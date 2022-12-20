@@ -87,7 +87,7 @@ namespace eLibrary {
 
         Integer doDivision(const Integer &NumberOther) const noexcept {
             Integer NumberRemainder, NumberResult(*this);
-            if (NumberSignature ^ NumberOther.NumberSignature) NumberResult.NumberSignature = false;
+            NumberResult.NumberSignature = !(NumberSignature ^ NumberOther.NumberSignature);
             for (auto NumberPart = (intmax_t) (NumberList.size() - 1); NumberPart >= 0; --NumberPart) {
                 NumberRemainder = NumberRemainder.doMultiplication(100000).doAddition(NumberList[NumberPart]);
                 intmax_t NumberMiddle, NumberStart = 0, NumberStop = 99999999LL;
@@ -108,7 +108,6 @@ namespace eLibrary {
 
         Integer doModulo(const Integer &NumberOther) const noexcept {
             Integer NumberRemainder, NumberResult(*this);
-            if (NumberSignature ^ NumberOther.NumberSignature) NumberResult.NumberSignature = false;
             for (auto NumberPart = (intmax_t) (NumberList.size() - 1); NumberPart >= 0; --NumberPart) {
                 NumberRemainder = NumberRemainder.doMultiplication(100000).doAddition(NumberList[NumberPart]);
                 intmax_t NumberMiddle, NumberStart = 0, NumberStop = 100000 - 1;
@@ -123,6 +122,7 @@ namespace eLibrary {
                 Integer NumberRemainderNew = NumberRemainder.doSubtraction(NumberOther.doMultiplication(NumberResult.NumberList[NumberPart]));
                 NumberRemainder.NumberList = NumberRemainderNew.NumberList;
             }
+            NumberRemainder.NumberSignature = NumberSignature;
             return NumberRemainder;
         }
 
@@ -134,7 +134,7 @@ namespace eLibrary {
                             NumberList[NumberDigit1] * NumberOther.NumberList[NumberDigit2];
             Integer NumberResult;
             NumberResult.NumberList.clear();
-            if (NumberSignature ^ NumberOther.NumberSignature) NumberResult.NumberSignature = false;
+            NumberResult.NumberSignature = !(NumberSignature ^ NumberOther.NumberSignature);
             intmax_t NumberCarry = 0;
             for (size_t NumberPart = 0;; ++NumberPart) {
                 if (!NumberCarry && NumberPart >= NumberProduct.size()) break;
@@ -148,6 +148,8 @@ namespace eLibrary {
         }
 
         Integer doSubtraction(const Integer &NumberOther) const noexcept {
+            if (NumberSignature && !NumberOther.NumberSignature) return doAddition(NumberOther.getAbsolute());
+            if (doCompare(NumberOther) < 0) return NumberOther.doSubtraction(*this).getOpposite();
             Integer NumberResult;
             NumberResult.NumberList.clear();
             intmax_t NumberBorrow = 0;
@@ -176,10 +178,10 @@ namespace eLibrary {
 
         intmax_t getValue() const noexcept {
             intmax_t NumberValue = NumberList.back();
-            if (NumberList.size() == 1) return NumberValue;
+            if (NumberList.size() == 1) return NumberSignature ? NumberValue : -NumberValue;
             for (auto NumberPart = (intmax_t) NumberList.size() - 2; NumberPart >= 0; --NumberPart)
                 NumberValue = NumberValue * 100000 + NumberList[NumberPart];
-            return NumberValue;
+            return NumberSignature ? NumberValue : -NumberValue;
         }
 
         Integer getOpposite() const noexcept {
@@ -194,7 +196,7 @@ namespace eLibrary {
             StringStream << NumberList.back();
             if (NumberList.size() == 1) return String(StringStream.str());
             for (auto NumberPart = (intmax_t) (NumberList.size() - 2); NumberPart >= 0; --NumberPart)
-                StringStream << std::setw(10) << std::setfill('0') << NumberList[NumberPart];
+                StringStream << std::setw(6) << std::setfill('0') << NumberList[NumberPart];
             return String(StringStream.str());
         }
     };
@@ -202,11 +204,52 @@ namespace eLibrary {
     class Fraction final {
     private:
         Integer NumberDenominator, NumberNumerator;
+
+        Integer getGreatestCommonFactor(const Integer &Number1, const Integer &Number2) const noexcept {
+            if (Number2.getAbsolute().doCompare(Integer(0)) == 0) {
+                return Number1;
+            }
+            return getGreatestCommonFactor(Number2, Number1.doModulo(Number2));
+        }
     public:
-        Fraction(const Integer &Numerator, const Integer &Denominator) noexcept : NumberDenominator(Denominator), NumberNumerator(Numerator) {}
+        Fraction(const Integer &Numerator, const Integer &Denominator) noexcept : NumberDenominator(Denominator), NumberNumerator(Numerator) {
+            Integer NumberFactor = getGreatestCommonFactor(Denominator, Numerator);
+            NumberDenominator = NumberDenominator.doDivision(NumberFactor);
+            NumberNumerator = NumberNumerator.doDivision(Numerator);
+        }
 
         Fraction doAddition(const Fraction &NumberOther) const noexcept {
             return Fraction(NumberNumerator.doMultiplication(NumberOther.NumberDenominator).doAddition(NumberDenominator.doMultiplication(NumberOther.NumberNumerator)), NumberDenominator.doMultiplication(NumberOther.NumberDenominator));
+        }
+
+        intmax_t doCompare(const Fraction &NumberOther) const noexcept {
+            return NumberNumerator.doMultiplication(NumberOther.NumberDenominator).doCompare(NumberDenominator.doMultiplication(NumberOther.NumberNumerator));
+        }
+
+        Fraction doDivision(const Fraction &NumberOther) const noexcept {
+            return Fraction(NumberNumerator.doMultiplication(NumberOther.NumberDenominator), NumberDenominator.doMultiplication(NumberOther.NumberNumerator));
+        }
+
+        Fraction doMultiplication(const Fraction &NumberOther) const noexcept {
+            return Fraction(NumberNumerator.doMultiplication(NumberOther.NumberNumerator), NumberDenominator.doMultiplication(NumberOther.NumberDenominator));
+        }
+
+        Fraction doSubtraction(const Fraction &NumberOther) const noexcept {
+            return Fraction(NumberNumerator.doMultiplication(NumberOther.NumberDenominator).doSubtraction(NumberDenominator.doMultiplication(NumberOther.NumberNumerator)), NumberDenominator.doMultiplication(NumberOther.NumberDenominator));
+        }
+
+        Integer getDenominator() const noexcept {
+            return NumberDenominator;
+        }
+
+        Integer getNumerator() const noexcept {
+            return NumberNumerator;
+        }
+
+        String toString() const noexcept {
+            std::basic_stringstream<char16_t> StringStream;
+            StringStream << NumberNumerator.toString().toU16String() << '/' << NumberDenominator.toString().toU16String();
+            return StringStream.str();
         }
     };
 }

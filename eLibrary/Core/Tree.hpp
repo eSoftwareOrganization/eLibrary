@@ -1,10 +1,12 @@
 #pragma once
 
+#include <Core/Exception.hpp>
+
 #include <optional>
 
 namespace eLibrary {
     template<typename K, typename V>
-    class RedBlackTree final {
+    class RedBlackTree final : public Object {
     private:
         enum NodeColorEnumeration {
             ColorRed,
@@ -71,8 +73,9 @@ namespace eLibrary {
 
         TreeNode *doSearchCore(TreeNode *NodeCurrent, const K &NodeKey) const noexcept {
             if (!NodeCurrent) return nullptr;
-            if (NodeCurrent->NodeKey == NodeKey) return NodeCurrent;
-            else if (NodeCurrent->NodeKey < NodeKey) return doSearchCore(NodeCurrent->NodeChildRight, NodeKey);
+            auto NodeRelation = NodeCurrent->NodeKey.doCompare(NodeKey);
+            if (NodeRelation == 0) return NodeCurrent;
+            else if (NodeRelation < 0) return doSearchCore(NodeCurrent->NodeChildRight, NodeKey);
             else return doSearchCore(NodeCurrent->NodeChildLeft, NodeKey);
         }
 
@@ -109,8 +112,9 @@ namespace eLibrary {
             }
             auto *NodeParent = NodeRoot;
             while (NodeParent) {
-                if (NodeTarget->NodeKey == NodeParent->NodeKey) return;
-                else if (NodeTarget->NodeKey >= NodeParent->NodeKey) {
+                auto NodeRelation = NodeTarget->NodeKey.doCompare(NodeParent->NodeKey);
+                if (NodeRelation == 0) return;
+                else if (NodeRelation > 0) {
                     if (!NodeParent->NodeChildRight) {
                         NodeParent->NodeChildRight = NodeTarget;
                         NodeTarget->NodeParent = NodeParent;

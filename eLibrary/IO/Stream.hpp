@@ -3,6 +3,8 @@
 #include <Core/Exception.hpp>
 
 namespace eLibrary {
+    typedef unsigned char byte;
+
     class InputStream : public Object {
     public:
         virtual void doClose() {}

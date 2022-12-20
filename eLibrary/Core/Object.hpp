@@ -3,8 +3,6 @@
 #include <cstdint>
 
 namespace eLibrary {
-    typedef unsigned char byte;
-
     class Object {
     public:
         virtual intmax_t hashCode() const noexcept {

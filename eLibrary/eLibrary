@@ -2,6 +2,7 @@
 
 #include <Core/Collection.hpp>
 #include <Core/Exception.hpp>
+#include <Core/Mathematics.hpp>
 #include <Core/Number.hpp>
 #include <Core/NumericCollection.hpp>
 #include <Core/String.hpp>

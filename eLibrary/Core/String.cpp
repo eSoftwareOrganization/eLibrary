@@ -40,12 +40,4 @@ namespace eLibrary {
         StringBuffer[CharacterStop - CharacterStart] = char16_t();
         return String(StringBuffer, CharacterStop - CharacterStart, true);
     }
-
-    StringIterator String::begin() const noexcept {
-        return StringIterator(*this, 0);
-    }
-
-    StringIterator String::end() const noexcept {
-        return StringIterator(*this, CharacterSize);
-    }
 }

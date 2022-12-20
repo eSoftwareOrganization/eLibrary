@@ -294,4 +294,12 @@ namespace eLibrary {
 
         StringIterator &operator=(const StringIterator &IteratorSource) noexcept = delete;
     };
+
+    StringIterator String::begin() const noexcept {
+        return StringIterator(*this, 0);
+    }
+
+    StringIterator String::end() const noexcept {
+        return StringIterator(*this, CharacterSize);
+    }
 }

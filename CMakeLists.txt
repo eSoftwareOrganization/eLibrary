@@ -4,14 +4,12 @@ project(eLibrary)
 
 include_directories(eLibrary)
 
-link_libraries(ntdll.dll)
-
 if (WIN32)
 add_compile_definitions(eLibraryCore_WindowsNT)
 endif()
 add_compile_definitions(eLibraryIO_FastBufferedStream)
 
-add_compile_options(-Wall -Ofast -mfma)
+add_compile_options(-march=native -Ofast -Wall)
 
 set(CMAKE_CXX_STANDARD 20)
 
