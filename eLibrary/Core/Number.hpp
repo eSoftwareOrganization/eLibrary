@@ -215,7 +215,7 @@ namespace eLibrary {
         Fraction(const Integer &Numerator, const Integer &Denominator) noexcept : NumberDenominator(Denominator), NumberNumerator(Numerator) {
             Integer NumberFactor = getGreatestCommonFactor(Denominator, Numerator);
             NumberDenominator = NumberDenominator.doDivision(NumberFactor);
-            NumberNumerator = NumberNumerator.doDivision(Numerator);
+            NumberNumerator = NumberNumerator.doDivision(NumberFactor);
         }
 
         Fraction doAddition(const Fraction &NumberOther) const noexcept {
