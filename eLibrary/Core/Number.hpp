@@ -176,7 +176,13 @@ namespace eLibrary {
             return NumberResult;
         }
 
-        intmax_t getValue() const noexcept {
+        Integer getOpposite() const noexcept {
+            Integer NumberResult(*this);
+            NumberResult.NumberSignature = !NumberSignature;
+            return NumberResult;
+        }
+
+        [[deprecated]] intmax_t getValue() const noexcept {
             intmax_t NumberValue = NumberList.back();
             if (NumberList.size() == 1) return NumberSignature ? NumberValue : -NumberValue;
             for (auto NumberPart = (intmax_t) NumberList.size() - 2; NumberPart >= 0; --NumberPart)
@@ -184,10 +190,12 @@ namespace eLibrary {
             return NumberSignature ? NumberValue : -NumberValue;
         }
 
-        Integer getOpposite() const noexcept {
-            Integer NumberResult(*this);
-            NumberResult.NumberSignature = !NumberSignature;
-            return NumberResult;
+        bool isNegative() const noexcept {
+            return !NumberSignature;
+        }
+
+        bool isPositive() const noexcept {
+            return NumberSignature;
         }
 
         String toString() const noexcept {
@@ -203,6 +211,7 @@ namespace eLibrary {
 
     class Fraction final {
     private:
+        bool NumberSignature;
         Integer NumberDenominator, NumberNumerator;
 
         Integer getGreatestCommonFactor(const Integer &Number1, const Integer &Number2) const noexcept {
@@ -212,30 +221,45 @@ namespace eLibrary {
             return getGreatestCommonFactor(Number2, Number1.doModulo(Number2));
         }
     public:
-        Fraction(const Integer &Numerator, const Integer &Denominator) noexcept : NumberDenominator(Denominator), NumberNumerator(Numerator) {
+        Fraction(const Integer &Numerator, const Integer &Denominator) noexcept {
+            NumberSignature = !(Denominator.isPositive() ^ Numerator.isPositive());
             Integer NumberFactor = getGreatestCommonFactor(Denominator, Numerator);
-            NumberDenominator = NumberDenominator.doDivision(NumberFactor);
-            NumberNumerator = NumberNumerator.doDivision(NumberFactor);
+            NumberDenominator = Denominator.getAbsolute().doDivision(NumberFactor);
+            NumberNumerator = Numerator.getAbsolute().doDivision(NumberFactor);
         }
 
         Fraction doAddition(const Fraction &NumberOther) const noexcept {
+            if (NumberSignature && !NumberOther.NumberSignature) return doSubtraction(NumberOther.getAbsolute());
+            if (!NumberSignature && NumberOther.NumberSignature) return NumberOther.doSubtraction(getAbsolute());
+            if (!NumberSignature && !NumberOther.NumberSignature) return getAbsolute().doAddition(NumberOther.getAbsolute()).getOpposite();
             return Fraction(NumberNumerator.doMultiplication(NumberOther.NumberDenominator).doAddition(NumberDenominator.doMultiplication(NumberOther.NumberNumerator)), NumberDenominator.doMultiplication(NumberOther.NumberDenominator));
         }
 
         intmax_t doCompare(const Fraction &NumberOther) const noexcept {
+            if (NumberSignature != NumberOther.NumberSignature) return (intmax_t) NumberSignature - NumberOther.NumberSignature;
             return NumberNumerator.doMultiplication(NumberOther.NumberDenominator).doCompare(NumberDenominator.doMultiplication(NumberOther.NumberNumerator));
         }
 
         Fraction doDivision(const Fraction &NumberOther) const noexcept {
-            return Fraction(NumberNumerator.doMultiplication(NumberOther.NumberDenominator), NumberDenominator.doMultiplication(NumberOther.NumberNumerator));
+            Fraction NumberResult(NumberNumerator.doMultiplication(NumberOther.NumberDenominator), NumberDenominator.doMultiplication(NumberOther.NumberNumerator));
+            NumberResult.NumberSignature = !(NumberSignature ^ NumberOther.NumberSignature);
+            return NumberResult;
         }
 
         Fraction doMultiplication(const Fraction &NumberOther) const noexcept {
-            return Fraction(NumberNumerator.doMultiplication(NumberOther.NumberNumerator), NumberDenominator.doMultiplication(NumberOther.NumberDenominator));
+            Fraction NumberResult(NumberNumerator.doMultiplication(NumberOther.NumberNumerator), NumberDenominator.doMultiplication(NumberOther.NumberDenominator));
+            NumberResult.NumberSignature = !(NumberSignature ^ NumberOther.NumberSignature);
+            return NumberResult;
         }
 
         Fraction doSubtraction(const Fraction &NumberOther) const noexcept {
+            if (NumberSignature && !NumberOther.NumberSignature) return doAddition(NumberOther.getAbsolute());
+            if (doCompare(NumberOther) < 0) return NumberOther.doSubtraction(*this).getOpposite();
             return Fraction(NumberNumerator.doMultiplication(NumberOther.NumberDenominator).doSubtraction(NumberDenominator.doMultiplication(NumberOther.NumberNumerator)), NumberDenominator.doMultiplication(NumberOther.NumberDenominator));
+        }
+
+        Fraction getAbsolute() const noexcept {
+            return Fraction(NumberNumerator, NumberDenominator);
         }
 
         Integer getDenominator() const noexcept {
@@ -246,9 +270,28 @@ namespace eLibrary {
             return NumberNumerator;
         }
 
+        Fraction getOpposite() const noexcept {
+            Fraction NumberResult(NumberNumerator, NumberDenominator);
+            NumberResult.NumberSignature = !NumberSignature;
+            return NumberResult;
+        }
+
+        [[deprecated]] double getValue() const noexcept {
+            return NumberNumerator.getValue() * 1.0 / NumberDenominator.getValue() * (NumberSignature ? 1.0 : -1.0);
+        }
+
+        bool isNegative() const noexcept {
+            return !NumberSignature;
+        }
+
+        bool isPositive() const noexcept {
+            return NumberSignature;
+        }
+
         String toString() const noexcept {
             std::basic_stringstream<char16_t> StringStream;
-            StringStream << NumberNumerator.toString().toU16String() << '/' << NumberDenominator.toString().toU16String();
+            if (!NumberSignature) StringStream << u'-';
+            StringStream << NumberNumerator.toString().toU16String() << u'/' << NumberDenominator.toString().toU16String();
             return StringStream.str();
         }
     };

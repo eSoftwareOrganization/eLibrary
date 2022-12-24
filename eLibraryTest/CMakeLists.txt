@@ -2,7 +2,7 @@ project(eLibraryTest)
 
 include_directories(../eLibrary)
 
-add_compile_definitions(eLibraryDoctest)
+#add_compile_definitions(eLibraryDoctest)
 
 add_compile_options(-mfma)
 

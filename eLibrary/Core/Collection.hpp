@@ -165,11 +165,11 @@ namespace eLibrary {
     template<class E>
     class ArrayListIterator final {
     private:
-        E* ElementSource;
+        E *ElementSource;
         intmax_t ElementCurrent;
         intmax_t ElementSize;
     public:
-        explicit ArrayListIterator(E *Source, intmax_t SourceSize, intmax_t Position) noexcept : ElementSource(Source), ElementCurrent(Position), ElementSize(SourceSize) {}
+        ArrayListIterator(E *Source, intmax_t SourceSize, intmax_t Position) noexcept : ElementSource(Source), ElementCurrent(Position), ElementSize(SourceSize) {}
 
         ArrayListIterator<E> operator++() noexcept {
             ++ElementCurrent;
@@ -212,9 +212,40 @@ namespace eLibrary {
             explicit LinkedNode(const E &Value) noexcept: NodeValue(Value), NodeNext(nullptr), NodePrevious(nullptr) {}
         } *NodeHead, *NodeTail;
 
+        class LinkedListIterator final {
+        private:
+            LinkedNode *NodeCurrent;
+        public:
+            explicit LinkedListIterator(LinkedNode *NodeSource) noexcept : NodeCurrent(NodeSource) {}
+
+            LinkedListIterator operator++() noexcept {
+                if (NodeCurrent) NodeCurrent = NodeCurrent->NodeNext;
+                return *this;
+            }
+
+            LinkedListIterator operator++(int) const noexcept {
+                return DoubleLinkedListIterator(NodeCurrent ? NodeCurrent->NodeNext : nullptr);
+            }
+
+            E operator*() const {
+                if (!NodeCurrent) throw Exception(String(u"LinkedListIterator::operator*() NodeCurrent"));
+                return NodeCurrent->NodeValue;
+            }
+
+            bool operator!=(const LinkedListIterator &IteratorOther) const noexcept {
+                return NodeCurrent != IteratorOther.NodeCurrent;
+            }
+
+            LinkedListIterator &operator=(const LinkedListIterator &IteratorSource) noexcept = delete;
+        };
+
         intmax_t NodeSize;
     public:
         DoubleLinkedList() noexcept: NodeHead(nullptr), NodeTail(nullptr), NodeSize(0) {}
+
+        DoubleLinkedList(std::initializer_list<E> ElementList) noexcept : NodeSize(ElementList.size()) {
+            for (const E &ElementCurrent : ElementList) addElement(ElementCurrent);
+        }
 
         ~DoubleLinkedList() noexcept {
             NodeSize = 0;
@@ -267,7 +298,9 @@ namespace eLibrary {
             ++NodeSize;
         }
 
-//        LinkedListIterator<E> begin() noexcept;
+        LinkedListIterator begin() noexcept {
+            return LinkedListIterator(NodeHead);
+        }
 
         intmax_t doFindElement(const E &ElementSource) noexcept {
             intmax_t NodeIndex = 0;
@@ -277,7 +310,9 @@ namespace eLibrary {
             return NodeIndex;
         }
 
-//        LinkedListIterator<E> end() noexcept;
+        LinkedListIterator end() noexcept {
+            return LinkedListIterator(nullptr);
+        }
 
         E getElement(intmax_t ElementIndex) const {
             if (ElementIndex < 0) ElementIndex += NodeSize;
@@ -370,9 +405,40 @@ namespace eLibrary {
             explicit LinkedNode(const E &Value) noexcept: NodeValue(Value), NodeNext(nullptr) {}
         } *NodeHead, *NodeTail;
 
+        class LinkedListIterator final {
+        private:
+            LinkedNode *NodeCurrent;
+        public:
+            explicit LinkedListIterator(LinkedNode *NodeSource) noexcept : NodeCurrent(NodeSource) {}
+
+            LinkedListIterator operator++() noexcept {
+                if (NodeCurrent) NodeCurrent = NodeCurrent->NodeNext;
+                return *this;
+            }
+
+            LinkedListIterator operator++(int) const noexcept {
+                return SingleLinkedListIterator(NodeCurrent ? NodeCurrent->NodeNext : nullptr);
+            }
+
+            E operator*() const {
+                if (!NodeCurrent) throw Exception(String(u"LinkedListIterator::operator*() NodeCurrent"));
+                return NodeCurrent->NodeValue;
+            }
+
+            bool operator!=(const LinkedListIterator &IteratorOther) const noexcept {
+                return NodeCurrent != IteratorOther.NodeCurrent;
+            }
+
+            LinkedListIterator &operator=(const LinkedListIterator &IteratorSource) noexcept = delete;
+        };
+
         intmax_t NodeSize;
     public:
         SingleLinkedList() noexcept: NodeHead(nullptr), NodeTail(nullptr), NodeSize(0) {}
+
+        SingleLinkedList(std::initializer_list<E> ElementList) noexcept : NodeSize(ElementList.size()) {
+            for (const E &ElementCurrent : ElementList) addElement(ElementCurrent);
+        }
 
         ~SingleLinkedList() noexcept {
             NodeSize = 0;
@@ -414,7 +480,9 @@ namespace eLibrary {
             ++NodeSize;
         }
 
-//        LinkedListIterator<E> begin() noexcept;
+        LinkedListIterator begin() noexcept {
+            return LinkedListIterator(NodeHead);
+        }
 
         intmax_t doFindElement(const E &ElementSource) noexcept {
             intmax_t NodeIndex = 0;
@@ -424,7 +492,9 @@ namespace eLibrary {
             return NodeIndex;
         }
 
-//        LinkedListIterator<E> end() noexcept;
+        LinkedListIterator end() noexcept {
+            return LinkedListIterator(nullptr);
+        }
 
         E getElement(intmax_t ElementIndex) const {
             if (ElementIndex < 0) ElementIndex += NodeSize;
