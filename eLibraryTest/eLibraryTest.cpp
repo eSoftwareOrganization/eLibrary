@@ -86,7 +86,6 @@ TEST_CASE("IntegerSubtraction") {
 #else
 
 int main(int ArgumentCount, char *ArgumentList[]) {
-    printf("%lf %lf", Mathematics::doEvolution(3.0, 2.0), sqrt(3.0));
     return 0;
 }
 

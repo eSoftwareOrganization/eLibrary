@@ -29,11 +29,30 @@ namespace eLibrary {
     class KeDriver final {
     private:
         DWORD DriverErrorControl;
+        HANDLE DriverFileHandle;
         String DriverFilePath;
         String DriverServiceName;
         DWORD DriverStartType;
     public:
-        KeDriver(const String &FilePath, const String &Name, DWORD ErrorControl, DWORD StartType) noexcept : DriverErrorControl(ErrorControl), DriverFilePath(FilePath), DriverServiceName(Name), DriverStartType(StartType) {}
+        KeDriver(const String &FilePath, const String &Name, DWORD ErrorControl, DWORD StartType) noexcept : DriverErrorControl(ErrorControl), DriverFileHandle(nullptr), DriverFilePath(FilePath), DriverServiceName(Name), DriverStartType(StartType) {}
+
+        ~KeDriver() noexcept {
+            if (DriverFileHandle && DriverFileHandle != INVALID_HANDLE_VALUE) CloseHandle(DriverFileHandle);
+        }
+
+        void doCancel() const {
+            if (!CancelIo(DriverFileHandle)) throw Exception(String(u"KeDriver::doCancel() CancelIo"));
+        }
+
+        void doClose() {
+            if (!DriverFileHandle || DriverFileHandle == INVALID_HANDLE_VALUE) throw Exception(String(u"KeDriver::doClose() DriverFileHandle"));
+            CloseHandle(DriverFileHandle);
+        }
+
+        void doControl(DWORD DriverControlCode, void *DriverControlInputBuffer, DWORD DriverControlInputSize, void *DriverControlOutputBuffer, DWORD DriverControlOutputBufferSize, DWORD *DriverControlOutputSize) {
+            if (!DeviceIoControl(DriverFileHandle, DriverControlCode, DriverControlInputBuffer, DriverControlInputSize, DriverControlOutputBuffer, DriverControlOutputBufferSize, DriverControlOutputSize, nullptr))
+                throw Exception(String(u"KeDriver::doControl(DWORD, void*, DWORD, void*, DWORD, DWORD*) DeviceIoControl"));
+        }
 
         void doLoadNt() {
             HMODULE ModuleNtDll = LoadLibraryW(L"ntdll.dll");
@@ -101,6 +120,11 @@ namespace eLibrary {
 
             CloseServiceHandle(DriverServiceHandle);
             CloseServiceHandle(ServiceManagerHandle);
+        }
+
+        void doOpen(const String &DriverControlPath) {
+            DriverFileHandle = CreateFileW(DriverControlPath.toWString().c_str(), FILE_ALL_ACCESS, FILE_SHARE_READ | FILE_SHARE_WRITE, nullptr, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, nullptr);
+            if (DriverFileHandle == INVALID_HANDLE_VALUE) throw Exception(String(u"KeDriver::doOpen(const String&) CreateFileW"));
         }
 
         void doUnloadNt() {

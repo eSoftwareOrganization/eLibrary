@@ -18,12 +18,18 @@ Project License: GPL v3.0
 Project Repository: [GitHub](https://github.com/ldgeng/eLibrary)
 
 Project Source:
-+ [Core::Integer](https://blog.csdn.net/code4101/article/details/38705155)
++ [Core::Integer](https://blog.csdn.net/code4101/article/details/38705155) @code4101
++ [Core::Mathematics](https://www.cnblogs.com/CocoonFan/p/3164221.html) @CocoonFan
 
 Project Subproject:
-+ eLibraryDriver(Compatibility Core::WindowsNT KeLoadDriver KeReadProcessMemory KeTerminateProcess KeWriteProcessMemory KeUnloadDriver)
++ eLibraryDriver(Compatibility Core::WindowsNT::KeDriver)
 
 Project Update Log:
+
+eLibrary V2022.15
+- Core::getSummationAVX(const double*, uintmax_t)(New) Core::getSummation(Rename => Core::getSummationAVX)
+- Core::KeDriver doCancel / doClose / doControl / doOpen(New)
+- Core::Mathematics doCosine / doHyperbolicCosine / doHyperbolicSine / doHyperbolicTangent / doSine / doTangent / getNearestPower2Lower / getNearestPower2Upper / toDegrees / toRadians(New) doEvolution / doExponent / doInverseHyperbolicTangent / doLogarithmE / doPower(Type Check)
 
 eLibrary V2022.14
 - Core::DoubleLinkedList begin / Constructor(std::initializer_list) / end / LinkedListIterator(new)
