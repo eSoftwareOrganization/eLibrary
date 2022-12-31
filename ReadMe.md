@@ -1,5 +1,6 @@
 # eLibrary
-Project Name: eLibrary
+
+![](Scroll.png)
 
 Project Destination: Lite Version of Java / Python
 
@@ -22,9 +23,16 @@ Project Source:
 + [Core::Mathematics](https://www.cnblogs.com/CocoonFan/p/3164221.html) @CocoonFan
 
 Project Subproject:
-+ eLibraryDriver(Compatibility Core::WindowsNT::KeDriver)
++ eLibraryDriver(Compatibility module under development)
 
 Project Update Log:
+
+eLibrary V2022.16
+- Core::NtDriver(KeDriver) doLoadNt / doUnloadNt (NtModule Implementation) doLoadSC / doUnloadSC(NtService / NtServiceManager Implementation) doRead / doWrite(New) doLoadSC / doUnloadNt / doUnloadSC(Modifier)
+- Core::NtModule / getFunction(New)
+- Core::NtService / doControl / doDelete / doStart(New)
+- Core::NtServiceManager / doCreateService / doOpenService(New)
+- Core::String Constructor(const std::wstring&) (New)
 
 eLibrary V2022.15
 - Core::getSummationAVX(const double*, uintmax_t)(New) Core::getSummation(Rename => Core::getSummationAVX)
@@ -46,6 +54,3 @@ eLibrary V2022.13
 - Core::Mathematics / getGreatestCommonFactor(New)
 - Core::RedBlackTree doInsert / doSearchCore(Compare) doRemove(Exception)
 - Core::WindowsNT loadDriver / unloadDriver(Remove Ntdll Linking Requirements) loadDriverSC(...)
-
-![](Nahida.png)
-By @eunip

@@ -2,6 +2,7 @@
 
 #include <algorithm>
 #include <codecvt>
+#include <cuchar>
 #include <locale>
 #include <map>
 #include <queue>
@@ -56,6 +57,14 @@ namespace eLibrary {
             std::u16string String16Source(reinterpret_cast<const char16_t*>(String8Source.c_str()), String8Source.size() / sizeof(char16_t));
             CharacterContainer = new char16_t[String16Source.size() + 1];
             std::copy(String16Source.begin(), String16Source.end(), CharacterContainer);
+            CharacterContainer[CharacterSize] = char16_t();
+            CharacterReference = new uintmax_t;
+            *CharacterReference = 1;
+        }
+
+        String(const std::wstring &StringSource) noexcept : CharacterSize((intmax_t) StringSource.size()) {
+            CharacterContainer = new char16_t[StringSource.size() + 1];
+            std::copy(StringSource.begin(), StringSource.end(), CharacterContainer);
             CharacterContainer[CharacterSize] = char16_t();
             CharacterReference = new uintmax_t;
             *CharacterReference = 1;
