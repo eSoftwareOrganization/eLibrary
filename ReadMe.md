@@ -27,6 +27,13 @@ Project Subproject:
 
 Project Update Log:
 
+eLibrary V2023.01
+- Core::NtDriver doLoadSC(NtServiceManager::doCreateService Implementation)
+- Core::NtService getServiceErrorControl / getServiceStartType / getServiceState / getServiceType / setServiceErrorControl / setServiceStartType / setServiceType(New)
+- Core::NtServiceManager doCreateService(NtService Implementation)
+- std::less\<String\>
+- std::greater\<String\>
+
 eLibrary V2022.16
 - Core::NtDriver(KeDriver) doLoadNt / doUnloadNt (NtModule Implementation) doLoadSC / doUnloadSC(NtService / NtServiceManager Implementation) doRead / doWrite(New) doLoadSC / doUnloadNt / doUnloadSC(Modifier)
 - Core::NtModule / getFunction(New)

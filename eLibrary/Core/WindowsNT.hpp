@@ -83,6 +83,43 @@ namespace eLibrary {
             if (!StartServiceW(ServiceHandle, ServiceArgumentCount, (const wchar_t**) ServiceArgumentList))
                 throw Exception(String(u"NtService::doStart(DWORD, void**) StartServiceW"));
         }
+
+        SERVICE_ERROR_TYPE getServiceErrorControl() const noexcept {
+            return ServiceErrorControl;
+        }
+
+        SERVICE_LOAD_TYPE getServiceStartType() const noexcept {
+            return ServiceStartType;
+        }
+
+        SERVICE_NODE_TYPE getServiceType() const noexcept {
+            return ServiceType;
+        }
+
+        DWORD getServiceState() const {
+            SERVICE_STATUS ServiceStatus;
+            if (!QueryServiceStatus(ServiceHandle, &ServiceStatus))
+                throw Exception(String(u"NtService::getServiceState() QueryServiceStatus"));
+            return ServiceStatus.dwCurrentState;
+        }
+
+        void setServiceErrorControl(SERVICE_ERROR_TYPE ErrorControl) {
+            ServiceErrorControl = ErrorControl;
+            if (!ChangeServiceConfigW(ServiceHandle, ServiceType, ServiceStartType, ServiceErrorControl, ServicePath.toWString().c_str(), nullptr, nullptr, nullptr, nullptr, nullptr, nullptr))
+                throw Exception(String(u"NtServcie::setServiceErrorControl(SERVICE_ERROR_TYPE) ChangeServiceConfigW"));
+        }
+
+        void setServiceStartType(SERVICE_LOAD_TYPE StartType) {
+            ServiceStartType = StartType;
+            if (!ChangeServiceConfigW(ServiceHandle, ServiceType, ServiceStartType, ServiceErrorControl, ServicePath.toWString().c_str(), nullptr, nullptr, nullptr, nullptr, nullptr, nullptr))
+                throw Exception(String(u"NtServcie::setServiceStartControl(SERVICE_LOAD_TYPE) ChangeServiceConfigW"));
+        }
+
+        void setServiceType(SERVICE_NODE_TYPE Type) {
+            ServiceType = Type;
+            if (!ChangeServiceConfigW(ServiceHandle, ServiceType, ServiceStartType, ServiceErrorControl, ServicePath.toWString().c_str(), nullptr, nullptr, nullptr, nullptr, nullptr, nullptr))
+                throw Exception(String(u"NtServcie::setServiceType(SERVICE_NODE_TYPE) ChangeServiceConfigW"));
+        }
     };
 
     class NtServiceManager final {
@@ -101,10 +138,10 @@ namespace eLibrary {
             }
         }
 
-        SC_HANDLE doCreateService(const String &ServiceName, const String &ServiceFilePath, DWORD ServiceType, DWORD ServiceStartType, DWORD ServiceErrorControl) const {
-            SC_HANDLE ServiceHandle = CreateServiceW(ManagerHandle, ServiceName.toWString().c_str(), ServiceName.toWString().c_str(), SERVICE_ALL_ACCESS, ServiceType, ServiceStartType, ServiceErrorControl, ServiceFilePath.toWString().c_str(), nullptr, nullptr, nullptr, nullptr, nullptr);
+        NtService doCreateService(const String &ServiceName, const String &ServicePath, DWORD ServiceType, DWORD ServiceStartType, DWORD ServiceErrorControl) const {
+            SC_HANDLE ServiceHandle = CreateServiceW(ManagerHandle, ServiceName.toWString().c_str(), ServiceName.toWString().c_str(), SERVICE_ALL_ACCESS, ServiceType, ServiceStartType, ServiceErrorControl, ServicePath.toWString().c_str(), nullptr, nullptr, nullptr, nullptr, nullptr);
             if (!ServiceHandle) throw Exception(String(u"NtServiceManager::doCreateService(const String&, const String&, DWORD, DWORD, DWORD) CreateServiceW"));
-            return ServiceHandle;
+            return NtService(ServiceHandle, ServiceName, ServicePath, ServiceErrorControl, ServiceStartType, ServiceType);
         }
 
         NtService doOpenService(const String &ServiceName) const {
@@ -190,14 +227,7 @@ namespace eLibrary {
         }
 
         void doLoadSC(const NtServiceManager &ServiceManager) const {
-            SC_HANDLE DriverServiceHandle = ServiceManager.doCreateService(DriverServiceName, DriverFilePath, SERVICE_KERNEL_DRIVER, DriverStartType, DriverErrorControl);
-
-            if (!StartServiceW(DriverServiceHandle, 0, nullptr)) {
-                CloseServiceHandle(DriverServiceHandle);
-                throw Exception(String(u"NtDriver::doLoadSC(const NtServiceManager&) StartServiceW"));
-            }
-
-            CloseServiceHandle(DriverServiceHandle);
+            ServiceManager.doCreateService(DriverServiceName, DriverFilePath, SERVICE_KERNEL_DRIVER, DriverStartType, DriverErrorControl).doStart(0, nullptr);
         }
 
         void doOpen(const String &DriverControlPath) {

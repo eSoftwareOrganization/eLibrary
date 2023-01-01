@@ -312,3 +312,19 @@ namespace eLibrary {
         return StringIterator(*this, CharacterSize);
     }
 }
+
+namespace std {
+    template<>
+    struct less<eLibrary::String> {
+        bool operator()(const eLibrary::String &String1, const eLibrary::String &String2) const noexcept {
+            return String1.doCompare(String2) < 0;
+        }
+    };
+
+    template<>
+    struct greater<eLibrary::String> {
+        bool operator()(const eLibrary::String &String1, const eLibrary::String &String2) const noexcept {
+            return String1.doCompare(String2) > 0;
+        }
+    };
+}
