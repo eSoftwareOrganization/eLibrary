@@ -5,7 +5,7 @@
 #include <array>
 
 namespace eLibrary {
-    template<class E>
+    template<typename E>
     class ArrayListIterator;
 
     template<typename E>
@@ -92,6 +92,18 @@ namespace eLibrary {
             }
         }
 
+        void doConcat(const ArrayList<E> ElementSource) noexcept {
+            while (ElementSize + ElementSource.ElementSize < ElementCapacity) ElementCapacity <<= 1;
+            auto *ElementBuffer = new E[ElementSize];
+            memcpy(ElementBuffer, ElementContainer, sizeof(E) * ElementSize);
+            delete[] ElementContainer;
+            ElementContainer = new E[ElementCapacity];
+            memcpy(ElementContainer, ElementBuffer, sizeof(E) * ElementSize);
+            delete[] ElementBuffer;
+            memcpy(ElementContainer + ElementSize, ElementSource.ElementContainer, sizeof(E) * ElementSource.ElementSize);
+            ElementSize += ElementSource.ElementSize;
+        }
+
         intmax_t doFindElement(const E &ElementSource) const noexcept {
             for (intmax_t ElementIndex = 0; ElementIndex < ElementSize; ++ElementIndex)
                 if (ElementContainer[ElementIndex] == ElementSource) return ElementIndex;
@@ -151,18 +163,25 @@ namespace eLibrary {
             ElementContainer[ElementIndex] = ElementSource;
         }
 
-        String toString() const noexcept {
-            std::stringstream StringStream;
-            StringStream << '{';
+        auto toArray() const noexcept {
+            std::array<E, this->ElementSize> ArraySource;
+            for (intmax_t ElementIndex = 0;ElementIndex < ElementSize;++ElementIndex)
+                ArraySource[ElementIndex] = ElementContainer[ElementIndex];
+            return ArraySource;
+        }
+
+        String toString() const noexcept override {
+            std::basic_stringstream<char16_t> StringStream;
+            StringStream << u'[';
             for (intmax_t ElementIndex = 0; ElementIndex + 1 < ElementSize; ++ElementIndex)
-                StringStream << String::valueOf(ElementContainer[ElementIndex]) << ' ';
-            if (ElementSize) StringStream << ElementContainer[ElementSize - 1];
-            StringStream << '}';
+                StringStream << String::valueOf(ElementContainer[ElementIndex]).toU16String() << u',';
+            if (ElementSize) StringStream << String::valueOf(ElementContainer[ElementSize - 1]).toU16String();
+            StringStream << u']';
             return StringStream.str();
         }
     };
 
-    template<class E>
+    template<typename E>
     class ArrayListIterator final {
     private:
         E *ElementSource;
@@ -382,13 +401,13 @@ namespace eLibrary {
             NodeCurrent->NodeValue = ElementSource;
         }
 
-        String toString() const noexcept {
+        String toString() const noexcept override {
             std::basic_stringstream<char16_t> StringStream;
             StringStream << u'[';
             if (NodeHead) {
                 LinkedNode *NodeCurrent = NodeHead;
-                while (NodeCurrent->NodeNext) StringStream << NodeCurrent->NodeValue << u" ";
-                StringStream << NodeCurrent->NodeValue;
+                while (NodeCurrent->NodeNext) StringStream << String::valueOf(NodeCurrent->NodeValue).toU16String() << u',';
+                StringStream << String::valueOf(NodeCurrent->NodeValue).toU16String();
             }
             StringStream << u']';
             return StringStream.str();
@@ -542,13 +561,13 @@ namespace eLibrary {
             NodeCurrent->NodeValue = ElementSource;
         }
 
-        String toString() const noexcept {
+        String toString() const noexcept override {
             std::basic_stringstream<char16_t> StringStream;
             StringStream << u'[';
             if (NodeHead) {
                 LinkedNode *NodeCurrent = NodeHead;
-                while (NodeCurrent->NodeNext) StringStream << NodeCurrent->NodeValue << u" ";
-                StringStream << NodeCurrent->NodeValue;
+                while (NodeCurrent->NodeNext) StringStream << String::valueOf(NodeCurrent->NodeValue).toU16String() << u',';
+                StringStream << String::valueOf(NodeCurrent->NodeValue).toU16String();
             }
             StringStream << u']';
             return StringStream.str();

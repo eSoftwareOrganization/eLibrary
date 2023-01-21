@@ -2,7 +2,11 @@
 
 #include <cstdint>
 
+#include <Core/Constant.hpp>
+
 namespace eLibrary {
+    class String;
+
     class Object {
     public:
         virtual intmax_t hashCode() const noexcept {
@@ -12,5 +16,7 @@ namespace eLibrary {
         virtual constexpr bool isEqual(const Object &ObjectSource) const noexcept {
             return this == &ObjectSource;
         }
+
+        virtual String toString() const noexcept;
     };
 }

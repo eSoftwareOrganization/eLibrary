@@ -1,7 +1,5 @@
 #pragma once
 
-#ifdef eLibraryIO_FastBufferedStream
-
 #include <deque>
 #include <fstream>
 #include <iostream>
@@ -28,8 +26,8 @@ namespace eLibrary {
             } else ObjectTarget = *IOBufferStart++;
         }
     public:
-        explicit FastBufferedInputStream(std::basic_streambuf<C> *Buffer, unsigned BufferSize) : IOBufferStatus(true), IOBufferSize(BufferSize), StreamBuffer(Buffer) {
-            if (!Buffer) throw Exception(String(u"FastBufferedInputStream<C>::FastBufferedInputStream(std::basic_streambuf<C>*, unsigned) Buffer"));
+        explicit FastBufferedInputStream(std::basic_streambuf<C> *StreamBufferSource, unsigned BufferSize) : IOBufferStatus(true), IOBufferSize(BufferSize), StreamBuffer(StreamBufferSource) {
+            if (!StreamBufferSource) throw IOException(String(u"FastBufferedInputStream<C>::FastBufferedInputStream(std::basic_streambuf<C>*, unsigned) StreamBufferSource"));
             IOBufferStart = IOBufferStop = IOBuffer = new C[IOBufferSize];
         }
 
@@ -46,25 +44,20 @@ namespace eLibrary {
 
         void doPop() noexcept {
             C ObjectTarget;
-            operator>>(ObjectTarget);
+            doInput(ObjectTarget);
         }
 
         std::basic_streambuf<C> *getStreamBuffer() const noexcept {
             return StreamBuffer;
         }
 
-        template<typename T>
-        void operator()(T &ObjectTarget) noexcept {
-            operator>>(ObjectTarget);
-        }
-
         template<typename T, typename... Ts>
-        void operator()(T &ObjectTarget, Ts&... ObjectTargets) noexcept {
-            operator>>(ObjectTarget);
-            operator()(ObjectTargets...);
+        void doInput(T &ObjectTarget, Ts&... ObjectTargets) noexcept {
+            doInput(ObjectTarget);
+            doInput(ObjectTargets...);
         }
 
-        FastBufferedInputStream<C> &operator>>(C &ObjectTarget) noexcept {
+        FastBufferedInputStream<C> &doInput(C &ObjectTarget) noexcept {
             if (IOBufferStatus) {
                 getCharacter0(ObjectTarget);
                 while ((ObjectTarget >= 7 && ObjectTarget <= 13) || ObjectTarget == 32) getCharacter0(ObjectTarget);
@@ -72,8 +65,8 @@ namespace eLibrary {
             return *this;
         }
 
-        template<typename T>
-        typename std::enable_if<std::is_floating_point<T>::value, FastBufferedInputStream<C>&>::type &operator>>(T &ObjectTarget) {
+        template<typename T> requires std::is_floating_point<T>::value
+        FastBufferedInputStream<C> &doInput(T &ObjectTarget) {
             if (IOBufferStatus) {
                 C CharacterTarget;
                 bool ObjectSignature = false;
@@ -92,8 +85,8 @@ namespace eLibrary {
             return *this;
         }
 
-        template<typename T>
-        typename std::enable_if<std::is_signed<T>::value, FastBufferedInputStream<C>&>::type &operator>>(T &ObjectTarget) {
+        template<typename T> requires std::is_signed<T>::value
+        FastBufferedInputStream<C> &doInput(T &ObjectTarget) {
             if (IOBufferStatus) {
                 C CharacterTarget;
                 bool ObjectSignature = false;
@@ -107,8 +100,8 @@ namespace eLibrary {
             return *this;
         }
 
-        template<typename T>
-        typename std::enable_if<std::is_unsigned<T>::value, FastBufferedInputStream<C>&>::type &operator>>(T &ObjectTarget) {
+        template<typename T> requires std::is_unsigned<T>::value
+        FastBufferedInputStream<C> &doInput(T &ObjectTarget) {
             if (IOBufferStatus) {
                 C CharacterTarget;
                 getCharacter0(CharacterTarget);
@@ -120,7 +113,7 @@ namespace eLibrary {
             return *this;
         }
 
-        FastBufferedInputStream<C> &operator>>(std::basic_string<C> &ObjectTarget) {
+        FastBufferedInputStream<C> &doInput(std::basic_string<C> &ObjectTarget) {
             if (IOBufferStatus) {
                 C CharacterTarget;
                 getCharacter0(CharacterTarget);
@@ -132,13 +125,9 @@ namespace eLibrary {
             return *this;
         }
 
-        operator bool() const noexcept {
-            return IOBufferStatus;
-        }
-
-        void setStreamBuffer(std::basic_streambuf<C> *Buffer) {
-            if (!Buffer) throw Exception(String(u"FastBufferedInputStream<C>::setStreamBuffer(std::basic_streambuf<C>*) Buffer"));
-            StreamBuffer = Buffer;
+        void setStreamBuffer(std::basic_streambuf<C> *StreamBufferSource) {
+            if (!StreamBufferSource) throw IOException(String(u"FastBufferedInputStream<C>::setStreamBuffer(std::basic_streambuf<C>*) StreamBufferSource"));
+            StreamBuffer = StreamBufferSource;
         }
     };
 
@@ -149,7 +138,7 @@ namespace eLibrary {
         std::basic_streambuf<C> *StreamBuffer;
     public:
         FastBufferedOutputStream(std::basic_streambuf<C> *Buffer, unsigned BufferSize) : StreamBuffer(Buffer) {
-            if (!Buffer) throw Exception(String(u"FastBufferedOutputStream::FastBufferedOutputStream(std::basic_streambuf<C>*, unsigned) Buffer"));
+            if (!Buffer) throw IOException(String(u"FastBufferedOutputStream::FastBufferedOutputStream(std::basic_streambuf<C>*, unsigned) Buffer"));
             if (BufferSize) IOBuffer.reserve(BufferSize);
         }
 
@@ -170,19 +159,14 @@ namespace eLibrary {
             return StreamBuffer;
         }
 
-        template<typename T>
-        void operator()(const T &ObjectTarget) noexcept {
-            operator<<(ObjectTarget);
-        }
-
         template<typename T, typename... Ts>
-        void operator()(const T &ObjectTarget, const Ts&... ObjectTargets) noexcept {
-            operator<<(ObjectTarget);
-            operator()(ObjectTargets...);
+        void doOutput(const T &ObjectTarget, const Ts&... ObjectTargets) noexcept {
+            doOutput(ObjectTarget);
+            doOutput(ObjectTargets...);
         }
 
-        template<typename T>
-        typename std::enable_if<std::is_signed<T>::value, FastBufferedOutputStream<C>&>::type &operator<<(T ObjectTarget) {
+        template<typename T> requires std::is_signed<T>::value
+        FastBufferedOutputStream<C> &doOutput(T ObjectTarget) {
             std::deque<C> ObjectDeque;
             while (ObjectTarget) {
                 ObjectDeque.push_back(ObjectTarget % 10 ^ 48);
@@ -196,8 +180,8 @@ namespace eLibrary {
             return *this;
         }
 
-        template<typename T>
-        typename std::enable_if<std::is_unsigned<T>::value, FastBufferedOutputStream<C>&>::type &operator<<(T ObjectTarget) {
+        template<typename T> requires std::is_unsigned<T>::value
+        FastBufferedOutputStream<C> &doOutput(T ObjectTarget) {
             std::deque<C> ObjectDeque;
             if (ObjectTarget < 0) {
                 IOBuffer.push_back('-');
@@ -215,24 +199,24 @@ namespace eLibrary {
             return *this;
         }
 
-        FastBufferedOutputStream<C> &operator<<(C ObjectTarget) noexcept {
+        FastBufferedOutputStream<C> &doOutput(C ObjectTarget) noexcept {
             IOBuffer.push_back(ObjectTarget);
             return *this;
         }
 
-        FastBufferedOutputStream<C> &operator<<(const std::basic_string<C> &ObjectTarget) noexcept {
+        FastBufferedOutputStream<C> &doOutput(const std::basic_string<C> &ObjectTarget) noexcept {
             for (auto CharacterTarget : ObjectTarget) IOBuffer.push_back(CharacterTarget);
             return *this;
         }
 
-        void setIOBuffer(const std::basic_string<C> &Buffer) {
+        void setIOBuffer(const std::basic_string<C> &IOBufferSource) {
             IOBuffer.clear();
-            IOBuffer = Buffer;
+            IOBuffer = IOBufferSource;
         }
 
-        void setStreamBuffer(std::basic_streambuf<C> *Buffer) {
-            if (!Buffer) throw Exception(String(u"FastBufferedOutputStream<C>::setStreamBuffer(std::basic_streambuf<C>*) Buffer"));
-            StreamBuffer = Buffer;
+        void setStreamBuffer(std::basic_streambuf<C> *StreamBufferSource) {
+            if (!StreamBufferSource) throw IOException(String(u"FastBufferedOutputStream<C>::setStreamBuffer(std::basic_streambuf<C>*) StreamBufferSource"));
+            StreamBuffer = StreamBufferSource;
         }
     };
 
@@ -306,5 +290,3 @@ namespace eLibrary {
         return StreamOutW;
     }
 }
-
-#endif

@@ -1,13 +1,14 @@
 #pragma once
 
 #include <Core/Collection.hpp>
+#include <Core/Constant.hpp>
 #include <Core/Exception.hpp>
 #include <Core/Mathematics.hpp>
 #include <Core/Number.hpp>
-#include <Core/NumericCollection.hpp>
 #include <Core/String.hpp>
 #include <Core/Tree.hpp>
 #include <Core/WindowsNT.hpp>
+#include <IO/AudioSegment.hpp>
 #include <IO/FastBufferedStream.hpp>
 #include <IO/Socket.hpp>
 #include <IO/Stream.hpp>

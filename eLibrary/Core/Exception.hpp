@@ -24,7 +24,7 @@ namespace eLibrary {
             ErrorDetail = ObjectStream.str();
         }
 
-        String toString() const noexcept {
+        String toString() const noexcept override {
             return ErrorDetail;
         }
 

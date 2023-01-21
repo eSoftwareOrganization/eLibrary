@@ -1,5 +1,7 @@
 #pragma once
 
+#include <Core/Exception.hpp>
+
 #include <io.h>
 #include <utility>
 
@@ -27,6 +29,14 @@ namespace eLibrary {
 
         addrinfo *getAddressInformation() const noexcept {
             return SocketAddressInformation;
+        }
+
+        String getSocketIP() const noexcept {
+            return SocketIP;
+        }
+
+        unsigned short getSocketPort() const noexcept {
+            return SocketPort;
         }
     };
 
@@ -86,12 +96,11 @@ namespace eLibrary {
     };
 
     class SocketServer final : public Object {
-    public:
     private:
         SOCKET SocketSource;
         SocketInetAddress SocketAddress;
     public:
-        explicit SocketServer(const SocketInetAddress &Address) : SocketAddress(Address) {
+        explicit SocketServer(const SocketInetAddress &SocketAddressSource) : SocketAddress(SocketAddressSource) {
             addrinfo *SocketAddressInformation = SocketAddress.getAddressInformation();
             if ((SocketSource = socket(SocketAddressInformation->ai_family, SocketAddressInformation->ai_socktype, SocketAddressInformation->ai_protocol)) == INVALID_SOCKET)
                 throw Exception(String(u"SocketServer::SocketServer(const SocketInetAddress&) socket"));
@@ -128,14 +137,14 @@ namespace eLibrary {
 
         void setConnectionReuse(bool OptionValue) const {
             if (setsockopt(SocketSource, SOL_SOCKET, SO_SNDTIMEO, (char*) &OptionValue, sizeof(bool)) != 0)
-                throw Exception(String(u"SocketServer::setConnectionReuse(int) setsockopt"));
+                throw Exception(String(u"SocketServer::setConnectionReuse(bool) setsockopt"));
         }
     };
 
     class URLConnection : public Object {
     private:
-        bool ConnectionInput;
-        bool ConnectionOutput;
+        bool ConnectionModeInput;
+        bool ConnectionModeOutput;
         unsigned ConnectionTimeoutConnect;
         unsigned ConnectionTimeoutRead;
     public:

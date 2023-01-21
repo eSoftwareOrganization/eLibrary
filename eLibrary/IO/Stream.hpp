@@ -1,6 +1,6 @@
 #pragma once
 
-#include <Core/Exception.hpp>
+#include <Core/Object.hpp>
 
 namespace eLibrary {
     typedef unsigned char byte;
@@ -9,7 +9,7 @@ namespace eLibrary {
     public:
         virtual void doClose() {}
 
-        virtual int doRead() const = 0;
+        virtual int doRead() = 0;
 
         virtual int doRead(byte StreamBuffer[], int StreamOffset, int StreamSize) {
             if (StreamSize == 0) return 0;
@@ -33,7 +33,7 @@ namespace eLibrary {
             while (StreamRemain) {
                 int StreamResult = doRead(StreamBuffer, 0, (int) std::min(SkipSize, StreamRemain));
                 if (StreamResult < 0) break;
-                StreamRemain -= std::min(StreamRemain, (unsigned long long) StreamResult);
+                StreamRemain -= std::min(StreamRemain, (uintmax_t) StreamResult);
             }
             delete[] StreamBuffer;
             return SkipSize - StreamRemain;

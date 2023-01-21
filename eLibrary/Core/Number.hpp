@@ -16,9 +16,14 @@ namespace eLibrary {
         bool NumberSignature;
         std::vector<intmax_t> NumberList;
     public:
-        Integer(intmax_t NumberValue = 0) noexcept: NumberSignature(NumberValue >= 0) {
+        constexpr Integer() noexcept : NumberSignature(true) {
+            NumberList.push_back(0);
+        }
+
+        template<typename T> requires std::is_integral<T>::value
+        Integer(T NumberValue) noexcept {
+            NumberSignature = NumberValue >= 0;
             NumberValue = NumberValue >= 0? NumberValue : -NumberValue;
-            NumberList.clear();
             do {
                 NumberList.push_back(NumberValue % 100000);
                 NumberValue /= 100000;
@@ -46,10 +51,10 @@ namespace eLibrary {
                 else if (NumberValue.getCharacter(NumberDigit) == u'+' && NumberDigit == 0 && !NumberSignatureExist)
                     NumberSignatureExist = true;
                 else if ((iswdigit(NumberValue.getCharacter(NumberDigit)) || iswalpha(NumberValue.getCharacter(NumberDigit))) && NumberDigitMapping[NumberValue.getCharacter(NumberDigit)] < NumberRadix);
-                else throw Exception(String(u"Integer::Integer(String*, unsigned short) NumberValue"));
-            NumberList.clear();
-            for (; NumberDigit < NumberValue.getCharacterSize(); ++NumberDigit)
-                operator=(doMultiplication(IntegerRadix).doAddition(NumberDigitMapping[NumberValue.getCharacter(NumberDigit)]));
+                else throw Exception(String(u"Integer::Integer(const String&, unsigned short) NumberValue"));
+            for (NumberDigit = 0; NumberDigit < NumberValue.getCharacterSize(); ++NumberDigit)
+                NumberList = doMultiplication(IntegerRadix).doAddition(NumberDigitMapping[NumberValue.getCharacter(NumberDigit)]).NumberList;
+            if (NumberList.empty()) NumberList.push_back(0);
             while (!NumberList.back() && NumberList.size() > 1) NumberList.pop_back();
         }
 
@@ -74,8 +79,8 @@ namespace eLibrary {
         }
 
         intmax_t doCompare(const Integer &NumberOther) const noexcept {
-            if (NumberSignature != NumberOther.NumberSignature)
-                return (intmax_t)NumberSignature - NumberOther.NumberSignature;
+            if (NumberSignature != NumberOther.NumberSignature && NumberList[0] && NumberOther.NumberList[0])
+                return (intmax_t) NumberSignature - NumberOther.NumberSignature;
             if (NumberList.size() != NumberOther.NumberList.size())
                 return (intmax_t) (NumberList.size()) - NumberOther.NumberList.size();
             for (auto NumberPart = (intmax_t) (NumberList.size() - 1); NumberPart >= 0; --NumberPart)
@@ -147,6 +152,26 @@ namespace eLibrary {
             return NumberResult;
         }
 
+        Integer doPower(const Integer &NumberExponentSource) const noexcept {
+            Integer NumberBase(*this), NumberExponent(NumberExponentSource), NumberResult(1);
+            while (NumberExponent.doCompare(0)) {
+                if (!NumberExponent.doModulo(2).doCompare(1)) NumberResult = NumberResult.doMultiplication(NumberBase);
+                NumberBase = NumberBase.doMultiplication(NumberBase);
+                NumberExponent = NumberExponent.doDivision(2);
+            }
+            return NumberResult;
+        }
+
+        Integer doPower(const Integer &NumberExponentSource, const Integer &NumberModulo) const noexcept {
+            Integer NumberBase(*this), NumberExponent(NumberExponentSource), NumberResult(1);
+            while (NumberExponent.doCompare(0)) {
+                if (!NumberExponent.doModulo(2).doCompare(1)) NumberResult = NumberResult.doMultiplication(NumberBase).doModulo(NumberModulo);
+                NumberBase = NumberBase.doMultiplication(NumberBase).doModulo(NumberModulo);
+                NumberExponent = NumberExponent.doDivision(2);
+            }
+            return NumberResult;
+        }
+
         Integer doSubtraction(const Integer &NumberOther) const noexcept {
             if (NumberSignature && !NumberOther.NumberSignature) return doAddition(NumberOther.getAbsolute());
             if (doCompare(NumberOther) < 0) return NumberOther.doSubtraction(*this).getOpposite();
@@ -198,18 +223,39 @@ namespace eLibrary {
             return NumberSignature;
         }
 
-        String toString() const noexcept {
+        String toString() const noexcept override {
+            return toString(10);
+        }
+
+        String toString(unsigned short NumberRadix) const noexcept {
+            if (NumberRadix < 2 || NumberRadix > 36) throw Exception(String(u"Integer::toString(unsigned short) NumberRadix"));
             std::stringstream StringStream;
             if (!NumberSignature) StringStream << '-';
-            StringStream << NumberList.back();
-            if (NumberList.size() == 1) return String(StringStream.str());
-            for (auto NumberPart = (intmax_t) (NumberList.size() - 2); NumberPart >= 0; --NumberPart)
-                StringStream << std::setw(6) << std::setfill('0') << NumberList[NumberPart];
-            return String(StringStream.str());
+            if (NumberRadix == 10) {
+                StringStream << NumberList.back();
+                if (NumberList.size() == 1) return String(StringStream.str());
+                for (auto NumberPart = (intmax_t) (NumberList.size() - 2); NumberPart >= 0; --NumberPart)
+                    StringStream << std::setw(6) << std::setfill('0') << NumberList[NumberPart];
+                return String(StringStream.str());
+            }
+            static std::map<unsigned short, char16_t> NumberDigitMapping;
+            if (NumberDigitMapping.empty()) {
+                for (unsigned short NumberDigit = 0; NumberDigit < 10; ++NumberDigit)
+                    NumberDigitMapping[NumberDigit] = char16_t(NumberDigit + 48);
+                for (unsigned short NumberDigit = 0; NumberDigit < 26; ++NumberDigit)
+                    NumberDigitMapping[NumberDigit + 10] = char16_t(NumberDigit + 65);
+            }
+            std::deque<char16_t> NumberDeque;
+            Integer NumberCurrent(getAbsolute()), NumberRadixInteger(NumberRadix);
+            while (NumberCurrent.NumberList[0]) {
+                NumberDeque.push_front(NumberDigitMapping[NumberCurrent.doModulo(NumberRadixInteger).NumberList[0]]);
+                NumberCurrent.NumberList = NumberCurrent.doDivision(NumberRadixInteger).NumberList;
+            }
+            return std::u16string(NumberDeque.begin(), NumberDeque.end());
         }
     };
 
-    class Fraction final {
+    class Fraction final : public Object {
     private:
         bool NumberSignature;
         Integer NumberDenominator, NumberNumerator;
@@ -221,11 +267,13 @@ namespace eLibrary {
             return getGreatestCommonFactor(Number2, Number1.doModulo(Number2));
         }
     public:
-        Fraction(const Integer &Numerator, const Integer &Denominator) noexcept {
-            NumberSignature = !(Denominator.isPositive() ^ Numerator.isPositive());
-            Integer NumberFactor = getGreatestCommonFactor(Denominator, Numerator);
-            NumberDenominator = Denominator.getAbsolute().doDivision(NumberFactor);
-            NumberNumerator = Numerator.getAbsolute().doDivision(NumberFactor);
+        Fraction(const Integer &NumberValueSource) noexcept : NumberSignature(NumberValueSource.isPositive()), NumberDenominator(1), NumberNumerator(NumberValueSource) {}
+
+        Fraction(const Integer &NumberNumeratorSource, const Integer &NumberDenominatorSource) noexcept {
+            NumberSignature = !(NumberDenominatorSource.isPositive() ^ NumberNumeratorSource.isPositive());
+            Integer NumberFactor = getGreatestCommonFactor(NumberDenominatorSource, NumberNumeratorSource);
+            NumberDenominator = NumberDenominatorSource.getAbsolute().doDivision(NumberFactor);
+            NumberNumerator = NumberNumeratorSource.getAbsolute().doDivision(NumberFactor);
         }
 
         Fraction doAddition(const Fraction &NumberOther) const noexcept {
@@ -236,7 +284,7 @@ namespace eLibrary {
         }
 
         intmax_t doCompare(const Fraction &NumberOther) const noexcept {
-            if (NumberSignature != NumberOther.NumberSignature) return (intmax_t) NumberSignature - NumberOther.NumberSignature;
+            if (NumberSignature != NumberOther.NumberSignature && NumberNumerator.doCompare(Integer(0)) && NumberDenominator.doCompare(Integer(0))) return (intmax_t) NumberSignature - NumberOther.NumberSignature;
             return NumberNumerator.doMultiplication(NumberOther.NumberDenominator).doCompare(NumberDenominator.doMultiplication(NumberOther.NumberNumerator));
         }
 
@@ -277,7 +325,7 @@ namespace eLibrary {
         }
 
         [[deprecated]] double getValue() const noexcept {
-            return NumberNumerator.getValue() * 1.0 / NumberDenominator.getValue() * (NumberSignature ? 1.0 : -1.0);
+            return (double) NumberNumerator.getValue() / (double) NumberDenominator.getValue() * (NumberSignature ? 1.0 : -1.0);
         }
 
         bool isNegative() const noexcept {
@@ -288,7 +336,7 @@ namespace eLibrary {
             return NumberSignature;
         }
 
-        String toString() const noexcept {
+        String toString() const noexcept override {
             std::basic_stringstream<char16_t> StringStream;
             if (!NumberSignature) StringStream << u'-';
             StringStream << NumberNumerator.toString().toU16String() << u'/' << NumberDenominator.toString().toU16String();

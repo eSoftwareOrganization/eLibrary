@@ -2,32 +2,32 @@
 
 #ifdef eLibraryCore_WindowsNT
 
+#include <Core/Exception.hpp>
+
 #include <Windows.h>
 #include <map>
-#include <ntdef.h>
 #include <ntstatus.h>
 #include <shlwapi.h>
 #include <string>
 #include <sstream>
+#include <winternl.h>
 
 namespace eLibrary {
     typedef NTSTATUS NTAPI (*NtCloseType)(IN HANDLE Handle);
-
-    typedef NTSTATUS NTAPI (*NtCreateKeyType)(OUT PHANDLE KeyHandle, IN ACCESS_MASK DesiredAccess, IN POBJECT_ATTRIBUTES ObjectAttributes, ULONG TitleIndex, IN OPTIONAL PUNICODE_STRING Class, IN ULONG CreateOptions, OUT OPTIONAL PULONG Disposition);
-
-    typedef NTSTATUS NTAPI (*NtLoadDriverType)(IN PUNICODE_STRING DriverServiceName);
-
-    typedef NTSTATUS NTAPI (*NtSetValueKeyType)(IN HANDLE KeyHandle, IN PUNICODE_STRING ValueName, IN OPTIONAL ULONG TitleIndex, IN ULONG Type, IN OPTIONAL PVOID Data, IN ULONG DataSize);
-
-    typedef NTSTATUS NTAPI (*NtUnloadDriverType)(IN PUNICODE_STRING DriverServiceName);
-
-    typedef NTSTATUS NTAPI (*RtlAdjustPrivilegeType)(IN ULONG Privilege, IN BOOLEAN Enable, IN BOOLEAN CurrentThread, OUT PBOOLEAN Enabled OPTIONAL);
-
-    typedef NTSTATUS NTAPI (*RtlInitUnicodeStringType)(OUT PUNICODE_STRING DestinationString, IN PCWSTR SourceString);
+    typedef NTSTATUS NTAPI (*NtCreateKeyType)(OUT HANDLE *KeyHandle, IN ACCESS_MASK DesiredAccess, IN OBJECT_ATTRIBUTES *ObjectAttributes, ULONG TitleIndex, IN OPTIONAL UNICODE_STRING *Class, IN ULONG CreateOptions, OUT OPTIONAL PULONG Disposition);
+    typedef NTSTATUS NTAPI (*NtLoadDriverType)(IN UNICODE_STRING *DriverServiceName);
+    typedef NTSTATUS NTAPI (*NtOpenProcessType)(OUT HANDLE *ProcessHandle, IN ACCESS_MASK DesiredAccess, IN OBJECT_ATTRIBUTES *ObjectAttributes, IN CLIENT_ID *ClientId);
+    typedef NTSTATUS NTAPI (*NtOpenThreadType)(OUT HANDLE *ThreadHandle, IN ACCESS_MASK DesiredAccess, IN OBJECT_ATTRIBUTES *ObjectAttributes, IN CLIENT_ID *ClientId);
+    typedef NTSTATUS NTAPI (*NtSetValueKeyType)(IN HANDLE KeyHandle, IN UNICODE_STRING *ValueName, IN OPTIONAL ULONG TitleIndex, IN ULONG Type, IN OPTIONAL PVOID Data, IN ULONG DataSize);
+    typedef NTSTATUS NTAPI (*NtTerminateProcessType)(IN OPTIONAL HANDLE ProcessHandle, IN NTSTATUS ExitStatus);
+    typedef NTSTATUS NTAPI (*NtTerminateThreadType)(IN OPTIONAL HANDLE ThreadHandle, IN NTSTATUS ExitStatus);
+    typedef NTSTATUS NTAPI (*NtUnloadDriverType)(IN UNICODE_STRING *DriverServiceName);
+    typedef NTSTATUS NTAPI (*RtlAdjustPrivilegeType)(IN ULONG Privilege, IN BOOLEAN Enable, IN BOOLEAN CurrentThread, OUT OPTIONAL BOOLEAN *Enabled);
+    typedef NTSTATUS NTAPI (*RtlInitUnicodeStringType)(OUT UNICODE_STRING *DestinationString, IN PCWSTR SourceString);
 
 #define SeLoadDriverPrivilege 0xa
 
-    class NtModule final {
+    class NtModule final : public Object {
     private:
         mutable std::map<String, FARPROC> ModuleFunctionMapping;
         HMODULE ModuleHandle;
@@ -51,22 +51,165 @@ namespace eLibrary {
         }
     };
 
-    class NtService final {
+    enum class NtFileAccess {
+        AccessAll = FILE_ALL_ACCESS,
+        AccessAttributeExtendRead = FILE_READ_EA,
+        AccessAttributeExtendWrite = FILE_WRITE_EA,
+        AccessAttributeRead = FILE_READ_ATTRIBUTES,
+        AccessAttributeWrite = FILE_WRITE_ATTRIBUTES,
+        AccessDataAppend = FILE_APPEND_DATA,
+        AccessDataRead = FILE_READ_DATA,
+        AccessDataWrite = FILE_WRITE_DATA,
+        AccessDelete = DELETE,
+        AccessRead = FILE_READ_ACCESS,
+        AccessSynchronize = SYNCHRONIZE,
+        AccessWrite = FILE_WRITE_ACCESS
+    };
+
+    enum class NtFileAttribute {
+        AttributeCompressed = FILE_ATTRIBUTE_COMPRESSED,
+        AttributeHidden = FILE_ATTRIBUTE_HIDDEN,
+        AttributeNormal = FILE_ATTRIBUTE_NORMAL,
+        AttributeOffline = FILE_ATTRIBUTE_OFFLINE,
+        AttributeReadonly = FILE_ATTRIBUTE_READONLY,
+        AttributeSystem = FILE_ATTRIBUTE_SYSTEM,
+        AttributeTemporary = FILE_ATTRIBUTE_TEMPORARY
+    };
+
+    enum class NtFileDisposition {
+        DispositionCreate = FILE_CREATE,
+        DispositionOpen = FILE_OPEN,
+        DispositionOpenIf = FILE_OPEN_IF,
+        DispositionOverwrite = FILE_OVERWRITE,
+        DispositionOverwriteIf = FILE_OVERWRITE_IF,
+        DispositionSupersede = FILE_SUPERSEDE
+    };
+
+    enum class NtFileOption {
+        OptionDeleteOnClose = FILE_DELETE_ON_CLOSE,
+        OptionNoCompression = FILE_NO_COMPRESSION,
+        OptionSequential = FILE_SEQUENTIAL_ONLY,
+        OptionWriteThrough = FILE_WRITE_THROUGH
+    };
+
+    enum class NtFileShare {
+        ShareDelete = FILE_SHARE_DELETE,
+        ShareNone = 0,
+        ShareRead = FILE_SHARE_READ,
+        ShareWrite = FILE_SHARE_WRITE
+    };
+
+    class NtFile final : public Object {
+    private:
+        HANDLE FileHandle;
+    public:
+        NtFile(HANDLE FileHandleSource) : FileHandle(FileHandleSource) {
+            if (!FileHandleSource) throw Exception(String(u"NtFile::NtFile(HANDLE) FileHandleSource"));
+        }
+
+        ~NtFile() noexcept {
+            if (FileHandle) {
+                NtClose(FileHandle);
+                FileHandle = nullptr;
+            }
+        }
+
+        static NtFile doCreate(const String &FilePath, bool FilePathCaseSenstive, const NtFileAccess &FileAccess, const NtFileAttribute &FileAttribute, const NtFileDisposition &FileDisposition, const NtFileOption &FileOption, const NtFileShare &FileShare) {
+            HANDLE FileHandle;
+            IO_STATUS_BLOCK FileStatusBlock;
+            OBJECT_ATTRIBUTES FileObjectAttribute;
+            UNICODE_STRING FilePathString;
+            RtlInitUnicodeString(&FilePathString, FilePath.toWString().c_str());
+            InitializeObjectAttributes(&FileObjectAttribute, &FilePathString, FilePathCaseSenstive ? 0 : OBJ_CASE_INSENSITIVE, nullptr, nullptr)
+            if (!NT_SUCCESS(NtCreateFile(&FileHandle, (ACCESS_MASK) FileAccess, &FileObjectAttribute, &FileStatusBlock, nullptr, (ULONG) FileAttribute, (ULONG) FileShare, (ULONG) FileDisposition, (ULONG) FileOption, nullptr, 0)))
+                throw Exception(String(u"NtFile::doCreate(const String&, bool, const NtFileAccess&, const NtFileAttribute&, const NtFileDisposition&, const NtFileOption&, const NtFileShare&) NtCreateFile"));
+            return NtFile(FileHandle);
+        }
+
+        static NtFile doOpen(const String &FilePath, bool FilePathCaseSenstive, const NtFileAccess &FileAccess, const NtFileOption &FileOption, const NtFileShare &FileShare) {
+            HANDLE FileHandle;
+            IO_STATUS_BLOCK FileStatusBlock;
+            OBJECT_ATTRIBUTES FileObjectAttribute;
+            UNICODE_STRING FilePathString;
+            RtlInitUnicodeString(&FilePathString, FilePath.toWString().c_str());
+            InitializeObjectAttributes(&FileObjectAttribute, &FilePathString, FilePathCaseSenstive ? 0 : OBJ_CASE_INSENSITIVE, nullptr, nullptr)
+            if (!NT_SUCCESS(NtOpenFile(&FileHandle, (ACCESS_MASK) FileAccess, &FileObjectAttribute, &FileStatusBlock, (ULONG) FileShare, (ULONG) FileOption)))
+                throw Exception(String(u"NtFile::doOpen() NtOpenFile"));
+            return NtFile(FileHandle);
+        }
+    };
+
+    class NtProcess final : public Object {
+    private:
+        HANDLE ProcessHandle;
+    public:
+        NtProcess(HANDLE ProcessHandleSource) : ProcessHandle(ProcessHandleSource) {
+            if (!ProcessHandleSource) throw Exception(String(u"NtProcess::NtProcess(HANDLE) ProcessHandleSource"));
+        }
+
+        ~NtProcess() noexcept {
+            if (ProcessHandle) {
+                NtClose(ProcessHandle);
+                ProcessHandle = nullptr;
+            }
+        }
+
+        static NtProcess doOpen(DWORD ProcessID) {
+            NtModule ModuleNtDll(String(u"ntdll.dll"));
+            NtOpenProcessType NtOpenProcess = (NtOpenProcessType) ModuleNtDll.getFunction(String(u"NtOpenProcess"));
+            CLIENT_ID ProcessClientID{ULongToHandle(ProcessID), nullptr};
+            HANDLE ProcessHandle;
+            OBJECT_ATTRIBUTES ProcessObjectAttribute;
+            InitializeObjectAttributes(&ProcessObjectAttribute, nullptr, 0, nullptr, nullptr)
+            if (!NT_SUCCESS(NtOpenProcess(&ProcessHandle, PROCESS_ALL_ACCESS, &ProcessObjectAttribute, &ProcessClientID))) throw Exception(String(u"NtProcess::doOpen(DWORD) NtOpenProcess"));
+            return NtProcess(ProcessHandle);
+        }
+
+        void doTerminate(NTSTATUS ProcessStatus) const {
+            NtModule ModuleNtDll(String(u"ntdll.dll"));
+            NtTerminateProcessType NtTerminateProcess = (NtTerminateProcessType) ModuleNtDll.getFunction(String(u"NtTerminateProcess"));
+            if (!NT_SUCCESS(NtTerminateProcess(ProcessHandle, ProcessStatus))) throw Exception(String(u"NtProcess::doTerminate(NTSTATUS) NtTerminateProcess"));
+        }
+    };
+
+    enum class NtServiceErrorControl {
+        ControlCritical = SERVICE_ERROR_CRITICAL,
+        ControlIgnore = SERVICE_ERROR_IGNORE,
+        ControlNormal = SERVICE_ERROR_NORMAL,
+        ControlSevere = SERVICE_ERROR_SEVERE
+    };
+
+    enum class NtServiceStartType {
+        TypeAuto = SERVICE_AUTO_START,
+        TypeBoot = SERVICE_BOOT_START,
+        TypeDemand = SERVICE_DEMAND_START,
+        TypeDisabled = SERVICE_DISABLED,
+        TypeSystem = SERVICE_SYSTEM_START
+    };
+
+    class NtService final : public Object {
     private:
         SC_HANDLE ServiceHandle;
         String ServiceName;
         String ServicePath;
-        SERVICE_ERROR_TYPE ServiceErrorControl;
-        SERVICE_LOAD_TYPE ServiceStartType;
+        NtServiceErrorControl ServiceErrorControl;
+        NtServiceStartType ServiceStartType;
         SERVICE_NODE_TYPE ServiceType;
+        std::set<String> ServiceDependencySet;
     public:
-        NtService(SC_HANDLE Handle, const String &Name, const String &Path, DWORD ErrorControl, DWORD StartType, DWORD Type) : ServiceHandle(Handle), ServiceName(Name), ServicePath(Path), ServiceErrorControl((SERVICE_ERROR_TYPE) ErrorControl), ServiceStartType((SERVICE_LOAD_TYPE) StartType), ServiceType((SERVICE_NODE_TYPE) Type) {}
+        NtService(SC_HANDLE ServiceHandleSource, const String &ServiceNameSource, const String &ServicePathSource, const NtServiceErrorControl &ServiceErrorControlSource, const NtServiceStartType &ServiceStartTypeSource, DWORD ServiceTypeSource) : ServiceHandle(ServiceHandleSource), ServiceName(ServiceNameSource), ServicePath(ServicePathSource), ServiceErrorControl(ServiceErrorControlSource), ServiceStartType(ServiceStartTypeSource), ServiceType((SERVICE_NODE_TYPE) ServiceTypeSource) {
+            if (!ServiceHandleSource) throw Exception(String(u"NtService::NtService(SC_HANDLE, const String&, const String&, const String&, const NtServiceErrorControl&, const NtServiceStartType&, DWORD) ServiceHandleSource"));
+        }
 
         ~NtService() noexcept {
             if (ServiceHandle) {
                 CloseServiceHandle(ServiceHandle);
                 ServiceHandle = nullptr;
             }
+        }
+
+        void addDependency(const NtService &ServiceDependency) noexcept {
+            ServiceDependencySet.insert(ServiceDependency.ServiceName);
         }
 
         void doControl(DWORD ServiceControl) const {
@@ -84,11 +227,19 @@ namespace eLibrary {
                 throw Exception(String(u"NtService::doStart(DWORD, void**) StartServiceW"));
         }
 
-        SERVICE_ERROR_TYPE getServiceErrorControl() const noexcept {
+        NtServiceErrorControl getServiceErrorControl() const noexcept {
             return ServiceErrorControl;
         }
 
-        SERVICE_LOAD_TYPE getServiceStartType() const noexcept {
+        String getServiceName() const noexcept {
+            return ServiceName;
+        }
+
+        String getServicePath() const noexcept {
+            return ServicePath;
+        }
+
+        NtServiceStartType getServiceStartType() const noexcept {
             return ServiceStartType;
         }
 
@@ -103,26 +254,43 @@ namespace eLibrary {
             return ServiceStatus.dwCurrentState;
         }
 
-        void setServiceErrorControl(SERVICE_ERROR_TYPE ErrorControl) {
-            ServiceErrorControl = ErrorControl;
-            if (!ChangeServiceConfigW(ServiceHandle, ServiceType, ServiceStartType, ServiceErrorControl, ServicePath.toWString().c_str(), nullptr, nullptr, nullptr, nullptr, nullptr, nullptr))
-                throw Exception(String(u"NtServcie::setServiceErrorControl(SERVICE_ERROR_TYPE) ChangeServiceConfigW"));
+        void removeDependency(const NtService &ServiceDependency) {
+            if (!ServiceDependencySet.contains(ServiceDependency.ServiceName))
+                throw Exception(String(u"NtService::removeDependency(const NtService&) ServiceDependency"));
+            ServiceDependencySet.erase(ServiceDependency.ServiceName);
         }
 
-        void setServiceStartType(SERVICE_LOAD_TYPE StartType) {
-            ServiceStartType = StartType;
-            if (!ChangeServiceConfigW(ServiceHandle, ServiceType, ServiceStartType, ServiceErrorControl, ServicePath.toWString().c_str(), nullptr, nullptr, nullptr, nullptr, nullptr, nullptr))
-                throw Exception(String(u"NtServcie::setServiceStartControl(SERVICE_LOAD_TYPE) ChangeServiceConfigW"));
+        void setServiceErrorControl(const NtServiceErrorControl &ServiceErrorControlSource) {
+            ServiceErrorControl = ServiceErrorControlSource;
+            updateServiceConfiguration();
         }
 
-        void setServiceType(SERVICE_NODE_TYPE Type) {
-            ServiceType = Type;
-            if (!ChangeServiceConfigW(ServiceHandle, ServiceType, ServiceStartType, ServiceErrorControl, ServicePath.toWString().c_str(), nullptr, nullptr, nullptr, nullptr, nullptr, nullptr))
-                throw Exception(String(u"NtServcie::setServiceType(SERVICE_NODE_TYPE) ChangeServiceConfigW"));
+        void setServicePath(const String &ServicePathSource) {
+            ServicePath.doAssign(ServicePathSource);
+            updateServiceConfiguration();
+        }
+
+        void setServiceStartType(const NtServiceStartType &ServiceStartTypeSource) {
+            ServiceStartType = ServiceStartTypeSource;
+            updateServiceConfiguration();
+        }
+
+        void setServiceType(SERVICE_NODE_TYPE ServiceTypeSource) {
+            ServiceType = ServiceTypeSource;
+            updateServiceConfiguration();
+        }
+
+        void updateServiceConfiguration() const {
+            std::basic_stringstream<wchar_t> ServiceDependencyStream;
+            for (const auto &ServiceDependency : ServiceDependencySet)
+                ServiceDependencyStream << ServiceDependency.toWString() << L'\0';
+            ServiceDependencyStream << L'\0';
+            if (!ChangeServiceConfigW(ServiceHandle, ServiceType, (DWORD) ServiceStartType, (DWORD) ServiceErrorControl, ServicePath.toWString().c_str(), nullptr, nullptr, ServiceDependencyStream.str().c_str(), nullptr, nullptr, ServiceName.toWString().c_str()))
+                throw Exception(String(u"NtServcie::updateServiceConfiguration() ChangeServiceConfigW"));
         }
     };
 
-    class NtServiceManager final {
+    class NtServiceManager final : public Object {
     private:
         SC_HANDLE ManagerHandle;
     public:
@@ -138,9 +306,9 @@ namespace eLibrary {
             }
         }
 
-        NtService doCreateService(const String &ServiceName, const String &ServicePath, DWORD ServiceType, DWORD ServiceStartType, DWORD ServiceErrorControl) const {
-            SC_HANDLE ServiceHandle = CreateServiceW(ManagerHandle, ServiceName.toWString().c_str(), ServiceName.toWString().c_str(), SERVICE_ALL_ACCESS, ServiceType, ServiceStartType, ServiceErrorControl, ServicePath.toWString().c_str(), nullptr, nullptr, nullptr, nullptr, nullptr);
-            if (!ServiceHandle) throw Exception(String(u"NtServiceManager::doCreateService(const String&, const String&, DWORD, DWORD, DWORD) CreateServiceW"));
+        NtService doCreateService(const String &ServiceName, const String &ServicePath, DWORD ServiceType, const NtServiceStartType &ServiceStartType, const NtServiceErrorControl &ServiceErrorControl) const {
+            SC_HANDLE ServiceHandle = CreateServiceW(ManagerHandle, ServiceName.toWString().c_str(), ServiceName.toWString().c_str(), SERVICE_ALL_ACCESS, ServiceType, (DWORD) ServiceStartType, (DWORD) ServiceErrorControl, ServicePath.toWString().c_str(), nullptr, nullptr, nullptr, nullptr, nullptr);
+            if (!ServiceHandle) throw Exception(String(u"NtServiceManager::doCreateService(const String&, const String&, DWORD, const NtServiceStartType&, const NtServiceErrorControl&) CreateServiceW"));
             return NtService(ServiceHandle, ServiceName, ServicePath, ServiceErrorControl, ServiceStartType, ServiceType);
         }
 
@@ -150,30 +318,26 @@ namespace eLibrary {
             QUERY_SERVICE_CONFIGW ServiceConfiguration;
             if (!QueryServiceConfigW(ServiceHandle, &ServiceConfiguration, sizeof(QUERY_SERVICE_CONFIGW), nullptr))
                 throw Exception(String(u"NtServiceManager::doOpenService(const String&) QueryServiceConfigW"));
-            return NtService(ServiceHandle, ServiceName, String(ServiceConfiguration.lpBinaryPathName), ServiceConfiguration.dwErrorControl, ServiceConfiguration.dwServiceType, ServiceConfiguration.dwStartType);
+            return NtService(ServiceHandle, ServiceName, String(ServiceConfiguration.lpBinaryPathName), (NtServiceErrorControl) ServiceConfiguration.dwErrorControl, (NtServiceStartType) ServiceConfiguration.dwStartType, ServiceConfiguration.dwServiceType);
         }
     };
 
-    class NtDriver final {
+    class NtDriver final : public Object {
     private:
-        DWORD DriverErrorControl;
+        NtServiceErrorControl DriverErrorControl;
         HANDLE DriverFileHandle;
         String DriverFilePath;
         String DriverServiceName;
-        DWORD DriverStartType;
+        NtServiceStartType DriverStartType;
     public:
-        NtDriver(const String &FilePath, const String &Name, DWORD ErrorControl, DWORD StartType) noexcept : DriverErrorControl(ErrorControl), DriverFileHandle(nullptr), DriverFilePath(FilePath), DriverServiceName(Name), DriverStartType(StartType) {}
+        NtDriver(const String &DriverFilePathSource, const String &DriverServiceNameSource, const NtServiceErrorControl &DriverErrorControlSource, const NtServiceStartType &DriverStartTypeSource) noexcept : DriverErrorControl(DriverErrorControlSource), DriverFileHandle(nullptr), DriverFilePath(DriverFilePathSource), DriverServiceName(DriverServiceNameSource), DriverStartType(DriverStartTypeSource) {}
 
         ~NtDriver() noexcept {
-            if (DriverFileHandle && DriverFileHandle != INVALID_HANDLE_VALUE) CloseHandle(DriverFileHandle);
-        }
-
-        void doCancel() const {
-            if (!CancelIo(DriverFileHandle)) throw Exception(String(u"NtDriver::doCancel() CancelIo"));
+            if (DriverFileHandle) CloseHandle(DriverFileHandle);
         }
 
         void doClose() {
-            if (!DriverFileHandle || DriverFileHandle == INVALID_HANDLE_VALUE) throw Exception(String(u"NtDriver::doClose() DriverFileHandle"));
+            if (!DriverFileHandle) throw Exception(String(u"NtDriver::doClose() DriverFileHandle"));
             CloseHandle(DriverFileHandle);
         }
 
@@ -184,12 +348,10 @@ namespace eLibrary {
 
         void doLoadNt() {
             NtModule ModuleNtDll(String(u"ntdll.dll"));
-            NtCloseType NtClose = (NtCloseType) ModuleNtDll.getFunction(String(u"NtClose"));
             NtCreateKeyType NtCreateKey = (NtCreateKeyType) ModuleNtDll.getFunction(String(u"NtCreateKey"));
             NtLoadDriverType NtLoadDriver = (NtLoadDriverType) ModuleNtDll.getFunction(String(u"NtLoadDriver"));
             NtSetValueKeyType NtSetValueKey = (NtSetValueKeyType) ModuleNtDll.getFunction(String(u"NtSetValueKey"));
             RtlAdjustPrivilegeType RtlAdjustPrivilege = (RtlAdjustPrivilegeType) ModuleNtDll.getFunction(String(u"RtlAdjustPrivilege"));
-            RtlInitUnicodeStringType RtlInitUnicodeString = (RtlInitUnicodeStringType) ModuleNtDll.getFunction(String(u"RtlInitUnicodeString"));
 
             std::basic_stringstream<wchar_t> DriverImagePathStream;
             DriverImagePathStream << L"\\??\\" << DriverFilePath.toWString();
@@ -244,7 +406,6 @@ namespace eLibrary {
             NtModule ModuleNtDll(String(u"ntdll.dll"));
             NtUnloadDriverType NtUnloadDriver = (NtUnloadDriverType) ModuleNtDll.getFunction(String(u"NtUnloadDriver"));
             RtlAdjustPrivilegeType RtlAdjustPrivilege = (RtlAdjustPrivilegeType) ModuleNtDll.getFunction(String(u"RtlAdjustPrivilege"));
-            RtlInitUnicodeStringType RtlInitUnicodeString = (RtlInitUnicodeStringType) ModuleNtDll.getFunction(String(u"RtlInitUnicodeString"));
 
             std::basic_stringstream<wchar_t> DriverRegistrationPathStream;
             DriverRegistrationPathStream << L"\\Registry\\Machine\\System\\CurrentControlSet\\Services\\" << DriverServiceName.toWString();
