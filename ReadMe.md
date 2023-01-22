@@ -24,6 +24,10 @@ Project Subproject:
 + [eLibraryDriver](https://github.com/ldgeng/eLibraryDriver)
 
 Project Update Log:
+> eLibrary V2023.03
+- Core::ArrayList begin / end(Remove) doFind(From doFindElement)
+- Core::ArrayListIterator(Remove)
+- Core::ConcurrentArrayList / addElement / doClear / doFind / getElement / getElementSize / removeElement / removeIndex / setElement / toArray / toString(New)
 > eLibrary V2023.02
 - Core::ArrayList doConcat / toArray(New) toString(...)
 - Core::Comparable(New)

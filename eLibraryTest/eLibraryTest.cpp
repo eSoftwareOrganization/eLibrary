@@ -133,7 +133,6 @@ TEST_CASE("IntegerPower") {
     });
 }
 
-
 TEST_CASE("IntegerPrime") {
     RandomEngine.seed(RandomDevice() + time(nullptr));
 

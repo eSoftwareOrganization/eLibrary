@@ -3,6 +3,7 @@
 #include <Core/Exception.hpp>
 
 #include <array>
+#include <mutex>
 
 namespace eLibrary {
     template<typename E>
@@ -81,8 +82,6 @@ namespace eLibrary {
             ++ElementSize;
         }
 
-        ArrayListIterator<E> begin() const noexcept;
-
         void doClear() noexcept {
             if (ElementCapacity && ElementSize && ElementContainer) {
                 ElementCapacity = 0;
@@ -104,13 +103,11 @@ namespace eLibrary {
             ElementSize += ElementSource.ElementSize;
         }
 
-        intmax_t doFindElement(const E &ElementSource) const noexcept {
+        intmax_t doFind(const E &ElementSource) const noexcept {
             for (intmax_t ElementIndex = 0; ElementIndex < ElementSize; ++ElementIndex)
                 if (ElementContainer[ElementIndex] == ElementSource) return ElementIndex;
             return -1;
         }
-
-        ArrayListIterator<E> end() const noexcept;
 
         E getElement(intmax_t ElementIndex) const {
             if (ElementIndex < 0) ElementIndex += ElementSize;
@@ -182,44 +179,66 @@ namespace eLibrary {
     };
 
     template<typename E>
-    class ArrayListIterator final {
+    class ConcurrentArrayList final : public Object {
     private:
-        E *ElementSource;
-        intmax_t ElementCurrent;
-        intmax_t ElementSize;
+        ArrayList<E> ElementList;
+        mutable std::mutex ElementMutex;
     public:
-        ArrayListIterator(E *Source, intmax_t SourceSize, intmax_t Position) noexcept : ElementSource(Source), ElementCurrent(Position), ElementSize(SourceSize) {}
-
-        ArrayListIterator<E> operator++() noexcept {
-            ++ElementCurrent;
-            return *this;
+        void addElement(const E &ElementSource) noexcept {
+            std::lock_guard<std::mutex> ElementLockGuard(ElementMutex);
+            ElementList.addElement(ElementSource);
         }
 
-        ArrayListIterator<E> operator++(int) noexcept {
-            return ArrayListIterator<E>(ElementSource, ElementCurrent++);
+        void addElement(intmax_t ElementIndex, const E &ElementSource) {
+            std::lock_guard<std::mutex> ElementLockGuard(ElementMutex);
+            ElementList.addElement(ElementIndex, ElementSource);
         }
 
-        E operator*() const {
-            if (ElementCurrent >= ElementSize) throw Exception(String(u"ArrayListIterator<E>::operator*() ElementCurrent"));
-            return ElementSource[ElementCurrent];
+        void doClear() noexcept {
+            std::lock_guard<std::mutex> ElementLockGuard(ElementMutex);
+            ElementList.doClear();
         }
 
-        bool operator!=(const ArrayListIterator<E> &IteratorOther) const noexcept {
-            return ElementSource != IteratorOther.ElementSource || ElementCurrent != IteratorOther.ElementCurrent;
+        intmax_t doFind(const E &ElementSource) const noexcept {
+            std::lock_guard<std::mutex> ElementLockGuard(ElementMutex);
+            return ElementList.doFind(ElementSource);
         }
 
-        ArrayListIterator<E> &operator=(const ArrayListIterator<E> &IteratorSource) noexcept = delete;
+        E getElement(intmax_t ElementIndex) const {
+            std::lock_guard<std::mutex> ElementLockGuard(ElementMutex);
+            return ElementList.getElement(ElementIndex);
+        }
+
+        intmax_t getElementSize() {
+            std::lock_guard<std::mutex> ElementLockGuard(ElementMutex);
+            return ElementList.getElementSize();
+        }
+
+        void removeElement(const E &ElementSource) {
+            std::lock_guard<std::mutex> ElementLockGuard(ElementMutex);
+            ElementList.removeElement(ElementSource);
+        }
+
+        void removeIndex(intmax_t ElementIndex) {
+            std::lock_guard<std::mutex> ElementLockGuard(ElementMutex);
+            ElementList.removeIndex(ElementIndex);
+        }
+
+        void setElement(intmax_t ElementIndex, const E &ElementSource) {
+            std::lock_guard<std::mutex> ElementLockGuard(ElementMutex);
+            ElementList.setElement(ElementIndex, ElementSource);
+        }
+
+        auto toArray() const noexcept {
+            std::lock_guard<std::mutex> ElementLockGuard(ElementMutex);
+            return ElementList.toArray();
+        }
+
+        String toString() const noexcept override {
+            std::lock_guard<std::mutex> ElementLockGuard(ElementMutex);
+            return ElementList.toString();
+        }
     };
-
-    template<typename E>
-    ArrayListIterator<E> ArrayList<E>::begin() const noexcept {
-        return ArrayListIterator<E>(ElementContainer, ElementSize, 0);
-    }
-
-    template<typename E>
-    ArrayListIterator<E> ArrayList<E>::end() const noexcept {
-        return ArrayListIterator<E>(ElementContainer, ElementSize, ElementSize);
-    }
 
     template<typename E>
     class DoubleLinkedList final : public Object {
