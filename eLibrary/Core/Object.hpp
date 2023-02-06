@@ -9,6 +9,8 @@ namespace eLibrary {
 
     class Object {
     public:
+        virtual ~Object() noexcept = default;
+
         virtual intmax_t hashCode() const noexcept {
             return (intmax_t) this;
         }

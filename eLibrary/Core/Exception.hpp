@@ -14,13 +14,17 @@ namespace eLibrary {
         std::string ErrorDetail;
         String ErrorMessage;
     public:
-        explicit Exception(const String &Message) noexcept : ErrorMessage(Message) {
+        explicit Exception(const String &ErrorMessageSource) noexcept : ErrorMessage(ErrorMessageSource) {
             std::stringstream ObjectStream;
+            ObjectStream <<
 #ifdef __GNUC__
-            ObjectStream << abi::__cxa_demangle(typeid(*this).name(), nullptr, nullptr, nullptr) << ' ' << ErrorMessage.toU8String();
-#else
-            ObjectStream << typeid(*this).name() << ' ' << ErrorMessage.toU8String();
+            abi::__cxa_demangle(
 #endif
+            typeid(*this).name()
+#ifdef __GNUC__
+            , nullptr, nullptr, nullptr)
+#endif
+            << ' ' << ErrorMessage.toU8String();
             ErrorDetail = ObjectStream.str();
         }
 
@@ -31,10 +35,5 @@ namespace eLibrary {
         const char *what() const noexcept override {
             return ErrorDetail.data();
         }
-    };
-
-    class IOException final : public Exception {
-    public:
-        explicit IOException(const String &Message) noexcept : Exception(Message) {}
     };
 }

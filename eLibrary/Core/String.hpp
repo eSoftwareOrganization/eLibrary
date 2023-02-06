@@ -2,11 +2,9 @@
 
 #include <algorithm>
 #include <codecvt>
-#include <cuchar>
+#include <cstring>
 #include <locale>
 #include <map>
-#include <queue>
-#include <sstream>
 #include <string>
 
 #include <Core/Object.hpp>
@@ -19,6 +17,14 @@ namespace eLibrary {
         uintmax_t *CharacterReference;
     public:
         String() noexcept: CharacterSize(0), CharacterContainer(nullptr) {
+            CharacterReference = new uintmax_t;
+            *CharacterReference = 1;
+        }
+
+        explicit String(char16_t CharacterSource) noexcept : CharacterSize(1) {
+            CharacterContainer = new char16_t[2];
+            CharacterContainer[0] = CharacterSource;
+            CharacterContainer[1] = char16_t();
             CharacterReference = new uintmax_t;
             *CharacterReference = 1;
         }
@@ -69,7 +75,7 @@ namespace eLibrary {
                 CharacterSize = 0;
                 delete[] CharacterContainer;
                 CharacterContainer = nullptr;
-                delete[] CharacterReference;
+                delete CharacterReference;
                 CharacterReference = nullptr;
             }
         }
@@ -92,17 +98,9 @@ namespace eLibrary {
             return 0;
         }
 
-        String doConcat(char16_t CharacterSource) const noexcept {
-            std::basic_stringstream<char16_t> CharacterStream;
-            CharacterStream << CharacterContainer << CharacterSource;
-            return CharacterStream.str();
-        }
+        String doConcat(char16_t CharacterSource) const noexcept;
 
-        String doConcat(const String &StringOther) const noexcept {
-            std::basic_stringstream<char16_t> CharacterStream;
-            CharacterStream << CharacterContainer << StringOther.CharacterContainer;
-            return CharacterStream.str();
-        }
+        String doConcat(const String &StringOther) const noexcept;
 
         intmax_t doFind(char16_t CharacterSource) const noexcept {
             for (char16_t CharacterIndex = 0;CharacterIndex < CharacterSize;++CharacterIndex)
@@ -119,35 +117,13 @@ namespace eLibrary {
             return -1;
         }
 
-        String doReplace(const String &StringTarget, const String &StringSource) noexcept {
-            std::basic_stringstream<char16_t> CharacterStream;
-            std::u16string StringSource16(StringSource.toU16String());
-            for (intmax_t Character1 = 0, Character2;Character1 < CharacterSize;++Character1) {
-                for (Character2 = 0; Character2 < StringTarget.CharacterSize && CharacterContainer[Character1 + Character2] == StringTarget.CharacterContainer[Character2]; ++Character2);
-                if (Character2 == StringTarget.CharacterSize) {
-                    CharacterStream << StringSource16;
-                    Character1 += StringTarget.CharacterSize - 1;
-                } else CharacterStream << CharacterContainer[Character1];
-            }
-            return CharacterStream.str();
-        }
+        String doReplace(const String &StringTarget, const String &StringSource) const noexcept;
 
-        String doStrip(char16_t CharacterSource) const noexcept {
-            std::basic_stringstream<char16_t> CharacterStream;
-            for (intmax_t CharacterIndex = 0; CharacterIndex < CharacterSize; ++CharacterIndex)
-                if (CharacterContainer[CharacterIndex] != CharacterSource) CharacterStream << CharacterContainer[CharacterIndex];
-            return CharacterStream.str();
-        }
+        String doReverse() const noexcept;
 
-        String doStrip(const String &StringTarget) noexcept {
-            std::basic_stringstream<char16_t> StringStream;
-            for (intmax_t Character1 = 0, Character2;Character1 < CharacterSize;++Character1) {
-                for (Character2 = 0; Character2 < StringTarget.CharacterSize && CharacterContainer[Character1 + Character2] == StringTarget.CharacterContainer[Character2]; ++Character2);
-                if (Character2 == StringTarget.CharacterSize) Character1 += StringTarget.CharacterSize - 1;
-                else StringStream << CharacterContainer[Character1];
-            }
-            return StringStream.str();
-        }
+        String doStrip(char16_t CharacterSource) const noexcept;
+
+        String doStrip(const String &StringTarget) noexcept;
 
         String doTruncate(intmax_t CharacterStart, intmax_t CharacterStop) const;
 
@@ -197,24 +173,13 @@ namespace eLibrary {
         }
 
         String &operator=(const String &StringSource) noexcept {
-            if (&StringSource == this) return *this;
             doAssign(StringSource);
             return *this;
         }
 
-        String toLowerCase() const noexcept {
-            std::basic_stringstream<char16_t> CharacterStream;
-            for (intmax_t CharacterIndex = 0;CharacterIndex < CharacterSize;++CharacterIndex)
-                CharacterStream << towlower(CharacterContainer[CharacterIndex]);
-            return CharacterStream.str();
-        }
+        String toLowerCase() const noexcept;
 
-        String toUpperCase() const noexcept {
-            std::basic_stringstream<char16_t> CharacterStream;
-            for (intmax_t CharacterIndex = 0;CharacterIndex < CharacterSize;++CharacterIndex)
-                CharacterStream << towupper(CharacterContainer[CharacterIndex]);
-            return CharacterStream.str();
-        }
+        String toUpperCase() const noexcept;
 
         String toString() const noexcept override {
             return *this;
@@ -235,33 +200,66 @@ namespace eLibrary {
         }
 
         std::wstring toWString() const noexcept {
-            std::u16string U16String = CharacterContainer;
-            return std::wstring(U16String.begin(), U16String.end());
+            return {CharacterContainer, CharacterContainer + CharacterSize + 1};
         }
 
-        template<typename T> requires std::is_integral<T>::value
-        static String valueOf(T ObjectSource, unsigned short NumberRadix = 10) noexcept {
-            static std::map<unsigned short, char16_t> NumberDigitMapping;
-            if (NumberDigitMapping.empty()) {
-                for (unsigned short NumberDigit = 0; NumberDigit < 10; ++NumberDigit)
-                    NumberDigitMapping[NumberDigit] = char16_t(NumberDigit + 48);
-                for (unsigned short NumberDigit = 0; NumberDigit < 26; ++NumberDigit)
-                    NumberDigitMapping[NumberDigit + 10] = char16_t(NumberDigit + 65);
-            }
-            std::deque<char16_t> NumberDeque;
-            bool NumberNegative = false;
-            if (ObjectSource < 0) NumberNegative = true, ObjectSource = -ObjectSource;
-            while (ObjectSource) {
-                NumberDeque.push_front(NumberDigitMapping[ObjectSource % NumberRadix]);
-                ObjectSource /= NumberRadix;
-            }
-            if (NumberNegative) NumberDeque.push_front(u'-');
-            return std::u16string(NumberDeque.begin(), NumberDeque.end());
-        }
-
-        template<typename T> requires std::is_base_of<Object, T>::value
+        template<std::derived_from<Object> T>
         static String valueOf(const T &ObjectSource) noexcept {
             return ObjectSource.toString();
+        }
+    };
+
+    class StringStream final : public Object {
+    private:
+        uintmax_t CharacterCapacity;
+        uintmax_t CharacterSize;
+        char16_t *CharacterContainer;
+    public:
+        constexpr StringStream() : CharacterCapacity(0), CharacterSize(0), CharacterContainer(nullptr) {}
+
+        ~StringStream() noexcept {
+            doClear();
+        }
+
+        void addCharacter(char16_t CharacterSource) noexcept {
+            if (CharacterCapacity == 0) CharacterContainer = new char16_t[CharacterCapacity = 1];
+            if (CharacterSize == CharacterCapacity) {
+                auto *CharacterBuffer = new char16_t[CharacterCapacity];
+                memcpy(CharacterBuffer, CharacterContainer, sizeof(char16_t) * CharacterSize);
+                delete[] CharacterContainer;
+                CharacterContainer = new char16_t[CharacterCapacity <<= 1];
+                memcpy(CharacterContainer, CharacterBuffer, sizeof(char16_t) * CharacterSize);
+                delete[] CharacterBuffer;
+            }
+            CharacterContainer[CharacterSize++] = CharacterSource;
+        }
+
+        void addString(const std::u16string &StringSource) noexcept {
+            if (CharacterSize + StringSource.size() > CharacterCapacity) {
+                while (CharacterSize + StringSource.size() > CharacterCapacity) CharacterCapacity <<= 1;
+                auto *ElementBuffer = new char16_t[CharacterSize];
+                memcpy(ElementBuffer, CharacterContainer, sizeof(char16_t) * CharacterSize);
+                delete[] CharacterContainer;
+                CharacterContainer = new char16_t[CharacterCapacity];
+                memcpy(CharacterContainer, ElementBuffer, sizeof(char16_t) * CharacterSize);
+                delete[] ElementBuffer;
+            }
+            memcpy(CharacterContainer + CharacterSize, StringSource.data(), sizeof(char16_t) * StringSource.size());
+            CharacterSize += StringSource.size();
+        }
+
+        void doClear() noexcept {
+            if (CharacterCapacity && CharacterSize && CharacterContainer) {
+                CharacterCapacity = 0;
+                CharacterSize = 0;
+                delete[] CharacterContainer;
+                CharacterContainer = nullptr;
+            }
+        }
+
+        String toString() const noexcept override {
+            if (!CharacterContainer) return std::u16string(u"");
+            return std::u16string(CharacterContainer, CharacterContainer + CharacterSize);
         }
     };
 }

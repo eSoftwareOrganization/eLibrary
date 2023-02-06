@@ -2,28 +2,46 @@
 
 ![](Scroll.png)
 
-![](https://img.shields.io/badge/License-LGPL%202.1-red.svg)
+![](https://img.shields.io/badge/License-Apache%202.0-red.svg)
 
-Project Author: ldgeng(ldgeng@outlook.com)
+Project Community:
++ [Discord](https://discord.gg/ejYKQZpxkx)
 
-Project Community: [Discord](https://discord.gg/uvktZHHX)
+Project Dependencies:
++ [doctest](https://github.com/doctest/doctest)
++ [nanobench](https://github.com/martinus/nanobench)
 
-Project Destination: An all-in-one cpp library
+Project Description: An all-in-one cpp library
 
-Project Repository: [GitHub](https://github.com/ldgeng/eLibrary)
-
-Project Source:
-+ [Core::Integer](https://blog.csdn.net/code4101/article/details/38705155) @code4101
-+ [Core::Mathematics](https://www.cnblogs.com/CocoonFan/p/3164221.html) @CocoonFan
-+ [Core::Mathematics](https://github.com/sympy/sympy) @sympy
-+ [IO::AudioSegment](https://github.com/jiaaro/pydub) @Jiaaro
-+ [Benchmark](https://github.com/martinus/nanobench)
-+ [Test](https://github.com/doctest/doctest)
-
-Project Subproject:
-+ [eLibraryDriver](https://github.com/ldgeng/eLibraryDriver)
+Project Reference:
++ [pydub](https://github.com/jiaaro/pydub)
++ [sympy](https://github.com/sympy/sympy)
++ [\<Unnamed>](https://blog.csdn.net/code4101/article/details/38705155)
++ [\<Unnamed>](https://www.cnblogs.com/CocoonFan/p/3164221.html)
 
 Project Update Log:
+> eLibrary V2023.04
+- Core::ArrayList ~Constructor(...) doAssign / operator= / toSTLVector(New) doConcat(Memory Overflow Fix) Constructor(std::array\<>) / doReverse(New) indexOf(From doFind) toString(StringStream Implementation)
+- Core::ConcurrentArrayList Constructor(std::array\<E, ElementSourceSize>) / doConcat / doReverse(New) indexOf(From doFind)
+- Core::DoubleLinkedList begin / end / LinkedListIterator(Remove) indexOf(From doFindElement + Modifier + Segment Fault Fix) toString(StringStream Implementation)
+- Core::Fraction getValue(Overflow Protection)
+- Core::Integer Constructor(T)(std::numeric_limits<intmax_t>::min()) doCompare(Signature) isNegative / isPositive(0) isEven / isOdd / NumberBaseUnit(New) getValue(Overflow Protection) toString(StringStream Implementation)
+- Core::Mathematics doCosineFraction / doExponentFraction / doInverseHyperbolicTangentFraction(Parameter`NumberPrecision`) getAbsolute(New) isPrimeLucas(Implementation) isPrimeRabinMiller(Integer::isEven Implementation)
+- Core::Object ~Constructor(New)
+- Core::SingleLinkedList begin / end / LinkedListIterator(Remove) doFind(From doFindElement + Segment Fault Fix) toString(StringStream Implementation)
+- Core::String Constructor(char16_t)(New) doConcat / doReplace / doStrip / doTruncate / toLowerCase / toUpperCase(StringStream Implementation) doReplace(Modifier) doReverse(New) toWString(...) valueOf(T, \[unsigned short])(Remove)
+- Core::StringStream addCharacter / addString / doClear() / toString(New)
+- Core::NtDriver Constructor(Parameter)
+- Core::NtFile NtFileAccess / NtFileAttribute / NtFileDisposition / NtFileOption / NtFileShare(From Core::*)
+- Core::NtService NtServiceErrorControl / NtServiceStartType(From Core::*) NtServiceType(New)
+- Core::NtServiceManager doCreateService
+- IO::AudioSegment doOpenWAV(Remove)
+- IO::FastBufferedInputStream(Remove)
+- IO::FastBufferedOutputStream(Remove)
+- IO::InputStream doRead(byte[], int, int) / doSkip(Remove)
+- IO::IOException(Remove)
+- IO::OutputStream doWrite(byte[], int, int)(Remove)
+- IO::SocketInetAddress Constructor(...)
 > eLibrary V2023.03
 - Core::ArrayList begin / end(Remove) doFind(From doFindElement)
 - Core::ArrayListIterator(Remove)
@@ -62,16 +80,16 @@ Project Update Log:
 - std::equal_to\<Comparable>
 - std::less\<Comparable>
 - std::less_equal\<Comparable>
-- std::greater\<Comparable\>
-- std::greater_equal\<Comparable\>
-- std::hash\<Hashable\>
-- std::not_equal_to\<Comparable\>
+- std::greater\<Comparable>
+- std::greater_equal\<Comparable>
+- std::hash\<Hashable>
+- std::not_equal_to\<Comparable>
 >eLibrary V2023.01
 - Core::NtDriver doLoadSC(NtServiceManager::doCreateService Implementation)
 - Core::NtService getServiceErrorControl / getServiceStartType / getServiceState / getServiceType / setServiceErrorControl / setServiceStartType / setServiceType(New)
 - Core::NtServiceManager doCreateService(NtService Implementation)
-- std::less\<String\>
-- std::greater\<String\>
+- std::less\<String>
+- std::greater\<String>
 >eLibrary V2022.16
 - Core::NtDriver(KeDriver) doLoadNt / doUnloadNt (NtModule Implementation) doLoadSC / doUnloadSC(NtService / NtServiceManager Implementation) doRead / doWrite(New) doLoadSC / doUnloadNt / doUnloadSC(Modifier)
 - Core::NtModule / getFunction(New)

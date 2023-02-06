@@ -1,4 +1,5 @@
 #include <Core/String.hpp>
+#include <sstream>
 
 #ifdef __GNUC__
 #include <cxxabi.h>

@@ -4,11 +4,7 @@ project(eLibrary)
 
 include_directories(eLibrary)
 
-if (WIN32)
-add_compile_definitions(eLibraryCore_WindowsNT)
-endif()
-
-add_compile_options(-march=native -Wall)
+add_compile_options(-Wall)
 
 set(CMAKE_CXX_STANDARD 20)
 

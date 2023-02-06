@@ -34,66 +34,6 @@ namespace eLibrary {
             }
         } *NodeRoot;
 
-        void doRemoveFixup(RedBlackNode *NodeChild, RedBlackNode *NodeParent) noexcept {
-            while ((!NodeChild || NodeChild->NodeColor == ColorBlack) && NodeChild != NodeRoot)
-                if (NodeParent->NodeChildLeft == NodeChild) {
-                    RedBlackNode *NodeUncle = NodeParent->NodeChildRight;
-                    if (NodeUncle->NodeColor == ColorRed) {
-                        NodeParent->NodeColor = ColorRed;
-                        NodeUncle->NodeColor = ColorBlack;
-                        doRotateLeft(NodeParent);
-                        NodeUncle = NodeParent->NodeChildRight;
-                    }
-                    if ((!NodeUncle->NodeChildLeft || NodeUncle->NodeChildLeft->NodeColor == ColorBlack) &&
-                        (!NodeUncle->NodeChildRight || NodeUncle->NodeChildRight->NodeColor == ColorBlack)) {
-                        NodeUncle->NodeColor = ColorRed;
-                        NodeChild = NodeParent;
-                        NodeParent = NodeChild->NodeParent;
-                    } else {
-                        if (!NodeUncle->NodeChildRight || NodeUncle->NodeChildRight->NodeColor == ColorBlack) {
-                            NodeUncle->NodeChildLeft->NodeColor = ColorBlack;
-                            NodeUncle->NodeColor = ColorRed;
-                            doRotateRight(NodeUncle);
-                            NodeUncle = NodeParent->NodeChildRight;
-                        }
-                        NodeUncle->NodeColor = NodeParent->NodeColor;
-                        NodeParent->NodeColor = ColorBlack;
-                        NodeUncle->NodeChildRight->NodeColor = ColorBlack;
-                        doRotateLeft(NodeParent);
-                        NodeChild = NodeRoot;
-                        break;
-                    }
-                } else {
-                    RedBlackNode *NodeUncle = NodeParent->NodeChildLeft;
-                    if (NodeUncle->NodeColor == ColorRed) {
-                        NodeParent->NodeColor = ColorRed;
-                        NodeUncle->NodeColor = ColorBlack;
-                        doRotateRight(NodeParent);
-                        NodeUncle = NodeParent->NodeChildLeft;
-                    }
-                    if ((!NodeUncle->NodeChildLeft || NodeUncle->NodeChildLeft->NodeColor == ColorBlack) &&
-                        (!NodeUncle->NodeChildRight || NodeUncle->NodeChildRight->NodeColor == ColorBlack)) {
-                        NodeUncle->NodeColor = ColorRed;
-                        NodeChild = NodeParent;
-                        NodeParent = NodeChild->NodeParent;
-                    } else {
-                        if (!NodeUncle->NodeChildLeft || NodeUncle->NodeChildLeft->NodeColor == ColorBlack) {
-                            NodeUncle->NodeChildRight->NodeColor = ColorBlack;
-                            NodeUncle->NodeColor = ColorRed;
-                            doRotateLeft(NodeUncle);
-                            NodeUncle = NodeParent->NodeChildLeft;
-                        }
-                        NodeUncle->NodeColor = NodeParent->NodeColor;
-                        NodeParent->NodeColor = ColorBlack;
-                        NodeUncle->NodeChildLeft->NodeColor = ColorBlack;
-                        doRotateRight(NodeParent);
-                        NodeChild = NodeRoot;
-                        break;
-                    }
-                }
-            if (NodeChild) NodeChild->NodeColor = ColorBlack;
-        }
-
         void doRotateLeft(RedBlackNode *NodeTarget) noexcept {
             auto *NodeChildRight = NodeTarget->NodeChildRight;
 
@@ -250,7 +190,7 @@ namespace eLibrary {
                 NodeReplace->NodeColor = NodeTarget->NodeColor;
                 NodeReplace->NodeParent = NodeTarget->NodeParent;
                 NodeTarget->NodeChildLeft->NodeParent = NodeReplace;
-                if (NodeColor == ColorBlack) doRemoveFixup(NodeChild, NodeParent);
+                if (NodeColor == ColorBlack) goto doRemoveFixup;
                 return;
             }
             NodeChild = NodeTarget->NodeChildLeft ? NodeTarget->NodeChildLeft : NodeTarget->NodeChildRight;
@@ -261,7 +201,65 @@ namespace eLibrary {
             else if (NodeParent->NodeChildLeft == NodeTarget)
                 NodeParent->NodeChildLeft = NodeChild;
             else NodeParent->NodeChildRight = NodeChild;
-            if (NodeColor == ColorBlack) doRemoveFixup(NodeChild, NodeParent);
+            if (NodeColor == ColorRed) return;
+            doRemoveFixup:
+            while ((!NodeChild || NodeChild->NodeColor == ColorBlack) && NodeChild != NodeRoot)
+                if (NodeParent->NodeChildLeft == NodeChild) {
+                    RedBlackNode *NodeUncle = NodeParent->NodeChildRight;
+                    if (NodeUncle->NodeColor == ColorRed) {
+                        NodeParent->NodeColor = ColorRed;
+                        NodeUncle->NodeColor = ColorBlack;
+                        doRotateLeft(NodeParent);
+                        NodeUncle = NodeParent->NodeChildRight;
+                    }
+                    if ((!NodeUncle->NodeChildLeft || NodeUncle->NodeChildLeft->NodeColor == ColorBlack) &&
+                        (!NodeUncle->NodeChildRight || NodeUncle->NodeChildRight->NodeColor == ColorBlack)) {
+                        NodeUncle->NodeColor = ColorRed;
+                        NodeChild = NodeParent;
+                        NodeParent = NodeChild->NodeParent;
+                    } else {
+                        if (!NodeUncle->NodeChildRight || NodeUncle->NodeChildRight->NodeColor == ColorBlack) {
+                            NodeUncle->NodeChildLeft->NodeColor = ColorBlack;
+                            NodeUncle->NodeColor = ColorRed;
+                            doRotateRight(NodeUncle);
+                            NodeUncle = NodeParent->NodeChildRight;
+                        }
+                        NodeUncle->NodeColor = NodeParent->NodeColor;
+                        NodeParent->NodeColor = ColorBlack;
+                        NodeUncle->NodeChildRight->NodeColor = ColorBlack;
+                        doRotateLeft(NodeParent);
+                        NodeChild = NodeRoot;
+                        break;
+                    }
+                } else {
+                    RedBlackNode *NodeUncle = NodeParent->NodeChildLeft;
+                    if (NodeUncle->NodeColor == ColorRed) {
+                        NodeParent->NodeColor = ColorRed;
+                        NodeUncle->NodeColor = ColorBlack;
+                        doRotateRight(NodeParent);
+                        NodeUncle = NodeParent->NodeChildLeft;
+                    }
+                    if ((!NodeUncle->NodeChildLeft || NodeUncle->NodeChildLeft->NodeColor == ColorBlack) &&
+                        (!NodeUncle->NodeChildRight || NodeUncle->NodeChildRight->NodeColor == ColorBlack)) {
+                        NodeUncle->NodeColor = ColorRed;
+                        NodeChild = NodeParent;
+                        NodeParent = NodeChild->NodeParent;
+                    } else {
+                        if (!NodeUncle->NodeChildLeft || NodeUncle->NodeChildLeft->NodeColor == ColorBlack) {
+                            NodeUncle->NodeChildRight->NodeColor = ColorBlack;
+                            NodeUncle->NodeColor = ColorRed;
+                            doRotateLeft(NodeUncle);
+                            NodeUncle = NodeParent->NodeChildLeft;
+                        }
+                        NodeUncle->NodeColor = NodeParent->NodeColor;
+                        NodeParent->NodeColor = ColorBlack;
+                        NodeUncle->NodeChildLeft->NodeColor = ColorBlack;
+                        doRotateRight(NodeParent);
+                        NodeChild = NodeRoot;
+                        break;
+                    }
+                }
+            if (NodeChild) NodeChild->NodeColor = ColorBlack;
         }
 
         std::optional<V> doSearch(const K &NodeKey) const noexcept {

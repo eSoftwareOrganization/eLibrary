@@ -2,12 +2,12 @@
 
 #include <Core/Exception.hpp>
 
-#include <io.h>
 #include <utility>
 
 #ifdef _WIN32
 #include <ws2tcpip.h>
 #else
+#include <arpa/inet.h>
 #include <netdb.h>
 #include <netinet/in.h>
 #include <sys/socket.h>
@@ -22,8 +22,9 @@ namespace eLibrary {
         unsigned short SocketPort;
     public:
         SocketInetAddress(const String &IP, unsigned short Port) : SocketIP(IP), SocketPort(Port) {
-            addrinfo SocketAddressInformationHint = {0};
-            if (getaddrinfo(SocketIP.toU8String().c_str(), String::valueOf(SocketPort).toU8String().c_str(), &SocketAddressInformationHint, &SocketAddressInformation) != 0)
+            addrinfo SocketAddressInformationHint = {};
+            memset(&SocketAddressInformationHint, 0, sizeof(addrinfo));
+            if (getaddrinfo(SocketIP.toU8String().c_str(), std::to_string(SocketPort).c_str(), &SocketAddressInformationHint, &SocketAddressInformation) != 0)
                 throw Exception(String(u"SocketInetAddress::SocketInetAddress(const String&, unsigned short) getaddrinfo"));
         }
 
@@ -114,7 +115,8 @@ namespace eLibrary {
         }
 
         Socket doAccept() const noexcept {
-            sockaddr SocketAddressSource = {0};
+            sockaddr SocketAddressSource = {};
+            memset(&SocketAddressSource, 0, sizeof(sockaddr));
             return Socket(accept(SocketSource, &SocketAddressSource, nullptr), (sockaddr_in*) &SocketAddressSource);
         }
 

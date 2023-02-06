@@ -22,10 +22,10 @@ namespace eLibrary {
             return NumberResult;
         }
 
-        static Fraction doCosineFraction(const Fraction &NumberSource) noexcept {
+        static Fraction doCosineFraction(const Fraction &NumberSource, const Integer &NumberPrecision = Integer(10000000)) noexcept {
             Fraction NumberResult(1), NumberTerminate(1);
             unsigned short NumberDigit = 2;
-            while (std::abs(NumberTerminate.getValue()) > 1e-12) {
+            while (NumberTerminate.getAbsolute().doCompare({1, NumberPrecision}) > 0) {
                 NumberTerminate = NumberTerminate.doMultiplication(NumberSource.doMultiplication(NumberSource).doDivision(Integer(NumberDigit * (NumberDigit - 1))).getOpposite());
                 NumberResult = NumberResult.doAddition(NumberTerminate);
                 NumberDigit += 2;
@@ -55,10 +55,10 @@ namespace eLibrary {
             return NumberResult;
         }
 
-        static Fraction doExponentFraction(const Fraction &NumberSource) noexcept {
+        static Fraction doExponentFraction(const Fraction &NumberSource, const Integer &NumberPrecision = Integer(10000000)) noexcept {
             Fraction NumberDenominator(1), NumberNumerator = NumberSource, NumberResult(1), NumberTerminate = NumberSource;
             unsigned short NumberDigit = 1;
-            while (std::abs(NumberTerminate.getValue()) > 1e-12) {
+            while (NumberTerminate.getAbsolute().doCompare({1, NumberPrecision}) > 0) {
                 NumberResult = NumberResult.doAddition(NumberTerminate);
                 NumberNumerator = NumberNumerator.doMultiplication(NumberSource);
                 NumberDenominator = NumberDenominator.doMultiplication(Integer(++NumberDigit));
@@ -107,10 +107,10 @@ namespace eLibrary {
             return NumberResult;
         }
 
-        static Fraction doInverseHyperbolicTangentFraction(const Fraction &NumberDegree) noexcept {
+        static Fraction doInverseHyperbolicTangentFraction(const Fraction &NumberDegree, const Integer &NumberPrecision = Integer(10000000)) noexcept {
             Fraction NumberNumerator(NumberDegree), NumberResult(0), NumberTerminate(NumberDegree);
             unsigned short NumberDigit = 1;
-            while (std::abs(NumberTerminate.getValue()) > 1e-12) {
+            while (NumberTerminate.getAbsolute().doCompare({1, NumberPrecision}) > 0) {
                 NumberResult = NumberResult.doAddition(NumberTerminate);
                 NumberNumerator = NumberNumerator.doMultiplication(NumberDegree.doMultiplication(NumberDegree));
                 NumberDigit += 2;
@@ -151,7 +151,7 @@ namespace eLibrary {
         template<std::floating_point T>
         static T doSine(T NumberSource) noexcept {
             NumberSource -= (int)std::abs(NumberSource / (std::numbers::pi * 2)) * 2 * std::numbers::pi;
-            if (NumberSource == 0) return 0;
+            if (!NumberSource) return 0;
             T NumberDenominator = 1, NumberNumerator = NumberSource, NumberResult = 0, NumberSignature = 1, NumberTerminate = NumberSource;
             unsigned short NumberDigit = 1;
             while (std::abs(NumberTerminate) >= 1e-12) {
@@ -170,15 +170,18 @@ namespace eLibrary {
             return doSine(NumberSource) / doCosine(NumberSource);
         }
 
+        template<std::integral T>
+        static T getAbsolute(T NumberSource) noexcept {
+            return NumberSource >= 0 ? NumberSource : -NumberSource;
+        }
+
         static Integer getGreatestCommonFactor(const Integer &Number1, const Integer &Number2) noexcept {
-            if (Number2.getAbsolute().doCompare(Integer(0)) == 0) {
-                return Number1;
-            }
+            if (!Number2.getAbsolute().doCompare(0)) return Number1;
             return getGreatestCommonFactor(Number2, Number1.doModulo(Number2));
         }
 
-        static Integer getJocabiSymbol(const Integer &NumberMSource, const Integer &NumberNSource) noexcept {
-            if (NumberNSource.isNegative() || !NumberNSource.doModulo(2).doCompare(0)) throw Exception(String(u"Mathematics::getJocabiSymbol(const Integer&, const Integer&) NumberNSource"));
+        static Integer getJocabiSymbol(const Integer &NumberMSource, const Integer &NumberNSource) {
+            if (NumberNSource.isNegative() || NumberNSource.isEven()) throw Exception(String(u"Mathematics::getJocabiSymbol(const Integer&, const Integer&) NumberNSource"));
             Integer NumberM(NumberMSource), NumberN(NumberNSource);
             if (NumberM.isNegative() || NumberM.doCompare(NumberN) > 0) NumberM = NumberM.doModulo(NumberN);
             if (!NumberM.doCompare(0)) return NumberNSource.doCompare(1) == 0;
@@ -189,7 +192,7 @@ namespace eLibrary {
                 if (!NumberN.doModulo(4).doCompare(3)) NumberJ = NumberJ.getOpposite();
             }
             while (NumberM.doCompare(0)) {
-                while (!NumberM.doModulo(2).doCompare(0) && NumberM.isPositive()) {
+                while (NumberM.isEven() && NumberM.isPositive()) {
                     NumberM = NumberM.doDivision(2);
                     if (!NumberN.doModulo(8).doCompare(3) || !NumberN.doModulo(8).doCompare(5))
                         NumberJ = NumberJ.getOpposite();
@@ -234,14 +237,14 @@ namespace eLibrary {
 
         static Integer getTrailingZeroCount(const Integer &NumberSourceSource) noexcept {
             Integer NumberCount(0), NumberSource(NumberSourceSource);
-            while (!NumberSource.doModulo(2).doCompare(0)) NumberSource = NumberSource.doDivision(2), NumberCount = NumberCount.doAddition(1);
+            while (NumberSource.isEven()) NumberSource = NumberSource.doDivision(2), NumberCount = NumberCount.doAddition(1);
             return NumberCount;
         }
 
         static bool isPrime(const Integer &NumberSource) noexcept {
             if (NumberSource.doCompare(2) < 0) return false;
             if (!NumberSource.doCompare(2) || !NumberSource.doCompare(3) || !NumberSource.doCompare(5)) return true;
-            if (!NumberSource.doModulo(2).doCompare(0) || !NumberSource.doModulo(3).doCompare(0) || !NumberSource.doModulo(5).doCompare(0))
+            if (NumberSource.isEven() || !NumberSource.doModulo(3).doCompare(0) || !NumberSource.doModulo(5).doCompare(0))
                 return false;
             if (NumberSource.doCompare(49) < 0) return true;
             if (!NumberSource.doModulo(7).doCompare(0) || !NumberSource.doModulo(11).doCompare(0) ||
@@ -261,7 +264,7 @@ namespace eLibrary {
             if (NumberSource.doCompare(7999252175582851) < 0) return isPrimeRabinMiller(NumberSource, {2, 4130806001517, 149795463772692060, 186635894390467037, 3967304179347715805});
             if (NumberSource.doCompare(585226005592931977) < 0) return isPrimeRabinMiller(NumberSource, {2, 123635709730000, 9233062284813009, 43835965440333360, 761179012939631437, 1263739024124850375});
             if (NumberSource.doCompare(String(u"18446744073709551616")) < 0) return isPrimeRabinMiller(NumberSource, {2, 325, 9375, 28178, 450775, 9780504, 1795265022});
-            return isPrimeRabinMiller(NumberSource, {2});
+            return isPrimeRabinMiller(NumberSource, {2}) && isPrimeLucas(NumberSource);
         }
 
         static bool isPrimeLucas(const Integer &NumberSource) noexcept {
@@ -275,19 +278,19 @@ namespace eLibrary {
             }
             if (!NumberD.doCompare(0)) return false;
             Integer NumberIterationCount(0), NumberK(NumberSource.doAddition(1)), NumberP(1), NumberQ(Integer(1).doSubtraction(NumberD).doDivision(4));
-            while (!NumberK.doModulo(2).doCompare(0)) NumberK = NumberK.doDivision(2), NumberIterationCount = NumberIterationCount.doAddition(1);
-            Integer NumberBitCount(NumberSource.toString(2).getCharacterSize()), NumberQk(NumberQ), NumberU(1), NumberV(NumberP);
+            while (NumberK.isEven()) NumberK = NumberK.doDivision(2), NumberIterationCount = NumberIterationCount.doAddition(1);
+            Integer NumberBitCount(NumberK.toString(2).getCharacterSize()), NumberQk(NumberQ), NumberU(1), NumberV(NumberP);
             if (!NumberQ.doCompare(1)) {
                 while (NumberBitCount.doCompare(1) > 0) {
                     NumberU = NumberU.doMultiplication(NumberV).doModulo(NumberSource);
                     NumberV = NumberV.doMultiplication(NumberV).doSubtraction(2).doModulo(NumberSource);
                     NumberBitCount = NumberBitCount.doSubtraction(1);
-                    if (NumberK.doDivision(Integer(2).doPower(NumberBitCount.doSubtraction(1))).doModulo(2).doCompare(0)) {
+                    if (NumberK.doDivision(Integer(2).doPower(NumberBitCount.doSubtraction(1))).isOdd()) {
                         Integer NumberUBackup(NumberU.doMultiplication(NumberP).doAddition(NumberV));
                         NumberV = NumberV.doMultiplication(NumberP).doAddition(NumberU.doMultiplication(NumberP));
                         NumberU = NumberUBackup;
-                        if (NumberU.doModulo(2).doCompare(0)) NumberU = NumberU.doAddition(NumberSource);
-                        if (NumberV.doModulo(2).doCompare(0)) NumberV = NumberV.doAddition(NumberSource);
+                        if (NumberU.isOdd()) NumberU = NumberU.doAddition(NumberSource);
+                        if (NumberV.isOdd()) NumberV = NumberV.doAddition(NumberSource);
                         NumberU = NumberU.doDivision(2);
                         NumberV = NumberV.doDivision(2);
                     }
@@ -298,33 +301,58 @@ namespace eLibrary {
                     if (!NumberQk.doCompare(1)) NumberV = NumberV.doMultiplication(NumberV).doSubtraction(2).doModulo(NumberSource);
                     else NumberV = NumberV.doMultiplication(NumberV).doAddition(2).doModulo(NumberSource), NumberQk = 1;
                     NumberBitCount = NumberBitCount.doSubtraction(1);
-                    if (NumberK.doDivision(Integer(2).doPower(NumberBitCount.doSubtraction(1))).doModulo(2).doCompare(0)) {
+                    if (NumberK.doDivision(Integer(2).doPower(NumberBitCount.doSubtraction(1))).isOdd()) {
                         Integer NumberUBackup(NumberU.doAddition(NumberV));
                         NumberV = NumberV.doAddition(NumberU.doMultiplication(NumberD));
                         NumberU = NumberUBackup;
-                        if (NumberU.doModulo(2).doCompare(0)) NumberU = NumberU.doAddition(NumberSource);
-                        if (NumberV.doModulo(2).doCompare(0)) NumberV = NumberV.doAddition(NumberSource);
+                        if (NumberU.isOdd()) NumberU = NumberU.doAddition(NumberSource);
+                        if (NumberV.isOdd()) NumberV = NumberV.doAddition(NumberSource);
                         NumberU = NumberU.doDivision(2);
                         NumberV = NumberV.doDivision(2);
                         NumberQk = -1;
                     }
                 }
+            } else while (NumberBitCount.doCompare(1) > 0) {
+                NumberU = NumberU.doMultiplication(NumberV).doModulo(NumberSource);
+                NumberV = NumberV.doMultiplication(NumberV).doSubtraction(NumberQk.doAddition(NumberQk)).doModulo(NumberSource);
+                NumberQk = NumberQk.doMultiplication(NumberQk);
+                NumberBitCount = NumberBitCount.doSubtraction(1);
+                if (NumberK.doDivision(Integer(2).doPower(NumberBitCount.doSubtraction(1))).isOdd()) {
+                    Integer NumberUBackup(NumberU.doAddition(NumberV));
+                    NumberV = NumberV.doAddition(NumberU.doMultiplication(NumberD));
+                    NumberU = NumberUBackup;
+                    if (NumberU.isOdd()) NumberU = NumberU.doAddition(NumberSource);
+                    if (NumberV.isOdd()) NumberV = NumberV.doAddition(NumberSource);
+                    NumberU = NumberU.doDivision(2);
+                    NumberV = NumberV.doDivision(2);
+                    NumberQk = NumberQk.doMultiplication(NumberQ);
+                }
+                NumberQk = NumberQk.doModulo(NumberSource);
             }
-            throw Exception(String(u"Not Implemented"));
+            NumberU = NumberU.doModulo(NumberSource);
+            NumberV = NumberV.doModulo(NumberSource);
+            if (!NumberU.doCompare(0) || !NumberV.doCompare(0)) return true;
+            for (Integer NumberIteration = 1;NumberIteration.doCompare(NumberIterationCount) < 0;NumberIteration = NumberIteration.doAddition(1)) {
+                NumberV = NumberV.doMultiplication(NumberV).doSubtraction(NumberQk.doAddition(NumberQk)).doModulo(NumberSource);
+                if (!NumberV.doCompare(0)) return true;
+                NumberQk = NumberQk.doPower(2, NumberSource);
+            }
+            return false;
         }
 
         template<std::unsigned_integral T>
         static bool isPrimeNative(T NumberSource) noexcept {
             if (NumberSource <= 1) return false;
             if (NumberSource <= 3) return true;
-            for (T NumberFactor = 2;NumberFactor * NumberFactor <= NumberSource;++NumberFactor)
+            if (!(NumberSource & 1) || ((NumberSource - 1) % 6 && (NumberSource + 1) % 6)) return false;
+            for (T NumberFactor = 3;NumberFactor * NumberFactor <= NumberSource;NumberFactor += 2)
                 if (NumberSource % NumberFactor == 0) return false;
             return true;
         }
 
         static bool isPrimeRabinMiller(const Integer &NumberSource, const std::vector<Integer> &NumberBaseList) noexcept {
             Integer NumberIteration(1), NumberExponent(NumberSource.doSubtraction(1));
-            while (!NumberExponent.doModulo(2).doCompare(0)) NumberExponent = NumberExponent.doDivision(2), NumberIteration = NumberIteration.doAddition(1);
+            while (NumberExponent.isEven()) NumberExponent = NumberExponent.doDivision(2), NumberIteration = NumberIteration.doAddition(1);
             for (Integer NumberBase : NumberBaseList) {
                 if (NumberBase.doCompare(NumberSource) >= 0) NumberBase = NumberBase.doModulo(NumberSource);
                 if (NumberBase.doCompare(2) >= 0 && !isPrimeRabinMiller(NumberSource, NumberBase, NumberExponent, NumberIteration)) return false;

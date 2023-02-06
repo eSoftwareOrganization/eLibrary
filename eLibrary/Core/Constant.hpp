@@ -1,14 +1,6 @@
 #pragma once
 
 namespace eLibrary {
-#if defined(__GNUC__) || defined(__clang__)
-#define likely(ConditionSource) __builtin_expect(!!(ConditionSource), 1)
-#define unlikely(ConditionSource) __builtin_expect(!!(ConditionSource), 0)
-#else
-#define likely(ConditionSource) (ConditionSource)
-#define unlikely(ConditionSource) (ConditionSource)
-#endif
-
     template<typename T>
     concept Comparable = requires (const T &ObjectSource) {
         ObjectSource.doCompare(ObjectSource);

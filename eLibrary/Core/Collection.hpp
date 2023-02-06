@@ -4,11 +4,9 @@
 
 #include <array>
 #include <mutex>
+#include <vector>
 
 namespace eLibrary {
-    template<typename E>
-    class ArrayListIterator;
-
     template<typename E>
     class ArrayList final : public Object {
     private:
@@ -24,6 +22,13 @@ namespace eLibrary {
         }
     public:
         constexpr ArrayList() noexcept: ElementCapacity(0), ElementSize(0), ElementContainer(nullptr) {}
+
+        template<size_t ElementSourceSize>
+        ArrayList(std::array<E, ElementSourceSize> ElementSource) noexcept : ElementCapacity(1), ElementSize(ElementSourceSize) {
+            if (ElementSourceSize) while (ElementCapacity < ElementSourceSize) ElementCapacity <<= 1;
+            ElementContainer = new E[ElementCapacity];
+            std::copy(ElementSource.begin(), ElementSource.end(), ElementContainer);
+        }
 
         template<typename ...ElementListType>
         explicit ArrayList(ElementListType ...ElementList) noexcept : ElementCapacity(1), ElementSize(0) {
@@ -41,17 +46,12 @@ namespace eLibrary {
         }
 
         ~ArrayList() noexcept {
-            ElementCapacity = 0;
-            ElementSize = 0;
-            delete[] ElementContainer;
-            ElementContainer = nullptr;
+            doClear();
         }
 
         void addElement(const E &ElementSource) noexcept {
-            if (ElementCapacity == 0) {
-                ElementCapacity = 1;
-                ElementContainer = new E[1];
-            } else if (ElementSize >= ElementCapacity) {
+            if (ElementCapacity == 0) ElementContainer = new E[ElementCapacity = 1];
+            if (ElementSize == ElementCapacity) {
                 auto *ElementBuffer = new E[ElementSize];
                 memcpy(ElementBuffer, ElementContainer, sizeof(E) * ElementSize);
                 delete[] ElementContainer;
@@ -66,9 +66,8 @@ namespace eLibrary {
             if (ElementIndex < 0) ElementIndex += ElementSize + 1;
             if (ElementIndex < 0 || ElementIndex > ElementSize)
                 throw Exception(String(u"ArrayList<E>::addElement(intmax_t, const E&) ElementIndex"));
-            if (ElementCapacity == 0) {
-                ElementContainer = new E[ElementCapacity = 1];
-            } else if (ElementSize >= ElementCapacity) {
+            if (ElementCapacity == 0) ElementContainer = new E[ElementCapacity = 1];
+            if (ElementSize == ElementCapacity) {
                 auto *ElementBuffer = new E[ElementSize];
                 memcpy(ElementBuffer, ElementContainer, sizeof(E) * ElementSize);
                 delete[] ElementContainer;
@@ -82,6 +81,13 @@ namespace eLibrary {
             ++ElementSize;
         }
 
+        void doAssign(const ArrayList<E> &ElementSource) noexcept {
+            if (&ElementSource == this) return;
+            delete[] ElementContainer;
+            ElementContainer = new E[ElementCapacity = ElementSource.ElementCapacity];
+            memcpy(ElementContainer, ElementSource.ElementContainer, sizeof(E) * (ElementSize = ElementSource.ElementSize));
+        }
+
         void doClear() noexcept {
             if (ElementCapacity && ElementSize && ElementContainer) {
                 ElementCapacity = 0;
@@ -91,22 +97,18 @@ namespace eLibrary {
             }
         }
 
-        void doConcat(const ArrayList<E> ElementSource) noexcept {
-            while (ElementSize + ElementSource.ElementSize < ElementCapacity) ElementCapacity <<= 1;
-            auto *ElementBuffer = new E[ElementSize];
+        ArrayList<E> doConcat(const ArrayList<E> &ElementSource) const noexcept {
+            std::array<E, this->ElementSize + ElementSource.ElementSize> ElementBuffer;
             memcpy(ElementBuffer, ElementContainer, sizeof(E) * ElementSize);
-            delete[] ElementContainer;
-            ElementContainer = new E[ElementCapacity];
-            memcpy(ElementContainer, ElementBuffer, sizeof(E) * ElementSize);
-            delete[] ElementBuffer;
-            memcpy(ElementContainer + ElementSize, ElementSource.ElementContainer, sizeof(E) * ElementSource.ElementSize);
-            ElementSize += ElementSource.ElementSize;
+            memcpy(ElementBuffer + ElementSize, ElementSource.ElementContainer, sizeof(E) * ElementSource.ElementSize);
+            return ElementBuffer;
         }
 
-        intmax_t doFind(const E &ElementSource) const noexcept {
-            for (intmax_t ElementIndex = 0; ElementIndex < ElementSize; ++ElementIndex)
-                if (ElementContainer[ElementIndex] == ElementSource) return ElementIndex;
-            return -1;
+        void doReverse() noexcept {
+            std::array<E, this->ElementSize> ElementBuffer;
+            for (intmax_t ElementIndex = 0;ElementIndex < ElementSize;++ElementIndex)
+                ElementBuffer[ElementSize - ElementIndex - 1] = ElementContainer[ElementIndex];
+            std::copy(ElementBuffer.begin(), ElementBuffer.end(), ElementContainer);
         }
 
         E getElement(intmax_t ElementIndex) const {
@@ -120,6 +122,12 @@ namespace eLibrary {
             return ElementSize;
         }
 
+        intmax_t indexOf(const E &ElementSource) const noexcept {
+            for (intmax_t ElementIndex = 0; ElementIndex < ElementSize; ++ElementIndex)
+                if (ElementContainer[ElementIndex] == ElementSource) return ElementIndex;
+            return -1;
+        }
+
         bool isContains(const E &ElementSource) const noexcept {
             for (intmax_t ElementIndex = 0; ElementIndex < ElementSize; ++ElementIndex)
                 if (ElementContainer[ElementIndex] == ElementSource) return true;
@@ -128,6 +136,11 @@ namespace eLibrary {
 
         bool isEmpty() const noexcept {
             return ElementSize == 0;
+        }
+
+        ArrayList<E> &operator=(const ArrayList<E> &ElementSource) noexcept {
+            doAssign(ElementSource);
+            return *this;
         }
 
         void removeElement(const E &ElementSource) {
@@ -167,14 +180,20 @@ namespace eLibrary {
             return ArraySource;
         }
 
+        std::vector<E> toSTLVector() const noexcept {
+            return std::vector<E>(ElementContainer, ElementContainer + ElementSize);
+        }
+
         String toString() const noexcept override {
-            std::basic_stringstream<char16_t> StringStream;
-            StringStream << u'[';
-            for (intmax_t ElementIndex = 0; ElementIndex + 1 < ElementSize; ++ElementIndex)
-                StringStream << String::valueOf(ElementContainer[ElementIndex]).toU16String() << u',';
-            if (ElementSize) StringStream << String::valueOf(ElementContainer[ElementSize - 1]).toU16String();
-            StringStream << u']';
-            return StringStream.str();
+            StringStream CharacterStream;
+            CharacterStream.addCharacter(u'[');
+            for (intmax_t ElementIndex = 0; ElementIndex + 1 < ElementSize; ++ElementIndex) {
+                CharacterStream.addString(String::valueOf(ElementContainer[ElementIndex]).toU16String());
+                CharacterStream.addCharacter(u',');
+            }
+            if (ElementSize) CharacterStream.addString(String::valueOf(ElementContainer[ElementSize - 1]).toU16String());
+            CharacterStream.addCharacter(u']');
+            return CharacterStream.toString();
         }
     };
 
@@ -184,6 +203,8 @@ namespace eLibrary {
         ArrayList<E> ElementList;
         mutable std::mutex ElementMutex;
     public:
+        ConcurrentArrayList(const ArrayList<E> &ElementListSource) : ElementList(ElementListSource) {}
+
         void addElement(const E &ElementSource) noexcept {
             std::lock_guard<std::mutex> ElementLockGuard(ElementMutex);
             ElementList.addElement(ElementSource);
@@ -199,9 +220,14 @@ namespace eLibrary {
             ElementList.doClear();
         }
 
-        intmax_t doFind(const E &ElementSource) const noexcept {
+        ConcurrentArrayList<E> doConcat(const ConcurrentArrayList<E> &ElementSource) const noexcept {
             std::lock_guard<std::mutex> ElementLockGuard(ElementMutex);
-            return ElementList.doFind(ElementSource);
+            return ElementList.doConcat(ElementSource);
+        }
+
+        void doReverse() noexcept {
+            std::lock_guard<std::mutex> ElementLockGuard(ElementMutex);
+            ElementList.doReverse();
         }
 
         E getElement(intmax_t ElementIndex) const {
@@ -212,6 +238,11 @@ namespace eLibrary {
         intmax_t getElementSize() {
             std::lock_guard<std::mutex> ElementLockGuard(ElementMutex);
             return ElementList.getElementSize();
+        }
+
+        intmax_t indexOf(const E &ElementSource) const noexcept {
+            std::lock_guard<std::mutex> ElementLockGuard(ElementMutex);
+            return ElementList.doFind(ElementSource);
         }
 
         void removeElement(const E &ElementSource) {
@@ -249,33 +280,6 @@ namespace eLibrary {
 
             explicit LinkedNode(const E &Value) noexcept: NodeValue(Value), NodeNext(nullptr), NodePrevious(nullptr) {}
         } *NodeHead, *NodeTail;
-
-        class LinkedListIterator final {
-        private:
-            LinkedNode *NodeCurrent;
-        public:
-            explicit LinkedListIterator(LinkedNode *NodeSource) noexcept : NodeCurrent(NodeSource) {}
-
-            LinkedListIterator operator++() noexcept {
-                if (NodeCurrent) NodeCurrent = NodeCurrent->NodeNext;
-                return *this;
-            }
-
-            LinkedListIterator operator++(int) const noexcept {
-                return DoubleLinkedListIterator(NodeCurrent ? NodeCurrent->NodeNext : nullptr);
-            }
-
-            E operator*() const {
-                if (!NodeCurrent) throw Exception(String(u"LinkedListIterator::operator*() NodeCurrent"));
-                return NodeCurrent->NodeValue;
-            }
-
-            bool operator!=(const LinkedListIterator &IteratorOther) const noexcept {
-                return NodeCurrent != IteratorOther.NodeCurrent;
-            }
-
-            LinkedListIterator &operator=(const LinkedListIterator &IteratorSource) noexcept = delete;
-        };
 
         intmax_t NodeSize;
     public:
@@ -336,20 +340,24 @@ namespace eLibrary {
             ++NodeSize;
         }
 
-        LinkedListIterator begin() noexcept {
-            return LinkedListIterator(NodeHead);
-        }
-
-        intmax_t doFindElement(const E &ElementSource) noexcept {
-            intmax_t NodeIndex = 0;
-            LinkedNode *NodeCurrent = NodeHead;
-            while (NodeCurrent && NodeCurrent->NodeValue != ElementSource) NodeCurrent = NodeCurrent->NodeNext, ++NodeIndex;
-            if (NodeCurrent->NodeValue != ElementSource) return -1;
-            return NodeIndex;
-        }
-
-        LinkedListIterator end() noexcept {
-            return LinkedListIterator(nullptr);
+        void doReverse() noexcept {
+            if (NodeHead == NodeTail) return;
+            if (NodeHead->NodeNext == NodeTail) {
+                std::swap(NodeHead, NodeTail);
+                return;
+            }
+            LinkedNode *NodeCurrent = NodeHead->NodeNext, *NodeNext, *NodeTemporary = new LinkedNode();
+            NodeTemporary->NodeNext = NodeTail;
+            while (NodeCurrent != NodeTail) {
+                NodeNext = NodeCurrent->NodeNext;
+                NodeCurrent->NodeNext = NodeTemporary->NodeNext;
+                NodeTemporary->NodeNext->NodePrevious = NodeCurrent;
+                NodeCurrent->NodePrevious = NodeTemporary;
+                NodeTemporary->NodeNext = NodeCurrent;
+                NodeCurrent = NodeNext;
+            }
+            NodeTemporary->NodeNext->NodePrevious = NodeHead;
+            NodeHead->NodeNext = NodeTemporary->NodeNext;
         }
 
         E getElement(intmax_t ElementIndex) const {
@@ -366,6 +374,14 @@ namespace eLibrary {
                 while (ElementIndex--) NodeCurrent = NodeCurrent->NodePrevious;
             }
             return NodeCurrent->NodeValue;
+        }
+
+        intmax_t indexOf(const E &ElementSource) const {
+            intmax_t NodeIndex = 0;
+            LinkedNode *NodeCurrent = NodeHead;
+            while (NodeCurrent && NodeCurrent->NodeValue != ElementSource) NodeCurrent = NodeCurrent->NodeNext, ++NodeIndex;
+            if (!NodeCurrent) return -1;
+            return NodeIndex;
         }
 
         void removeElement(const E &ElementSource) {
@@ -421,15 +437,19 @@ namespace eLibrary {
         }
 
         String toString() const noexcept override {
-            std::basic_stringstream<char16_t> StringStream;
-            StringStream << u'[';
+            StringStream CharacterStream;
+            CharacterStream.addCharacter(u'[');
             if (NodeHead) {
                 LinkedNode *NodeCurrent = NodeHead;
-                while (NodeCurrent->NodeNext) StringStream << String::valueOf(NodeCurrent->NodeValue).toU16String() << u',';
-                StringStream << String::valueOf(NodeCurrent->NodeValue).toU16String();
+                while (NodeCurrent->NodeNext) {
+                    CharacterStream.addString(String::valueOf(NodeCurrent->NodeValue).toU16String());
+                    CharacterStream.addCharacter(u',');
+                    NodeCurrent = NodeCurrent->NodeNext;
+                }
+                CharacterStream.addString(String::valueOf(NodeCurrent->NodeValue).toU16String());
             }
-            StringStream << u']';
-            return StringStream.str();
+            CharacterStream.addCharacter(u']');
+            return CharacterStream.toString();
         }
     };
 
@@ -442,33 +462,6 @@ namespace eLibrary {
 
             explicit LinkedNode(const E &Value) noexcept: NodeValue(Value), NodeNext(nullptr) {}
         } *NodeHead, *NodeTail;
-
-        class LinkedListIterator final {
-        private:
-            LinkedNode *NodeCurrent;
-        public:
-            explicit LinkedListIterator(LinkedNode *NodeSource) noexcept : NodeCurrent(NodeSource) {}
-
-            LinkedListIterator operator++() noexcept {
-                if (NodeCurrent) NodeCurrent = NodeCurrent->NodeNext;
-                return *this;
-            }
-
-            LinkedListIterator operator++(int) const noexcept {
-                return SingleLinkedListIterator(NodeCurrent ? NodeCurrent->NodeNext : nullptr);
-            }
-
-            E operator*() const {
-                if (!NodeCurrent) throw Exception(String(u"LinkedListIterator::operator*() NodeCurrent"));
-                return NodeCurrent->NodeValue;
-            }
-
-            bool operator!=(const LinkedListIterator &IteratorOther) const noexcept {
-                return NodeCurrent != IteratorOther.NodeCurrent;
-            }
-
-            LinkedListIterator &operator=(const LinkedListIterator &IteratorSource) noexcept = delete;
-        };
 
         intmax_t NodeSize;
     public:
@@ -518,20 +511,12 @@ namespace eLibrary {
             ++NodeSize;
         }
 
-        LinkedListIterator begin() noexcept {
-            return LinkedListIterator(NodeHead);
-        }
-
-        intmax_t doFindElement(const E &ElementSource) noexcept {
+        intmax_t doFind(const E &ElementSource) noexcept {
             intmax_t NodeIndex = 0;
             LinkedNode *NodeCurrent = NodeHead;
             while (NodeCurrent && NodeCurrent->NodeValue != ElementSource) NodeCurrent = NodeCurrent->NodeNext, ++NodeIndex;
-            if (NodeCurrent->NodeValue != ElementSource) return -1;
+            if (!NodeCurrent) return -1;
             return NodeIndex;
-        }
-
-        LinkedListIterator end() noexcept {
-            return LinkedListIterator(nullptr);
         }
 
         E getElement(intmax_t ElementIndex) const {
@@ -581,15 +566,19 @@ namespace eLibrary {
         }
 
         String toString() const noexcept override {
-            std::basic_stringstream<char16_t> StringStream;
-            StringStream << u'[';
+            StringStream CharacterStream;
+            CharacterStream.addCharacter(u'[');
             if (NodeHead) {
                 LinkedNode *NodeCurrent = NodeHead;
-                while (NodeCurrent->NodeNext) StringStream << String::valueOf(NodeCurrent->NodeValue).toU16String() << u',';
-                StringStream << String::valueOf(NodeCurrent->NodeValue).toU16String();
+                while (NodeCurrent->NodeNext) {
+                    CharacterStream.addString(String::valueOf(NodeCurrent->NodeValue).toU16String());
+                    CharacterStream.addCharacter(u',');
+                    NodeCurrent = NodeCurrent->NodeNext;
+                }
+                CharacterStream.addString(String::valueOf(NodeCurrent->NodeValue).toU16String());
             }
-            StringStream << u']';
-            return StringStream.str();
+            CharacterStream.addCharacter(u']');
+            return CharacterStream.toString();
         }
     };
 }
