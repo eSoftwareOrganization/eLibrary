@@ -1,4 +1,6 @@
 # eLibrary
+[![FOSSA Status](https://app.fossa.com/api/projects/git%2Bgithub.com%2Fldgeng%2FeLibrary.svg?type=shield)](https://app.fossa.com/projects/git%2Bgithub.com%2Fldgeng%2FeLibrary?ref=badge_shield)
+
 
 ![](Scroll.png)
 
@@ -114,3 +116,7 @@ Project Update Log:
 - Core::Mathematics / getGreatestCommonFactor(New)
 - Core::RedBlackTree doInsert / doSearchCore(Compare) doRemove(Exception)
 - Core::WindowsNT loadDriver / unloadDriver(Remove Ntdll Linking Requirements) loadDriverSC(...)
+
+
+## License
+[![FOSSA Status](https://app.fossa.com/api/projects/git%2Bgithub.com%2Fldgeng%2FeLibrary.svg?type=large)](https://app.fossa.com/projects/git%2Bgithub.com%2Fldgeng%2FeLibrary?ref=badge_large)
