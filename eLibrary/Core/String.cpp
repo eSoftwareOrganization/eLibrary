@@ -1,5 +1,4 @@
-#include <Core/Collection.hpp>
-#include <Core/Number.hpp>
+#include <Core/Exception.hpp>
 
 namespace eLibrary {
     char16_t String::getCharacter(intmax_t CharacterIndex) const {

@@ -4,7 +4,6 @@
 #include <codecvt>
 #include <cstring>
 #include <locale>
-#include <map>
 #include <string>
 
 #include <Core/Object.hpp>

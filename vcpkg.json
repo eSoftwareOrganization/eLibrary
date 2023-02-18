@@ -1,0 +1,7 @@
+{
+  "name": "eLibrary",
+  "dependencies": [
+    "doctest",
+    "nanobench"
+  ]
+}

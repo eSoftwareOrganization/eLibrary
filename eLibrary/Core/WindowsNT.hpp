@@ -332,30 +332,8 @@ namespace eLibrary {
     };
 
     class NtDriver final : public Object {
-    private:
-        HANDLE DriverFileHandle;
-        String DriverFilePath;
-        NtService DriverService;
     public:
-        NtDriver(const String &DriverFilePathSource, const NtService &DriverServiceSource) : DriverFileHandle(nullptr), DriverFilePath(DriverFilePathSource), DriverService(DriverServiceSource) {
-            if (DriverServiceSource.getServiceType() != NtService::NtServiceType::TypeKernelDriver) throw Exception(String(u"NtDriver::NtDriver(const String&, const NtService&) DriverServiceSource"));
-        }
-
-        ~NtDriver() noexcept {
-            if (DriverFileHandle) CloseHandle(DriverFileHandle);
-        }
-
-        void doClose() {
-            if (!DriverFileHandle) throw Exception(String(u"NtDriver::doClose() DriverFileHandle"));
-            CloseHandle(DriverFileHandle);
-        }
-
-        void doControl(DWORD DriverControlCode, void *DriverControlInputBuffer, DWORD DriverControlInputSize, void *DriverControlOutputBuffer, DWORD DriverControlOutputBufferSize, DWORD *DriverControlOutputSize) {
-            if (!DeviceIoControl(DriverFileHandle, DriverControlCode, DriverControlInputBuffer, DriverControlInputSize, DriverControlOutputBuffer, DriverControlOutputBufferSize, DriverControlOutputSize, nullptr))
-                throw Exception(String(u"NtDriver::doControl(DWORD, void*, DWORD, void*, DWORD, DWORD*) DeviceIoControl"));
-        }
-
-        void doLoadNt() {
+        static void doLoadNt(const String &DriverServiceName, const String &DriverFilePath, DWORD DriverErrorControl, DWORD DriverStartType) {
             NtCreateKeyType NtCreateKey = (NtCreateKeyType) ModuleNtDll.getFunction(String(u"NtCreateKey"));
             NtLoadDriverType NtLoadDriver = (NtLoadDriverType) ModuleNtDll.getFunction(String(u"NtLoadDriver"));
             NtSetValueKeyType NtSetValueKey = (NtSetValueKeyType) ModuleNtDll.getFunction(String(u"NtSetValueKey"));
@@ -365,7 +343,7 @@ namespace eLibrary {
             DriverImagePathStream << L"\\??\\" << DriverFilePath.toWString();
 
             std::basic_stringstream<wchar_t> DriverRegistrationPathStream;
-            DriverRegistrationPathStream << L"\\Registry\\Machine\\System\\CurrentControlSet\\Services\\" << DriverService.getServiceName().toWString();
+            DriverRegistrationPathStream << L"\\Registry\\Machine\\System\\CurrentControlSet\\Services\\" << DriverServiceName.toWString();
 
             UNICODE_STRING DriverRegistrationPath;
             RtlInitUnicodeString(&DriverRegistrationPath, DriverRegistrationPathStream.str().c_str());
@@ -373,9 +351,7 @@ namespace eLibrary {
             OBJECT_ATTRIBUTES DriverRegistrationAttribute;
             InitializeObjectAttributes(&DriverRegistrationAttribute, &DriverRegistrationPath, OBJ_CASE_INSENSITIVE, nullptr, nullptr)
 
-            DWORD DriverErrorControl = (DWORD) DriverService.getServiceErrorControl();
             DWORD DriverServiceType = SERVICE_KERNEL_DRIVER;
-            DWORD DriverStartType = (DWORD) DriverService.getServiceStartType();
 
             UNICODE_STRING DriverErrorControlString, DriverImagePathString, DriverServiceTypeString, DriverStartTypeString;
             RtlInitUnicodeString(&DriverErrorControlString, L"ErrorControl");
@@ -385,7 +361,7 @@ namespace eLibrary {
 
             HANDLE DriverRegistrationHandle;
             if (!NT_SUCCESS(NtCreateKey(&DriverRegistrationHandle, KEY_ALL_ACCESS, &DriverRegistrationAttribute, 0, nullptr, 0, nullptr)))
-                throw Exception(String(u"NtDriver::doLoadNt() NtCreateKey"));
+                throw Exception(String(u"NtDriver::doLoadNt(const String&, const String&, DWORD, DWORD) NtCreateKey"));
             NtSetValueKey(DriverRegistrationHandle, &DriverErrorControlString, 0, REG_DWORD, &DriverErrorControl, sizeof(DWORD));
             NtSetValueKey(DriverRegistrationHandle, &DriverImagePathString, 0, REG_EXPAND_SZ, (void*) DriverImagePathStream.str().c_str(), sizeof(wchar_t) * (DriverImagePathStream.str().size() + 1));
             NtSetValueKey(DriverRegistrationHandle, &DriverStartTypeString, 0, REG_DWORD, &DriverStartType, sizeof(DWORD));
@@ -395,25 +371,15 @@ namespace eLibrary {
             RtlAdjustPrivilege(SeLoadDriverPrivilege, TRUE, FALSE, nullptr);
 
             if (!NT_SUCCESS(NtLoadDriver(&DriverRegistrationPath)))
-                throw Exception(String(u"NtDriver::doLoadNt() NtLoadDriver"));
+                throw Exception(String(u"NtDriver::doLoadNt(const String&, const String&, DWORD, DWORD) NtLoadDriver"));
         }
 
-        void doOpen(const String &DriverControlPath) {
-            DriverFileHandle = CreateFileW(DriverControlPath.toWString().c_str(), FILE_ALL_ACCESS, FILE_SHARE_READ | FILE_SHARE_WRITE, nullptr, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, nullptr);
-            if (DriverFileHandle == INVALID_HANDLE_VALUE) throw Exception(String(u"NtDriver::doOpen(const String&) CreateFileW"));
-        }
-
-        void doRead(void *DriverControlBuffer, DWORD DriverControlBufferSize, DWORD *DriverControlSize) const {
-            if (!ReadFile(DriverFileHandle, DriverControlBuffer, DriverControlBufferSize, DriverControlSize, nullptr))
-                throw Exception(String(u"NtDriver::doRead(void*, DWORD, DWORD) ReadFile"));
-        }
-
-        void doUnloadNt() const {
+        void doUnloadNt(const String &DriverServiceName) const {
             NtUnloadDriverType NtUnloadDriver = (NtUnloadDriverType) ModuleNtDll.getFunction(String(u"NtUnloadDriver"));
             RtlAdjustPrivilegeType RtlAdjustPrivilege = (RtlAdjustPrivilegeType) ModuleNtDll.getFunction(String(u"RtlAdjustPrivilege"));
 
             std::basic_stringstream<wchar_t> DriverRegistrationPathStream;
-            DriverRegistrationPathStream << L"\\Registry\\Machine\\System\\CurrentControlSet\\Services\\" << DriverService.getServiceName().toWString();
+            DriverRegistrationPathStream << L"\\Registry\\Machine\\System\\CurrentControlSet\\Services\\" << DriverServiceName.toWString();
 
             UNICODE_STRING DriverRegistrationPath;
             RtlInitUnicodeString(&DriverRegistrationPath, DriverRegistrationPathStream.str().c_str());
@@ -421,19 +387,9 @@ namespace eLibrary {
             RtlAdjustPrivilege(SeLoadDriverPrivilege, TRUE, FALSE, nullptr);
 
             if (!NT_SUCCESS(NtUnloadDriver(&DriverRegistrationPath)))
-                throw Exception(String(u"NtDriver::doUnloadNt() NtUnloadDriver"));
+                throw Exception(String(u"NtDriver::doUnloadNt(const String&) NtUnloadDriver"));
             if (!NT_SUCCESS(SHDeleteKeyW(HKEY_LOCAL_MACHINE, L"System\\CurrentControlSet\\Services\\eLibraryDriver")))
-                throw Exception(String(u"NtDriver::doUnloadNt() SHDeleteKeyW"));
-        }
-
-        void doUnloadSC() const {
-            DriverService.doControl(SERVICE_CONTROL_STOP);
-            DriverService.doDelete();
-        }
-
-        void doWrite(void *DriverControlBuffer, DWORD DriverControlBufferSize, DWORD *DriverControlSize) const {
-            if (!WriteFile(DriverFileHandle, DriverControlBuffer, DriverControlBufferSize, DriverControlSize, nullptr))
-                throw Exception(String(u"NtDriver::doWrite(void*, DWORD, DWORD) WriteFile"));
+                throw Exception(String(u"NtDriver::doUnloadNt(const String&) SHDeleteKeyW"));
         }
     };
 }

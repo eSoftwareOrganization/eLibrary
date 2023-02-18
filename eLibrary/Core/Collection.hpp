@@ -3,7 +3,8 @@
 #include <Core/Exception.hpp>
 
 #include <array>
-#include <mutex>
+#include <forward_list>
+#include <list>
 #include <vector>
 
 namespace eLibrary {
@@ -24,7 +25,7 @@ namespace eLibrary {
         constexpr ArrayList() noexcept: ElementCapacity(0), ElementSize(0), ElementContainer(nullptr) {}
 
         template<size_t ElementSourceSize>
-        ArrayList(std::array<E, ElementSourceSize> ElementSource) noexcept : ElementCapacity(1), ElementSize(ElementSourceSize) {
+        ArrayList(const std::array<E, ElementSourceSize> &ElementSource) noexcept : ElementCapacity(1), ElementSize(ElementSourceSize) {
             if (ElementSourceSize) while (ElementCapacity < ElementSourceSize) ElementCapacity <<= 1;
             ElementContainer = new E[ElementCapacity];
             std::copy(ElementSource.begin(), ElementSource.end(), ElementContainer);
@@ -105,10 +106,11 @@ namespace eLibrary {
         }
 
         void doReverse() noexcept {
-            std::array<E, this->ElementSize> ElementBuffer;
+            E *ElementBuffer = new E[ElementSize];
             for (intmax_t ElementIndex = 0;ElementIndex < ElementSize;++ElementIndex)
                 ElementBuffer[ElementSize - ElementIndex - 1] = ElementContainer[ElementIndex];
-            std::copy(ElementBuffer.begin(), ElementBuffer.end(), ElementContainer);
+            memcpy(ElementContainer, ElementBuffer, sizeof(E) * ElementBuffer);
+            delete[] ElementBuffer;
         }
 
         E getElement(intmax_t ElementIndex) const {
@@ -144,7 +146,7 @@ namespace eLibrary {
         }
 
         void removeElement(const E &ElementSource) {
-            intmax_t ElementIndex = doFindElement(ElementSource);
+            intmax_t ElementIndex = indexOf(ElementSource);
             if (ElementIndex == -1) throw Exception(String(u"ArrayList<E>::removeElement(const E&) ElementSource"));
             removeIndex(ElementIndex);
         }
@@ -194,80 +196,6 @@ namespace eLibrary {
             if (ElementSize) CharacterStream.addString(String::valueOf(ElementContainer[ElementSize - 1]).toU16String());
             CharacterStream.addCharacter(u']');
             return CharacterStream.toString();
-        }
-    };
-
-    template<typename E>
-    class ConcurrentArrayList final : public Object {
-    private:
-        ArrayList<E> ElementList;
-        mutable std::mutex ElementMutex;
-    public:
-        ConcurrentArrayList(const ArrayList<E> &ElementListSource) : ElementList(ElementListSource) {}
-
-        void addElement(const E &ElementSource) noexcept {
-            std::lock_guard<std::mutex> ElementLockGuard(ElementMutex);
-            ElementList.addElement(ElementSource);
-        }
-
-        void addElement(intmax_t ElementIndex, const E &ElementSource) {
-            std::lock_guard<std::mutex> ElementLockGuard(ElementMutex);
-            ElementList.addElement(ElementIndex, ElementSource);
-        }
-
-        void doClear() noexcept {
-            std::lock_guard<std::mutex> ElementLockGuard(ElementMutex);
-            ElementList.doClear();
-        }
-
-        ConcurrentArrayList<E> doConcat(const ConcurrentArrayList<E> &ElementSource) const noexcept {
-            std::lock_guard<std::mutex> ElementLockGuard(ElementMutex);
-            return ElementList.doConcat(ElementSource);
-        }
-
-        void doReverse() noexcept {
-            std::lock_guard<std::mutex> ElementLockGuard(ElementMutex);
-            ElementList.doReverse();
-        }
-
-        E getElement(intmax_t ElementIndex) const {
-            std::lock_guard<std::mutex> ElementLockGuard(ElementMutex);
-            return ElementList.getElement(ElementIndex);
-        }
-
-        intmax_t getElementSize() {
-            std::lock_guard<std::mutex> ElementLockGuard(ElementMutex);
-            return ElementList.getElementSize();
-        }
-
-        intmax_t indexOf(const E &ElementSource) const noexcept {
-            std::lock_guard<std::mutex> ElementLockGuard(ElementMutex);
-            return ElementList.doFind(ElementSource);
-        }
-
-        void removeElement(const E &ElementSource) {
-            std::lock_guard<std::mutex> ElementLockGuard(ElementMutex);
-            ElementList.removeElement(ElementSource);
-        }
-
-        void removeIndex(intmax_t ElementIndex) {
-            std::lock_guard<std::mutex> ElementLockGuard(ElementMutex);
-            ElementList.removeIndex(ElementIndex);
-        }
-
-        void setElement(intmax_t ElementIndex, const E &ElementSource) {
-            std::lock_guard<std::mutex> ElementLockGuard(ElementMutex);
-            ElementList.setElement(ElementIndex, ElementSource);
-        }
-
-        auto toArray() const noexcept {
-            std::lock_guard<std::mutex> ElementLockGuard(ElementMutex);
-            return ElementList.toArray();
-        }
-
-        String toString() const noexcept override {
-            std::lock_guard<std::mutex> ElementLockGuard(ElementMutex);
-            return ElementList.toString();
         }
     };
 
@@ -436,6 +364,26 @@ namespace eLibrary {
             NodeCurrent->NodeValue = ElementSource;
         }
 
+        ArrayList<E> toArrayList() const noexcept {
+            ArrayList<E> ListResult;
+            LinkedNode *NodeCurrent = NodeHead;
+            while (NodeCurrent) {
+                ListResult.addElement(NodeCurrent->NodeValue);
+                NodeCurrent = NodeCurrent->NodeNext;
+            }
+            return ListResult;
+        }
+
+        std::list<E> toSTLList() const noexcept {
+            std::list<E> ListResult;
+            LinkedNode *NodeCurrent = NodeHead;
+            while (NodeCurrent) {
+                ListResult.push_back(NodeCurrent->NodeValue);
+                NodeCurrent = NodeCurrent->NodeNext;
+            }
+            return ListResult;
+        }
+
         String toString() const noexcept override {
             StringStream CharacterStream;
             CharacterStream.addCharacter(u'[');
@@ -511,14 +459,6 @@ namespace eLibrary {
             ++NodeSize;
         }
 
-        intmax_t doFind(const E &ElementSource) noexcept {
-            intmax_t NodeIndex = 0;
-            LinkedNode *NodeCurrent = NodeHead;
-            while (NodeCurrent && NodeCurrent->NodeValue != ElementSource) NodeCurrent = NodeCurrent->NodeNext, ++NodeIndex;
-            if (!NodeCurrent) return -1;
-            return NodeIndex;
-        }
-
         E getElement(intmax_t ElementIndex) const {
             if (ElementIndex < 0) ElementIndex += NodeSize;
             if (ElementIndex < 0 || ElementIndex >= NodeSize)
@@ -529,8 +469,16 @@ namespace eLibrary {
             return NodeCurrent->NodeValue;
         }
 
+        intmax_t indexOf(const E &ElementSource) noexcept {
+            intmax_t NodeIndex = 0;
+            LinkedNode *NodeCurrent = NodeHead;
+            while (NodeCurrent && NodeCurrent->NodeValue != ElementSource) NodeCurrent = NodeCurrent->NodeNext, ++NodeIndex;
+            if (!NodeCurrent) return -1;
+            return NodeIndex;
+        }
+
         void removeElement(const E &ElementSource) {
-            intmax_t ElementIndex = doFindElement(ElementSource);
+            intmax_t ElementIndex = indexOf(ElementSource);
             if (ElementIndex == -1) throw Exception(String(u"SingleLinkedList<E>::removeElement(const E&) ElementSource"));
             removeIndex(ElementIndex);
         }
@@ -563,6 +511,36 @@ namespace eLibrary {
             LinkedNode *NodeCurrent = NodeHead;
             while (ElementIndex--) NodeCurrent = NodeCurrent->NodeNext;
             NodeCurrent->NodeValue = ElementSource;
+        }
+
+        ArrayList<E> toArrayList() const noexcept {
+            ArrayList<E> ListResult;
+            LinkedNode *NodeCurrent = NodeHead;
+            while (NodeCurrent) {
+                ListResult.addElement(NodeCurrent->NodeValue);
+                NodeCurrent = NodeCurrent->NodeNext;
+            }
+            return ListResult;
+        }
+
+        DoubleLinkedList<E> toDoubleLinkedList() const noexcept {
+            DoubleLinkedList<E> ListResult;
+            LinkedNode *NodeCurrent = NodeHead;
+            while (NodeCurrent) {
+                ListResult.addElement(NodeCurrent->NodeValue);
+                NodeCurrent = NodeCurrent->NodeNext;
+            }
+            return ListResult;
+        }
+
+        std::forward_list<E> toSTLForwardList() const noexcept {
+            std::forward_list<E> ListResult;
+            LinkedNode *NodeCurrent = NodeHead;
+            while (NodeCurrent) {
+                ListResult.insert_after(ListResult.end(), NodeCurrent->NodeValue);
+                NodeCurrent = NodeCurrent->NodeNext;
+            }
+            return ListResult;
         }
 
         String toString() const noexcept override {

@@ -1,6 +1,7 @@
 #include <algorithm>
 #include <ctime>
 #include <random>
+#include <thread>
 
 #include <eLibrary>
 using namespace eLibrary;
@@ -64,6 +65,22 @@ TEST_SUITE("Integer") {
         });
     }
 
+    TEST_CASE("IntegerFactorial") {
+        RandomEngine.seed(RandomDevice() + time(nullptr));
+        for (unsigned NumberEpoch = 0; NumberEpoch < 10000; ++NumberEpoch) {
+            uintmax_t NumberValue = RandomEngine() % 300;
+            Integer NumberObject(NumberValue), NumberResult(1);
+            for (uintmax_t NumberIteration = 1; NumberIteration <= NumberValue; ++NumberIteration)
+                NumberResult = NumberResult.doMultiplication(NumberIteration);
+
+            CHECK(NumberObject.doFactorial().doCompare(NumberResult) == 0);
+        }
+        Integer NumberP(RandomEngine() % 500);
+        TestBench.run("IntegerFactorialP", [&] {
+            NumberP.doFactorial();
+        });
+    }
+
     TEST_CASE("IntegerModulo") {
         RandomEngine.seed(RandomDevice() + time(nullptr));
 
@@ -105,7 +122,7 @@ TEST_SUITE("Integer") {
 
             CHECK(NumberBaseObject.doPower(NumberExponentObject).doCompare(NumberResult) == 0);
         }
-        Integer NumberBaseObject(std::min(RandomEngine(), (uint_fast32_t) 1000000)), NumberExponentObject(RandomEngine() % 1000);
+        Integer NumberBaseObject(std::min(RandomEngine(), (uint_fast32_t) 1000000)), NumberExponentObject(RandomEngine() % 500);
         TestBench.run("IntegerPower", [&] {
             NumberBaseObject.doPower(NumberExponentObject);
         });
@@ -118,7 +135,7 @@ TEST_SUITE("Integer") {
             unsigned NumberTarget = RandomEngine() % 100000;
             CHECK(Mathematics::isPrime(NumberTarget) == Mathematics::isPrimeNative(NumberTarget));
         }
-        uintmax_t NumberSource = RandomEngine();
+        uintmax_t NumberSource = RandomEngine() % 1000000;
         TestBench.run("IntegerPrimeMixed", [&] {
             Mathematics::isPrime(NumberSource);
         });
@@ -137,6 +154,38 @@ TEST_SUITE("Integer") {
         TestBench.run("IntegerSubtraction", [&] {
             NumberObject1.doSubtraction(NumberObject2);
         });
+    }
+}
+
+TEST_SUITE("Mutex") {
+    TEST_CASE("MutexAll") {
+        Mutex MutexObject;
+        int NumberResult = 0;
+        std::thread Thread1([&] {
+            for (unsigned NumberEpoch = 0;NumberEpoch < 10000;++NumberEpoch)
+                MutexExecutor::doExecuteVoid(MutexObject, [&] {
+                    ++NumberResult;
+                });
+        }), Thread2([&] {
+            for (unsigned NumberEpoch = 0;NumberEpoch < 10000;++NumberEpoch)
+                MutexExecutor::doExecuteVoid(MutexObject, [&] {
+                    ++NumberResult;
+                });
+        });
+        Thread1.join();
+        Thread2.join();
+        CHECK(NumberResult == 20000);
+        TestBench.run("MutexLock&Unlock", [&] {
+            MutexObject.doLock();
+            MutexObject.doUnlock();
+        });
+    }
+
+    TEST_CASE("MutexExecutorAll") {
+        Mutex MutexObject;
+        CHECK(MutexExecutor::doExecute(MutexObject, [&] {
+            return String(u"eSoftware");
+        }).doCompare(String(u"eSoftware")) == 0);
     }
 }
 

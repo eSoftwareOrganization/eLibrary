@@ -1,5 +1,4 @@
-#include <Core/String.hpp>
-#include <sstream>
+#include <Core/Number.hpp>
 
 #ifdef __GNUC__
 #include <cxxabi.h>
@@ -7,14 +6,16 @@
 
 namespace eLibrary {
     String Object::toString() const noexcept {
-        std::stringstream ObjectStream;
-        ObjectStream <<
+        StringStream ObjectStream;
+        ObjectStream.addString(String(
 #ifdef __GNUC__
             abi::__cxa_demangle(typeid(*this).name(), nullptr, nullptr, nullptr)
 #else
             typeid(*this).name()
 #endif
-        << "@0x" << std::hex << std::uppercase << hashCode();
-        return ObjectStream.str();
+        ).toU16String());
+        ObjectStream.addString(u"@0x");
+        ObjectStream.addString(Integer(hashCode()).toString(16).toU16String());
+        return ObjectStream.toString();
     }
 }

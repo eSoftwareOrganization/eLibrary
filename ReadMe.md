@@ -2,7 +2,7 @@
 
 ![](Scroll.png)
 
-![](https://img.shields.io/badge/License-Apache%202.0-red.svg)
+[![FOSSA Status](https://app.fossa.com/api/projects/git%2Bgithub.com%2Fldgeng%2FeLibrary.svg?type=large)](https://app.fossa.com/projects/git%2Bgithub.com%2Fldgeng%2FeLibrary?ref=badge_large)
 
 Project Community:
 + [Discord](https://discord.gg/ejYKQZpxkx)
@@ -20,13 +20,28 @@ Project Reference:
 + [\<Unnamed>](https://www.cnblogs.com/CocoonFan/p/3164221.html)
 
 Project Update Log:
+> eLibrary V2023.05
+- Core::ArrayList doReverse(...) removeElement(...)
+- Core::ConcurrentArrayList doAssign / operator= / toSTLVector(New)
+- Core::ConditionVariable / doWait / getHandle / notifyAll / notifyOne / getHandle(New)
+- Core::DoubleLinkedList toArrayList / toSTLList(New)
+- Core::Fraction toString(StringStream Implementation)
+- Core::Integer doDivision / doModulo(0 Dividing Handling) doFactorial(New)
+- Core::Mathematics doCombinator(New)
+- Core::Mutex / doLock / doUnlock / getHandle / tryLock(New)
+- Core::MutexExecutor / doExecute / doExecuteVoid(New)
+- Core::NtDriver Constructor / ~Constructor / doClose / doControl / doOpen / doRead / doUnloadSC / doWrite(Remove) doLoadNt / doUnloadNt(Parameter & Static)
+- Core::Object toString(StringStream Implementation)
+- Core::Semaphore / doAcquire / doRelease / getHandle(New)
+- Core::SingleLinkedList indexOf(From doFind) removeElement(...) toArrayList / toDoubleLinkedList / toSTLForwardList(New)
+- IO::Buffer doClear / doDiscardMark / doFlip / doMark / doReset / doRewind / getBufferCapacity
 > eLibrary V2023.04
 - Core::ArrayList ~Constructor(...) doAssign / operator= / toSTLVector(New) doConcat(Memory Overflow Fix) Constructor(std::array\<>) / doReverse(New) indexOf(From doFind) toString(StringStream Implementation)
 - Core::ConcurrentArrayList Constructor(std::array\<E, ElementSourceSize>) / doConcat / doReverse(New) indexOf(From doFind)
 - Core::DoubleLinkedList begin / end / LinkedListIterator(Remove) indexOf(From doFindElement + Modifier + Segment Fault Fix) toString(StringStream Implementation)
 - Core::Fraction getValue(Overflow Protection)
 - Core::Integer Constructor(T)(std::numeric_limits<intmax_t>::min()) doCompare(Signature) isNegative / isPositive(0) isEven / isOdd / NumberBaseUnit(New) getValue(Overflow Protection) toString(StringStream Implementation)
-- Core::Mathematics doCosineFraction / doExponentFraction / doInverseHyperbolicTangentFraction(Parameter`NumberPrecision`) getAbsolute(New) isPrimeLucas(Implementation) isPrimeRabinMiller(Integer::isEven Implementation)
+- Core::Mathematics doCosineFraction / doExponentFraction / doInverseHyperbolicTangentFraction(Parameter `NumberPrecision`) getAbsolute(New) isPrimeLucas(Implementation) isPrimeRabinMiller(Integer::isEven Implementation)
 - Core::Object ~Constructor(New)
 - Core::SingleLinkedList begin / end / LinkedListIterator(Remove) doFind(From doFindElement + Segment Fault Fix) toString(StringStream Implementation)
 - Core::String Constructor(char16_t)(New) doConcat / doReplace / doStrip / doTruncate / toLowerCase / toUpperCase(StringStream Implementation) doReplace(Modifier) doReverse(New) toWString(...) valueOf(T, \[unsigned short])(Remove)

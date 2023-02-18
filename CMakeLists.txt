@@ -4,7 +4,7 @@ project(eLibrary)
 
 include_directories(eLibrary)
 
-add_compile_options(-Wall)
+add_compile_options(-ffreestanding -Wall)
 
 set(CMAKE_CXX_STANDARD 20)
 

@@ -3,13 +3,10 @@
 #include <Core/Exception.hpp>
 
 #include <algorithm>
-#include <cstdlib>
-#include <deque>
 #include <iomanip>
+#include <limits>
 #include <map>
-#include <numbers>
 #include <sstream>
-#include <string>
 #include <vector>
 
 namespace eLibrary {
@@ -112,7 +109,8 @@ namespace eLibrary {
             return 0;
         }
 
-        Integer doDivision(const Integer &NumberOther) const noexcept {
+        Integer doDivision(const Integer &NumberOther) const {
+            if (!NumberOther.doCompare(0)) throw Exception(String(u"Integer::doDivision(const Integer&) Divide 0"));
             Integer NumberRemainder, NumberResult(*this);
             NumberResult.NumberSignature = !(NumberSignature ^ NumberOther.NumberSignature);
             for (auto NumberPart = (intmax_t) (NumberList.size() - 1); NumberPart >= 0; --NumberPart) {
@@ -133,7 +131,18 @@ namespace eLibrary {
             return NumberResult;
         }
 
-        Integer doModulo(const Integer &NumberOther) const noexcept {
+        Integer doFactorial() const noexcept {
+            Integer NumberCurrent(*this), NumberResult(1);
+            if (doCompare(1) <= 0) return NumberResult;
+            while (NumberCurrent.doCompare(1)) {
+                NumberResult = NumberResult.doMultiplication(NumberCurrent);
+                NumberCurrent = NumberCurrent.doSubtraction(1);
+            }
+            return NumberResult;
+        }
+
+        Integer doModulo(const Integer &NumberOther) const {
+            if (!NumberOther.doCompare(0)) throw Exception(String(u"Integer::doModulo(const Integer&) Modulo 0"));
             Integer NumberRemainder, NumberResult(*this);
             for (auto NumberPart = (intmax_t) (NumberList.size() - 1); NumberPart >= 0; --NumberPart) {
                 NumberRemainder = NumberRemainder.doMultiplication(NumberBaseUnit).doAddition(NumberList[NumberPart]);
@@ -285,9 +294,7 @@ namespace eLibrary {
         Integer NumberDenominator, NumberNumerator;
 
         Integer getGreatestCommonFactor(const Integer &Number1, const Integer &Number2) const noexcept {
-            if (Number2.getAbsolute().doCompare(Integer(0)) == 0) {
-                return Number1;
-            }
+            if (!Number2.getAbsolute().doCompare(Integer(0))) return Number1;
             return getGreatestCommonFactor(Number2, Number1.doModulo(Number2));
         }
     public:
@@ -353,18 +360,20 @@ namespace eLibrary {
         }
 
         bool isNegative() const noexcept {
-            return !NumberSignature;
+            return !NumberSignature && NumberNumerator.doCompare(0);
         }
 
         bool isPositive() const noexcept {
-            return NumberSignature;
+            return NumberSignature && NumberNumerator.doCompare(0);
         }
 
         String toString() const noexcept override {
-            std::basic_stringstream<char16_t> StringStream;
-            if (!NumberSignature) StringStream << u'-';
-            StringStream << NumberNumerator.toString().toU16String() << u'/' << NumberDenominator.toString().toU16String();
-            return StringStream.str();
+            StringStream CharacterStream;
+            if (!NumberSignature) CharacterStream.addCharacter(u'-');
+            CharacterStream.addString(NumberNumerator.toString().toU16String());
+            CharacterStream.addCharacter(u'/');
+            CharacterStream.addString(NumberDenominator.toString().toU16String());
+            return CharacterStream.toString();
         }
     };
 }
