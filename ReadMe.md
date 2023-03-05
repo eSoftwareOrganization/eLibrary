@@ -1,17 +1,11 @@
 # eLibrary
-
-![](Scroll.png)
+> An all-in-one cpp library
 
 [![FOSSA Status](https://app.fossa.com/api/projects/git%2Bgithub.com%2Fldgeng%2FeLibrary.svg?type=large)](https://app.fossa.com/projects/git%2Bgithub.com%2Fldgeng%2FeLibrary?ref=badge_large)
-
-Project Community:
-+ [Discord](https://discord.gg/ejYKQZpxkx)
 
 Project Dependencies:
 + [doctest](https://github.com/doctest/doctest)
 + [nanobench](https://github.com/martinus/nanobench)
-
-Project Description: An all-in-one cpp library
 
 Project Reference:
 + [pydub](https://github.com/jiaaro/pydub)
@@ -20,6 +14,20 @@ Project Reference:
 + [\<Unnamed>](https://www.cnblogs.com/CocoonFan/p/3164221.html)
 
 Project Update Log:
+> eLibrary V2023.06
+- Core::AbstractQueuedSynchronizer / AbstractQueuedNode / tryAcquireExclusive / tryAcquireShared / tryReleaseExclusive / tryReleaseShared(New)
+- Core::ArrayList toSTLArray(From toArray)
+- Core::AtomicNumber / addAndGet / compareAndSet / decrementAndGet / getAndAdd / getAndDecrement / getAndIncrement / getAndSet / getValue / incrementAndGet(New)
+- Core::ConcurrentArrayList(Remove)
+- Core::ConcurrentUtility / doCompareAndExchange / doCompareAndExchangeReference / doCompareAndSet / doCompareAndSetReference / getAndAddNumber / getAndSetNumber(New)
+- Core::ConditionVariable(Remove)
+- Core::Mutex(Remove)
+- Core::MutexExecutor(Remove)
+- Core::Semaphore(Remove)
+- Core::String ~Constructor(StringReference)
+- IO::AudioSegment(Remove)
+- IO::Buffer getBufferLimit / getBufferMark / getBufferPosition / getRemaining / hasRemaining / setBufferLimit / setBufferPosition(v2023.05)
+- IO::ByteBuffer Constructor(unsigned) / Constructor(const ByteBuffer&) / ~Constructor / doCompact(New)
 > eLibrary V2023.05
 - Core::ArrayList doReverse(...) removeElement(...)
 - Core::ConcurrentArrayList doAssign / operator= / toSTLVector(New)
@@ -34,7 +42,7 @@ Project Update Log:
 - Core::Object toString(StringStream Implementation)
 - Core::Semaphore / doAcquire / doRelease / getHandle(New)
 - Core::SingleLinkedList indexOf(From doFind) removeElement(...) toArrayList / toDoubleLinkedList / toSTLForwardList(New)
-- IO::Buffer doClear / doDiscardMark / doFlip / doMark / doReset / doRewind / getBufferCapacity
+- IO::Buffer / doClear / doDiscardMark / doFlip / doMark / doReset / doRewind / getBufferCapacity(New)
 > eLibrary V2023.04
 - Core::ArrayList ~Constructor(...) doAssign / operator= / toSTLVector(New) doConcat(Memory Overflow Fix) Constructor(std::array\<>) / doReverse(New) indexOf(From doFind) toString(StringStream Implementation)
 - Core::ConcurrentArrayList Constructor(std::array\<E, ElementSourceSize>) / doConcat / doReverse(New) indexOf(From doFind)

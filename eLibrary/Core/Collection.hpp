@@ -175,7 +175,7 @@ namespace eLibrary {
             ElementContainer[ElementIndex] = ElementSource;
         }
 
-        auto toArray() const noexcept {
+        auto toSTLArray() const noexcept {
             std::array<E, this->ElementSize> ArraySource;
             for (intmax_t ElementIndex = 0;ElementIndex < ElementSize;++ElementIndex)
                 ArraySource[ElementIndex] = ElementContainer[ElementIndex];

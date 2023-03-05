@@ -32,7 +32,7 @@ namespace eLibrary {
     private:
         mutable std::map<String, FARPROC> ModuleFunctionMapping;
         HMODULE ModuleHandle;
-    protected:
+
         NtModule(HMODULE ModuleHandleSource) : ModuleHandle(ModuleHandleSource) {}
     public:
         ~NtModule() noexcept {
@@ -61,7 +61,7 @@ namespace eLibrary {
     class NtFile final : public Object {
     private:
         HANDLE FileHandle;
-    protected:
+
         NtFile(HANDLE FileHandleSource) : FileHandle(FileHandleSource) {
             if (!FileHandleSource) throw Exception(String(u"NtFile::NtFile(HANDLE) FileHandleSource"));
         }
@@ -149,11 +149,11 @@ namespace eLibrary {
     class NtProcess final : public Object {
     private:
         HANDLE ProcessHandle;
-    public:
+
         NtProcess(HANDLE ProcessHandleSource) : ProcessHandle(ProcessHandleSource) {
             if (!ProcessHandleSource) throw Exception(String(u"NtProcess::NtProcess(HANDLE) ProcessHandleSource"));
         }
-
+    public:
         ~NtProcess() noexcept {
             if (ProcessHandle) {
                 NtClose(ProcessHandle);

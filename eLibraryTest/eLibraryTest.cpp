@@ -157,38 +157,6 @@ TEST_SUITE("Integer") {
     }
 }
 
-TEST_SUITE("Mutex") {
-    TEST_CASE("MutexAll") {
-        Mutex MutexObject;
-        int NumberResult = 0;
-        std::thread Thread1([&] {
-            for (unsigned NumberEpoch = 0;NumberEpoch < 10000;++NumberEpoch)
-                MutexExecutor::doExecuteVoid(MutexObject, [&] {
-                    ++NumberResult;
-                });
-        }), Thread2([&] {
-            for (unsigned NumberEpoch = 0;NumberEpoch < 10000;++NumberEpoch)
-                MutexExecutor::doExecuteVoid(MutexObject, [&] {
-                    ++NumberResult;
-                });
-        });
-        Thread1.join();
-        Thread2.join();
-        CHECK(NumberResult == 20000);
-        TestBench.run("MutexLock&Unlock", [&] {
-            MutexObject.doLock();
-            MutexObject.doUnlock();
-        });
-    }
-
-    TEST_CASE("MutexExecutorAll") {
-        Mutex MutexObject;
-        CHECK(MutexExecutor::doExecute(MutexObject, [&] {
-            return String(u"eSoftware");
-        }).doCompare(String(u"eSoftware")) == 0);
-    }
-}
-
 TEST_SUITE("String") {
     TEST_CASE("StringCase") {
         RandomEngine.seed(RandomDevice() + time(nullptr));

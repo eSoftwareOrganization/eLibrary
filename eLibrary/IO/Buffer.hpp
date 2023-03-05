@@ -5,10 +5,10 @@
 namespace eLibrary {
     class Buffer : public Object {
     protected:
-        int BufferCapacity;
-        int BufferLimit;
-        int BufferMark = -1;
-        int BufferPosition = 0;
+        unsigned BufferCapacity;
+        unsigned BufferLimit;
+        intmax_t BufferMark;
+        unsigned BufferPosition;
     public:
         void doClear() noexcept {
             BufferLimit = BufferCapacity;
@@ -40,23 +40,23 @@ namespace eLibrary {
             BufferPosition = 0;
         }
 
-        int getBufferCapacity() const noexcept {
+        unsigned getBufferCapacity() const noexcept {
             return BufferCapacity;
         }
 
-        int getBufferLimit() const noexcept {
+        unsigned getBufferLimit() const noexcept {
             return BufferLimit;
         }
 
-        int getBufferMark() const noexcept {
+        intmax_t getBufferMark() const noexcept {
             return BufferMark;
         }
 
-        int getBufferPosition() const noexcept {
+        unsigned getBufferPosition() const noexcept {
             return BufferPosition;
         }
 
-        int getRemaining() const noexcept {
+        unsigned getRemaining() const noexcept {
             return hasRemaining() ? BufferLimit - BufferPosition : 0;
         }
 
@@ -64,15 +64,15 @@ namespace eLibrary {
             return BufferPosition < BufferLimit;
         }
 
-        void setBufferLimit(int BufferLimitSource) {
-            if (BufferLimitSource > BufferCapacity || BufferLimitSource < 0)
-                throw Exception(String(u"Buffer::setBufferLimit(int) BufferLimitSource"));
+        void setBufferLimit(unsigned BufferLimitSource) {
+            if (BufferLimitSource > BufferCapacity)
+                throw Exception(String(u"Buffer::setBufferLimit(unsigned) BufferLimitSource"));
             BufferLimit = BufferLimitSource;
         }
 
-        void setBufferPosition(int BufferPositionSource) {
-            if (BufferPositionSource > BufferLimit || BufferPositionSource < 0)
-                throw Exception(String(u"Buffer::setBufferPosition(int) BufferPositionSource"));
+        void setBufferPosition(unsigned BufferPositionSource) {
+            if (BufferPositionSource > BufferLimit)
+                throw Exception(String(u"Buffer::setBufferPosition(unsigned) BufferPositionSource"));
             BufferPosition = BufferPositionSource;
         }
     };

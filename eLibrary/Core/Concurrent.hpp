@@ -1,224 +1,139 @@
 #pragma once
 
-#include <Core/Exception.hpp>
-
-#include <condition_variable>
-#include <pthread.h>
-#include <semaphore.h>
+#include <Core/Number.hpp>
 
 namespace eLibrary {
-    class Mutex final : public Object {
-    private:
-        pthread_mutex_t MutexHandle;
+    class ConcurrentUtility final : public Object {
     public:
-        Mutex() {
-            if (pthread_mutex_init(&MutexHandle, nullptr))
-                throw Exception(String(u"Mutex::Mutex() pthread_mutex_init"));
+        constexpr ConcurrentUtility() noexcept = delete;
+
+        static int8_t doCompareAndExchange(volatile int8_t *ValueAddress, int8_t ValueExpected, int8_t ValueTarget) noexcept {
+            int8_t ValueResult;
+            asm volatile("lock\n\tcmpxchgb %2, (%3)":"=a"(ValueResult):"a"(ValueExpected), "r"(ValueTarget), "r"(ValueAddress):"cc", "memory");
+            return ValueResult;
         }
 
-        ~Mutex() noexcept {
-            pthread_mutex_destroy(&MutexHandle);
+        static int16_t doCompareAndExchange(volatile int16_t *ValueAddress, int16_t ValueExpected, int16_t ValueTarget) noexcept {
+            int16_t ValueResult;
+            asm volatile("lock\n\tcmpxchgw %2, (%3)":"=a"(ValueResult):"a"(ValueExpected), "r"(ValueTarget), "r"(ValueAddress):"cc", "memory");
+            return ValueResult;
         }
 
-        void doLock() {
-            if (pthread_mutex_lock(&MutexHandle)) throw Exception(String(u"Mutex::doLock() pthread_mutex_lock"));
+        static int32_t doCompareAndExchange(volatile int32_t *ValueAddress, int32_t ValueExpected, int32_t ValueTarget) noexcept {
+            int32_t ValueResult;
+            asm volatile("lock\n\tcmpxchgl %2, (%3)":"=a"(ValueResult):"a"(ValueExpected), "r"(ValueTarget), "r"(ValueAddress):"cc", "memory");
+            return ValueResult;
         }
 
-        void doUnlock() noexcept {
-            pthread_mutex_unlock(&MutexHandle);
+        static int64_t doCompareAndExchange(volatile int64_t *ValueAddress, int64_t ValueExpected, int64_t ValueTarget) noexcept {
+            int64_t ValueResult;
+            asm volatile("lock\n\tcmpxchgq %2, (%3)":"=a"(ValueResult):"a"(ValueExpected), "r"(ValueTarget), "r"(ValueAddress):"cc", "memory");
+            return ValueResult;
         }
 
-        pthread_mutex_t *getHandle() noexcept {
-            return &MutexHandle;
+        template<typename T>
+        static auto doCompareAndExchangeReference(volatile T **ValueAddress, T *ValueExpected, T *ValueTarget) noexcept {
+            return doCompareAndExchange((volatile intmax_t*) ValueAddress, (intmax_t) ValueExpected, (intmax_t) ValueTarget);
         }
 
-        Mutex &operator=(const Mutex&) noexcept = delete;
+        template<typename T>
+        static bool doCompareAndSet(volatile T *ValueAddress, T ValueExpected, T ValueTarget) noexcept {
+            doCompareAndExchange(ValueAddress, ValueExpected, ValueTarget);
+            return *ValueAddress == ValueTarget;
+        }
 
-        bool tryLock() noexcept {
-            return !pthread_mutex_trylock(&MutexHandle);
+        template<typename T>
+        static bool doCompareAndSetReference(volatile T **ValueAddress, T *ValueExpected, T *ValueTarget) noexcept {
+            doCompareAndExchangeReference(ValueAddress, ValueExpected, ValueTarget);
+            return *ValueAddress == ValueTarget;
+        }
+
+        template<std::integral T>
+        static T getAndAddNumber(volatile T *ValueAddress, T ValueDelta) noexcept {
+            T ValueExpected;
+            do {
+                ValueExpected = *ValueAddress;
+            } while (ConcurrentUtility::doCompareAndExchange(ValueAddress, ValueExpected, ValueExpected + ValueDelta) != ValueExpected);
+            return ValueExpected;
+        }
+
+        template<std::integral T>
+        static void getAndSetNumber(volatile T *ValueAddress, T ValueTarget) noexcept {
+            T ValueExpected;
+            do {
+                ValueExpected = *ValueAddress;
+            } while (ConcurrentUtility::doCompareAndExchange(ValueAddress, ValueExpected, ValueTarget) != ValueExpected);
         }
     };
 
-    class MutexExecutor final : public Object {
+    class AbstractQueuedSynchronizer : public Object {
     public:
-        MutexExecutor() noexcept = delete;
+        struct AbstractQueuedNode {
+            volatile AbstractQueuedNode *NodeNext = nullptr;
+            volatile AbstractQueuedNode *NodePrevious = nullptr;
 
-        template<typename OperationType>
-        static auto doExecute(Mutex &MutexSource, OperationType &&OperationFunction) {
-            MutexSource.doLock();
-            auto &&OperationResult = OperationFunction();
-            MutexSource.doUnlock();
-            return std::move(OperationResult);
-        }
+            bool setNodeNextCAS(AbstractQueuedNode *NodeExpected, AbstractQueuedNode *NodeTarget) noexcept {
+                return ConcurrentUtility::doCompareAndSetReference(&NodeNext, NodeExpected, NodeTarget);
+            }
 
-        template<typename OperationType>
-        static void doExecuteVoid(Mutex &MutexSource, OperationType &&OperationFunction) {
-            MutexSource.doLock();
-            OperationFunction();
-            MutexSource.doUnlock();
-        }
+            bool setNodePreviousCAS(AbstractQueuedNode *NodeExpected, AbstractQueuedNode *NodeTarget) noexcept {
+                return ConcurrentUtility::doCompareAndSetReference(&NodePrevious, NodeExpected, NodeTarget);
+            }
+        };
+        volatile AbstractQueuedNode *NodeHead = nullptr, *NodeTail = nullptr;
+    public:
+        virtual bool tryAcquireExclusive(int) noexcept = 0;
+
+        virtual bool tryAcquireShared() noexcept = 0;
+
+        virtual bool tryReleaseExclusive(int) noexcept = 0;
+
+        virtual bool tryReleaseShared() noexcept = 0;
     };
 
-    class ConditionVariable final : public Object {
+    template<std::integral T>
+    class AtomicNumber final : public Object {
     private:
-        pthread_cond_t VariableHandle;
+        volatile T NumberValue;
     public:
-        ConditionVariable() {
-            if (pthread_cond_init(&VariableHandle, nullptr))
-                throw Exception(String(u"ConditionVariable::ConditionVariable() pthread_cond_init"));
+        T addAndGet(T NumberDelta) noexcept {
+            return ConcurrentUtility::getAndAddNumber(&NumberValue, NumberDelta) + NumberDelta;
         }
 
-        ~ConditionVariable() noexcept {
-            pthread_cond_destroy(&VariableHandle);
+        bool compareAndSet(T ValueExpected, T ValueTarget) noexcept {
+            return ConcurrentUtility::doCompareAndSet(&NumberValue, ValueExpected, ValueTarget);
         }
 
-        void doWait(Mutex &MutexSource) {
-            if (pthread_cond_wait(&VariableHandle, MutexSource.getHandle()))
-                throw Exception(String(u"ConditionVariable::doWait(Mutex&) pthread_cond_wait"));
+        T decrementAndGet() noexcept {
+            return ConcurrentUtility::getAndAddNumber(&NumberValue, -1) - 1;
         }
 
-        pthread_cond_t *getHandle() noexcept {
-            return &VariableHandle;
+        T getAndAdd(T NumberDelta) noexcept {
+            return ConcurrentUtility::getAndAddNumber(&NumberValue, NumberDelta);
         }
 
-        void notifyAll() {
-            if (pthread_cond_broadcast(&VariableHandle)) throw Exception(String(u"ConditionVariable::notifyAll() pthread_cond_broadcast"));
+        T getAndDecrement() noexcept {
+            return ConcurrentUtility::getAndAddNumber(&NumberValue, -1);
         }
 
-        void notifyOne() {
-            if (pthread_cond_signal(&VariableHandle)) throw Exception(String(u"ConditionVariable::notifyOne() pthread_cond_signal"));
+        T getAndIncrement() noexcept {
+            return ConcurrentUtility::getAndAddNumber(&NumberValue, 1);
         }
 
-        ConditionVariable &operator=(const ConditionVariable&) noexcept = delete;
-    };
-
-    template<typename E>
-    class ConcurrentArrayList final : public Object {
-    private:
-        ArrayList<E> ElementList;
-        mutable Mutex ElementMutex;
-    public:
-        ConcurrentArrayList(const ArrayList<E> &ElementListSource) : ElementList(ElementListSource) {}
-
-        void addElement(const E &ElementSource) noexcept {
-            MutexExecutor::doExecuteVoid(ElementMutex, [&] {
-                ElementList.addElement(ElementSource);
-            });
+        T getAndSet(T ValueTarget) noexcept {
+            return ConcurrentUtility::getAndSetNumber(&NumberValue, ValueTarget);
         }
 
-        void addElement(intmax_t ElementIndex, const E &ElementSource) {
-            MutexExecutor::doExecuteVoid(ElementMutex, [&] {
-                ElementList.addElement(ElementIndex, ElementSource);
-            });
+        T getValue() const noexcept {
+            return NumberValue;
         }
 
-        void doAssign(const ConcurrentArrayList<E> &ElementSource) noexcept {
-            MutexExecutor::doExecuteVoid(ElementMutex, [&] {
-                ElementList.doAssign(ElementSource.ElementList);
-            });
-        }
-
-        void doClear() noexcept {
-            MutexExecutor::doExecuteVoid(ElementMutex, [&] {
-                ElementList.doClear();
-            });
-        }
-
-        ConcurrentArrayList<E> doConcat(const ConcurrentArrayList<E> &ElementSource) const noexcept {
-            return MutexExecutor::doExecute(ElementMutex, [&] {
-                return ElementList.doConcat(ElementSource);
-            });
-        }
-
-        void doReverse() noexcept {
-            MutexExecutor::doExecuteVoid(ElementMutex, [&] {
-                ElementList.doReverse();
-            });
-        }
-
-        E getElement(intmax_t ElementIndex) const {
-            return MutexExecutor::doExecute(ElementMutex, [&] {
-                return ElementList.getElement(ElementIndex);
-            });
-        }
-
-        intmax_t getElementSize() {
-            return MutexExecutor::doExecute(ElementMutex, [&] {
-                return ElementList.getElementSize();
-            });
-        }
-
-        intmax_t indexOf(const E &ElementSource) const noexcept {
-            return MutexExecutor::doExecute(ElementMutex, [&] {
-                return ElementList.doFind(ElementSource);
-            });
-        }
-
-        ConcurrentArrayList<E> &operator=(const ConcurrentArrayList<E> &ElementSource) noexcept {
-            doAssign(ElementSource);
-            return *this;
-        }
-
-        void removeElement(const E &ElementSource) {
-            MutexExecutor::doExecuteVoid(ElementMutex, [&] {
-                ElementList.removeElement(ElementSource);
-            });
-        }
-
-        void removeIndex(intmax_t ElementIndex) {
-            MutexExecutor::doExecuteVoid(ElementMutex, [&] {
-                ElementList.removeIndex(ElementIndex);
-            });
-        }
-
-        void setElement(intmax_t ElementIndex, const E &ElementSource) {
-            MutexExecutor::doExecuteVoid(ElementMutex, [&] {
-                ElementList.setElement(ElementIndex, ElementSource);
-            });
-        }
-
-        auto toArray() const noexcept {
-            return MutexExecutor::doExecute(ElementMutex, [&] {
-                return ElementList.toArray();
-            });
-        }
-
-        std::vector<E> toSTLVector() const noexcept {
-            return MutexExecutor::doExecute(ElementMutex, [&] {
-                return ElementList.toSTLVector();
-            });
+        T incrementAndGet() noexcept {
+            return ConcurrentUtility::getAndAddNumber(&NumberValue, 1) + 1;
         }
 
         String toString() const noexcept override {
-            return MutexExecutor::doExecute(ElementMutex, [&] {
-                return ElementList.toString();
-            });
-        }
-    };
-
-    class Semaphore final : public Object {
-    private:
-        sem_t SemaphoreHandle;
-    public:
-        explicit Semaphore(unsigned SemaphoreValue) {
-            if (sem_init(&SemaphoreHandle, 0, SemaphoreValue))
-                throw Exception(String(u"Semaphore::Semaphore() sem_init"));
-        }
-
-        ~Semaphore() noexcept {
-            sem_destroy(&SemaphoreHandle);
-        }
-
-        void doAcquire() noexcept {
-            sem_wait(&SemaphoreHandle);
-        }
-
-        void doRelease() noexcept {
-            sem_post(&SemaphoreHandle);
-        }
-
-        sem_t *getHandle() noexcept {
-            return &SemaphoreHandle;
+            return Integer(NumberValue).toString();
         }
     };
 }

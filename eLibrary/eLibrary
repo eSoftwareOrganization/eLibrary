@@ -14,7 +14,6 @@
 #include <Core/Number.hpp>
 #include <Core/String.hpp>
 #include <Core/Tree.hpp>
-#include <IO/AudioSegment.hpp>
 #include <IO/Buffer.hpp>
 #include <IO/Socket.hpp>
 #include <IO/Stream.hpp>

@@ -70,7 +70,7 @@ namespace eLibrary {
         }
 
         ~String() noexcept {
-            if (--(*CharacterReference) == 0) {
+            if (CharacterReference && --(*CharacterReference) == 0) {
                 CharacterSize = 0;
                 delete[] CharacterContainer;
                 CharacterContainer = nullptr;
@@ -200,6 +200,11 @@ namespace eLibrary {
 
         std::wstring toWString() const noexcept {
             return {CharacterContainer, CharacterContainer + CharacterSize + 1};
+        }
+
+        template<std::integral T>
+        static String valueOf(T ObjectSource) noexcept {
+            return std::to_string(ObjectSource);
         }
 
         template<std::derived_from<Object> T>
