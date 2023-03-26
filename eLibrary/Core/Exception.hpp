@@ -8,7 +8,7 @@
 #include <exception>
 #include <sstream>
 
-namespace eLibrary {
+namespace eLibrary::Core {
     class Exception : public Object, public std::exception {
     private:
         std::string ErrorDetail;
@@ -35,5 +35,10 @@ namespace eLibrary {
         const char *what() const noexcept override {
             return ErrorDetail.data();
         }
+    };
+
+    class ArithmeticException final : public Exception {
+    public:
+        explicit ArithmeticException(const String &ExceptionMessage) noexcept : Exception(ExceptionMessage) {};
     };
 }

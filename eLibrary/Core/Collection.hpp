@@ -7,7 +7,7 @@
 #include <list>
 #include <vector>
 
-namespace eLibrary {
+namespace eLibrary::Core {
     template<typename E>
     class ArrayList final : public Object {
     private:
@@ -190,10 +190,10 @@ namespace eLibrary {
             StringStream CharacterStream;
             CharacterStream.addCharacter(u'[');
             for (intmax_t ElementIndex = 0; ElementIndex + 1 < ElementSize; ++ElementIndex) {
-                CharacterStream.addString(String::valueOf(ElementContainer[ElementIndex]).toU16String());
+                CharacterStream.addString(String::valueOf(ElementContainer[ElementIndex]));
                 CharacterStream.addCharacter(u',');
             }
-            if (ElementSize) CharacterStream.addString(String::valueOf(ElementContainer[ElementSize - 1]).toU16String());
+            if (ElementSize) CharacterStream.addString(String::valueOf(ElementContainer[ElementSize - 1]));
             CharacterStream.addCharacter(u']');
             return CharacterStream.toString();
         }
@@ -390,11 +390,11 @@ namespace eLibrary {
             if (NodeHead) {
                 LinkedNode *NodeCurrent = NodeHead;
                 while (NodeCurrent->NodeNext) {
-                    CharacterStream.addString(String::valueOf(NodeCurrent->NodeValue).toU16String());
+                    CharacterStream.addString(String::valueOf(NodeCurrent->NodeValue));
                     CharacterStream.addCharacter(u',');
                     NodeCurrent = NodeCurrent->NodeNext;
                 }
-                CharacterStream.addString(String::valueOf(NodeCurrent->NodeValue).toU16String());
+                CharacterStream.addString(String::valueOf(NodeCurrent->NodeValue));
             }
             CharacterStream.addCharacter(u']');
             return CharacterStream.toString();
@@ -549,11 +549,11 @@ namespace eLibrary {
             if (NodeHead) {
                 LinkedNode *NodeCurrent = NodeHead;
                 while (NodeCurrent->NodeNext) {
-                    CharacterStream.addString(String::valueOf(NodeCurrent->NodeValue).toU16String());
+                    CharacterStream.addString(String::valueOf(NodeCurrent->NodeValue));
                     CharacterStream.addCharacter(u',');
                     NodeCurrent = NodeCurrent->NodeNext;
                 }
-                CharacterStream.addString(String::valueOf(NodeCurrent->NodeValue).toU16String());
+                CharacterStream.addString(String::valueOf(NodeCurrent->NodeValue));
             }
             CharacterStream.addCharacter(u']');
             return CharacterStream.toString();

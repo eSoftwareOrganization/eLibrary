@@ -4,18 +4,18 @@
 #include <cxxabi.h>
 #endif
 
-namespace eLibrary {
+namespace eLibrary::Core {
     String Object::toString() const noexcept {
         StringStream ObjectStream;
-        ObjectStream.addString(String(
+        ObjectStream.addString({
 #ifdef __GNUC__
             abi::__cxa_demangle(typeid(*this).name(), nullptr, nullptr, nullptr)
 #else
             typeid(*this).name()
 #endif
-        ).toU16String());
-        ObjectStream.addString(u"@0x");
-        ObjectStream.addString(Integer(hashCode()).toString(16).toU16String());
+        });
+        ObjectStream.addString({u"@0x"});
+        ObjectStream.addString(Integer(hashCode()).toString(16));
         return ObjectStream.toString();
     }
 }

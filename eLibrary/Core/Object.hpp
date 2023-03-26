@@ -4,7 +4,7 @@
 
 #include <Core/Constant.hpp>
 
-namespace eLibrary {
+namespace eLibrary::Core {
     class String;
 
     class Object {

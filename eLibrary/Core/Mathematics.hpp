@@ -5,7 +5,24 @@
 #include <concepts>
 #include <numbers>
 
-namespace eLibrary {
+namespace eLibrary::Core {
+    class MathematicsContext final : public Object {
+    private:
+        static Integer FunctionPrecision;
+    public:
+        MathematicsContext() noexcept = delete;
+
+        static Integer getFunctionPrecision() noexcept {
+            return FunctionPrecision;
+        }
+
+        static void setFunctionPrecision(const Integer &FunctionPrecisionSource) noexcept {
+            FunctionPrecision = FunctionPrecisionSource;
+        }
+    };
+
+    Integer MathematicsContext::FunctionPrecision{10000000};
+
     class Mathematics final : public Object {
     private:
         static bool isPrimeLucas(const Integer &NumberSource) noexcept {
@@ -102,11 +119,22 @@ namespace eLibrary {
             return false;
         }
     public:
+        static Fraction NumberPi;
+
         Mathematics() = delete;
 
         static Integer doCombinator(const Integer &NumberM, const Integer &NumberN) {
-            if (NumberN.doCompare(NumberM) < 0) throw Exception(String(u"Mathematics::doCombinator(const Integer&, const Integer&) NumberM NumberN"));
+            if (NumberN.doCompare(NumberM) < 0) throw ArithmeticException(String(u"Mathematics::doCombinator(const Integer&, const Integer&) NumberM NumberN"));
             return NumberN.doFactorial().doDivision(NumberM.doFactorial().doMultiplication(NumberN.doSubtraction(NumberM).doFactorial()));
+        }
+
+        template<std::floating_point T>
+        static T doCosecant(T NumberSource) noexcept {
+            return 1 / doSine(NumberSource);
+        }
+
+        static Fraction doCosecantFraction(const Fraction &NumberSource) noexcept {
+            return Fraction(1, 1).doDivision(doSineFraction(NumberSource));
         }
 
         template<std::floating_point T>
@@ -121,15 +149,24 @@ namespace eLibrary {
             return NumberResult;
         }
 
-        static Fraction doCosineFraction(const Fraction &NumberSource, const Integer &NumberPrecision = Integer(10000000)) noexcept {
+        static Fraction doCosineFraction(const Fraction &NumberSource) noexcept {
             Fraction NumberResult(1), NumberTerminate(1);
             unsigned short NumberDigit = 2;
-            while (NumberTerminate.getAbsolute().doCompare({1, NumberPrecision}) > 0) {
+            while (NumberTerminate.getAbsolute().doCompare({1, MathematicsContext::getFunctionPrecision()}) > 0) {
                 NumberTerminate = NumberTerminate.doMultiplication(NumberSource.doMultiplication(NumberSource).doDivision(Integer(NumberDigit * (NumberDigit - 1))).getOpposite());
                 NumberResult = NumberResult.doAddition(NumberTerminate);
                 NumberDigit += 2;
             }
             return NumberResult;
+        }
+
+        template<std::floating_point T>
+        static T doCotangent(T NumberSource) noexcept {
+            return doCosine(NumberSource) / doSine(NumberSource);
+        }
+
+        static Fraction doCotangentFraction(const Fraction &NumberSource) noexcept {
+            return doCosineFraction(NumberSource).doDivision(doSineFraction(NumberSource));
         }
 
         template<std::floating_point T>
@@ -154,10 +191,10 @@ namespace eLibrary {
             return NumberResult;
         }
 
-        static Fraction doExponentFraction(const Fraction &NumberSource, const Integer &NumberPrecision = Integer(10000000)) noexcept {
+        static Fraction doExponentFraction(const Fraction &NumberSource) noexcept {
             Fraction NumberDenominator(1), NumberNumerator = NumberSource, NumberResult(1), NumberTerminate = NumberSource;
             unsigned short NumberDigit = 1;
-            while (NumberTerminate.getAbsolute().doCompare({1, NumberPrecision}) > 0) {
+            while (NumberTerminate.getAbsolute().doCompare({1, MathematicsContext::getFunctionPrecision()}) > 0) {
                 NumberResult = NumberResult.doAddition(NumberTerminate);
                 NumberNumerator = NumberNumerator.doMultiplication(NumberSource);
                 NumberDenominator = NumberDenominator.doMultiplication(Integer(++NumberDigit));
@@ -206,10 +243,10 @@ namespace eLibrary {
             return NumberResult;
         }
 
-        static Fraction doInverseHyperbolicTangentFraction(const Fraction &NumberDegree, const Integer &NumberPrecision = Integer(10000000)) noexcept {
+        static Fraction doInverseHyperbolicTangentFraction(const Fraction &NumberDegree) noexcept {
             Fraction NumberNumerator(NumberDegree), NumberResult(0), NumberTerminate(NumberDegree);
             unsigned short NumberDigit = 1;
-            while (NumberTerminate.getAbsolute().doCompare({1, NumberPrecision}) > 0) {
+            while (NumberTerminate.getAbsolute().doCompare({1, MathematicsContext::getFunctionPrecision()}) > 0) {
                 NumberResult = NumberResult.doAddition(NumberTerminate);
                 NumberNumerator = NumberNumerator.doMultiplication(NumberDegree.doMultiplication(NumberDegree));
                 NumberDigit += 2;
@@ -248,8 +285,17 @@ namespace eLibrary {
         }
 
         template<std::floating_point T>
+        static T doSecant(T NumberSource) {
+            return 1 / doCosine(NumberSource);
+        }
+
+        static Fraction doSecantFraction(const Fraction &NumberSource) noexcept {
+            return Fraction(1, 1).doDivision(doCosineFraction(NumberSource));
+        }
+
+        template<std::floating_point T>
         static T doSine(T NumberSource) noexcept {
-            NumberSource -= (int)std::abs(NumberSource / (std::numbers::pi * 2)) * 2 * std::numbers::pi;
+            NumberSource -= (int) std::abs(NumberSource / (std::numbers::pi * 2)) * 2 * std::numbers::pi;
             if (!NumberSource) return 0;
             T NumberDenominator = 1, NumberNumerator = NumberSource, NumberResult = 0, NumberSignature = 1, NumberTerminate = NumberSource;
             unsigned short NumberDigit = 1;
@@ -264,9 +310,28 @@ namespace eLibrary {
             return NumberResult;
         }
 
+        static Fraction doSineFraction(const Fraction &NumberSourceSource) noexcept {
+            Fraction NumberSource(NumberSourceSource.doSubtraction(NumberSourceSource.doDivision(NumberPi.doAddition(NumberPi)).getAbsolute().doMultiplication(2).doMultiplication(NumberPi)));
+            Fraction NumberDenominator(1), NumberNumerator(NumberSource), NumberResult(0), NumberSignature(1), NumberTerminate(NumberSource);
+            unsigned short NumberDigit = 1;
+            while (NumberTerminate.getAbsolute().doCompare({1, MathematicsContext::getFunctionPrecision()}) > 0) {
+                NumberResult = NumberResult.doAddition(NumberTerminate);
+                ++NumberDigit;
+                NumberSignature = NumberSignature.getOpposite();
+                NumberDenominator = NumberDenominator.doMultiplication(Integer(((NumberDigit << 1) - 2) * ((NumberDigit << 1) - 1)));
+                NumberNumerator = NumberSource.doMultiplication(NumberSource).doMultiplication(NumberNumerator);
+                NumberTerminate = NumberSignature.doMultiplication(NumberNumerator.doDivision(NumberDenominator));
+            }
+            return NumberResult;
+        }
+
         template<std::floating_point T>
         static T doTangent(T NumberSource) noexcept {
             return doSine(NumberSource) / doCosine(NumberSource);
+        }
+
+        static Fraction doTangentFraction(const Fraction &NumberSource) noexcept {
+            return doSineFraction(NumberSource).doDivision(doCosineFraction(NumberSource));
         }
 
         template<std::integral T>
@@ -280,7 +345,7 @@ namespace eLibrary {
         }
 
         static Integer getJocabiSymbol(const Integer &NumberMSource, const Integer &NumberNSource) {
-            if (NumberNSource.isNegative() || NumberNSource.isEven()) throw Exception(String(u"Mathematics::getJocabiSymbol(const Integer&, const Integer&) NumberNSource"));
+            if (NumberNSource.isNegative() || NumberNSource.isEven()) throw ArithmeticException(String(u"Mathematics::getJocabiSymbol(const Integer&, const Integer&) NumberNSource"));
             Integer NumberM(NumberMSource), NumberN(NumberNSource);
             if (NumberM.isNegative() || NumberM.doCompare(NumberN) > 0) NumberM = NumberM.doModulo(NumberN);
             if (!NumberM.doCompare(0)) return NumberNSource.doCompare(1) == 0;
@@ -386,4 +451,6 @@ namespace eLibrary {
             return std::numbers::pi / 180.0 * NumberSource;
         }
     };
+
+    Fraction Mathematics::NumberPi = {52163, 16604};
 }

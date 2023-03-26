@@ -1,8 +1,10 @@
 #pragma once
 
-#include <Core/Exception.hpp>
+#include <IO/Exception.hpp>
 
-namespace eLibrary {
+using namespace eLibrary::Core;
+
+namespace eLibrary::IO {
     class Buffer : public Object {
     protected:
         unsigned BufferCapacity;
@@ -31,7 +33,7 @@ namespace eLibrary {
         }
 
         void doReset() {
-            if (BufferMark < 0) throw Exception(String(u"Buffer::doReset() BufferMark"));
+            if (BufferMark < 0) throw IOException(String(u"Buffer::doReset() BufferMark"));
             BufferPosition = BufferMark;
         }
 
@@ -66,13 +68,13 @@ namespace eLibrary {
 
         void setBufferLimit(unsigned BufferLimitSource) {
             if (BufferLimitSource > BufferCapacity)
-                throw Exception(String(u"Buffer::setBufferLimit(unsigned) BufferLimitSource"));
+                throw IOException(String(u"Buffer::setBufferLimit(unsigned) BufferLimitSource"));
             BufferLimit = BufferLimitSource;
         }
 
         void setBufferPosition(unsigned BufferPositionSource) {
             if (BufferPositionSource > BufferLimit)
-                throw Exception(String(u"Buffer::setBufferPosition(unsigned) BufferPositionSource"));
+                throw IOException(String(u"Buffer::setBufferPosition(unsigned) BufferPositionSource"));
             BufferPosition = BufferPositionSource;
         }
     };

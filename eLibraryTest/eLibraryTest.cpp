@@ -1,13 +1,8 @@
-#include <algorithm>
-#include <ctime>
 #include <random>
-#include <thread>
 
 #include <eLibrary>
 using namespace eLibrary;
 
-#undef max
-#undef min
 #define DOCTEST_CONFIG_IMPLEMENT
 #include <doctest/doctest.h>
 #define ANKERL_NANOBENCH_IMPLEMENT

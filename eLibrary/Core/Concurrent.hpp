@@ -2,7 +2,7 @@
 
 #include <Core/Number.hpp>
 
-namespace eLibrary {
+namespace eLibrary::Core {
     class ConcurrentUtility final : public Object {
     public:
         constexpr ConcurrentUtility() noexcept = delete;
@@ -84,11 +84,11 @@ namespace eLibrary {
     public:
         virtual bool tryAcquireExclusive(int) noexcept = 0;
 
-        virtual bool tryAcquireShared() noexcept = 0;
+        virtual bool tryAcquireShared(int) noexcept = 0;
 
         virtual bool tryReleaseExclusive(int) noexcept = 0;
 
-        virtual bool tryReleaseShared() noexcept = 0;
+        virtual bool tryReleaseShared(int) noexcept = 0;
     };
 
     template<std::integral T>

@@ -4,7 +4,7 @@
 
 #include <optional>
 
-namespace eLibrary {
+namespace eLibrary::Core {
     template<Comparable K, typename V>
     class RedBlackTree final : public Object {
     private:

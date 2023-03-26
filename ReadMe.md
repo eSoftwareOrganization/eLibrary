@@ -8,12 +8,28 @@ Project Dependencies:
 + [nanobench](https://github.com/martinus/nanobench)
 
 Project Reference:
-+ [pydub](https://github.com/jiaaro/pydub)
 + [sympy](https://github.com/sympy/sympy)
 + [\<Unnamed>](https://blog.csdn.net/code4101/article/details/38705155)
 + [\<Unnamed>](https://www.cnblogs.com/CocoonFan/p/3164221.html)
 
 Project Update Log:
+> eLibrary V2023.07
+- Core::ArithmeticException(New)
+- Core::Fraction doAddition / doSubtraction(isNegative / isPositive Implementation) toString(0)
+- Core::Integer toString(0)
+- Core::Mathematics doCosecant / doCosecantFraction / doCotangent / doCotangentFraction / doSecant / doSecantFraction / doSineFraction / doTangentFraction(New)
+- Core::MathematicsContext getFunctionPrecision / setFunctionPrecision(New)
+- IO::FileInputStream / doClose / doRead / doSeek / isAvailable / getFileLength / getFilePosition(New)
+- IO::FileOutputStream / doClose / doFlush / doSeek / doTruncate / doWrite / getFilePosition(New)
+- IO::InputStream doRead(byte*, int, int)(New)
+- IO::IOException(New)
+- IO::OutputStream doWrite(byte*, int, int)(New)
+- IO::URLConnection(Remove)
+- Network::DatagramSocket / doClose / doReceive / doSend / isClosed / setBroadcast(New)
+- Network::NetworkAddress / isAnyLocalAddress / isLinkLocalAddress / isLoopbackAddress / isMulticastAddress / isSiteLocalAddress / NetworkAddressProtocol(New)
+- Network::NetworkSocketAddress(IO::SocketInetAddress) getAddressInformation(Remove) getSocketAddress(From getSocketIP) Constructor / getSocketIP(...)
+- Network::StreamSocket(IO::Socket) doClose / doConnect(...) doReceive / doSend / getRemoteSocketAddress / isClosed / isConnected / setAddressReuse(New)
+- Network::StreamSocketServer(IO::SocketServer) isBound / isClosed(New) setAddressReuse(From setConnectionReuse)
 > eLibrary V2023.06
 - Core::AbstractQueuedSynchronizer / AbstractQueuedNode / tryAcquireExclusive / tryAcquireShared / tryReleaseExclusive / tryReleaseShared(New)
 - Core::ArrayList toSTLArray(From toArray)
@@ -107,33 +123,3 @@ Project Update Log:
 - std::greater_equal\<Comparable>
 - std::hash\<Hashable>
 - std::not_equal_to\<Comparable>
->eLibrary V2023.01
-- Core::NtDriver doLoadSC(NtServiceManager::doCreateService Implementation)
-- Core::NtService getServiceErrorControl / getServiceStartType / getServiceState / getServiceType / setServiceErrorControl / setServiceStartType / setServiceType(New)
-- Core::NtServiceManager doCreateService(NtService Implementation)
-- std::less\<String>
-- std::greater\<String>
->eLibrary V2022.16
-- Core::NtDriver(KeDriver) doLoadNt / doUnloadNt (NtModule Implementation) doLoadSC / doUnloadSC(NtService / NtServiceManager Implementation) doRead / doWrite(New) doLoadSC / doUnloadNt / doUnloadSC(Modifier)
-- Core::NtModule / getFunction(New)
-- Core::NtService / doControl / doDelete / doStart(New)
-- Core::NtServiceManager / doCreateService / doOpenService(New)
-- Core::String Constructor(const std::wstring&) (New)
->eLibrary V2022.15
-- Core::getSummationAVX(const double*, uintmax_t)(New) Core::getSummation(Rename => Core::getSummationAVX)
-- Core::KeDriver doCancel / doClose / doControl / doOpen(New)
-- Core::Mathematics doCosine / doHyperbolicCosine / doHyperbolicSine / doHyperbolicTangent / doSine / doTangent / getNearestPower2Lower / getNearestPower2Upper / toDegrees / toRadians(New) doEvolution / doExponent / doInverseHyperbolicTangent / doLogarithmE / doPower(Type Check)
->eLibrary V2022.14
-- Core::DoubleLinkedList begin / Constructor(std::initializer_list) / end / LinkedListIterator(new)
-- Core::Fraction Constructor / doAddition / doCompare / doDivision / doMultiplication / doSubtraction(Signature) getAbsolute / getOpposite(New) getValue(Deprecated New) isNegative / isPositive(New) toString(Signature)
-- Core::Integer getValue(Deprecated) isNegative / isPositive(New)
-- Core::KeDriver / Constructor(const String&, const String&, DWORD, DWORD) / doLoadNt / doLoadSC / doUnloadNt / doUnloadSC(New)
-- Core::Mathematics doEvolution / doExponent / doInverseHyperbolicTangent / doLogarithmE / doPower(New)
-- Core::SingleLinkedList begin / Constructor(std::initializer_list) / end / LinkedListIterator(New)
-- Core::WindowsNT loadDriver(Remove) loadDriverSC(Remove) unloadDriver(Remove) unloadDriverSC(Remove)
->eLibrary V2022.13
-- Core::Fraction Constructor(Simplify) doDivision / doMultiplication / doSubtraction / getDenominator / getNumerator / toString(New)
-- Core::Integer doDivision / doModulo / doMultiplication / doSubtraction / getValue(Signature) toString(Format)
-- Core::Mathematics / getGreatestCommonFactor(New)
-- Core::RedBlackTree doInsert / doSearchCore(Compare) doRemove(Exception)
-- Core::WindowsNT loadDriver / unloadDriver(Remove Ntdll Linking Requirements) loadDriverSC(...)

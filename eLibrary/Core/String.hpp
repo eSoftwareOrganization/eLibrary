@@ -4,11 +4,12 @@
 #include <codecvt>
 #include <cstring>
 #include <locale>
+#include <sstream>
 #include <string>
 
 #include <Core/Object.hpp>
 
-namespace eLibrary {
+namespace eLibrary::Core {
     class String final : public Object {
     private:
         intmax_t CharacterSize;
@@ -215,55 +216,22 @@ namespace eLibrary {
 
     class StringStream final : public Object {
     private:
-        uintmax_t CharacterCapacity;
-        uintmax_t CharacterSize;
-        char16_t *CharacterContainer;
+        std::basic_stringstream<char16_t> CharacterStream;
     public:
-        constexpr StringStream() : CharacterCapacity(0), CharacterSize(0), CharacterContainer(nullptr) {}
-
-        ~StringStream() noexcept {
-            doClear();
-        }
-
         void addCharacter(char16_t CharacterSource) noexcept {
-            if (CharacterCapacity == 0) CharacterContainer = new char16_t[CharacterCapacity = 1];
-            if (CharacterSize == CharacterCapacity) {
-                auto *CharacterBuffer = new char16_t[CharacterCapacity];
-                memcpy(CharacterBuffer, CharacterContainer, sizeof(char16_t) * CharacterSize);
-                delete[] CharacterContainer;
-                CharacterContainer = new char16_t[CharacterCapacity <<= 1];
-                memcpy(CharacterContainer, CharacterBuffer, sizeof(char16_t) * CharacterSize);
-                delete[] CharacterBuffer;
-            }
-            CharacterContainer[CharacterSize++] = CharacterSource;
+            CharacterStream << CharacterSource;
         }
 
-        void addString(const std::u16string &StringSource) noexcept {
-            if (CharacterSize + StringSource.size() > CharacterCapacity) {
-                while (CharacterSize + StringSource.size() > CharacterCapacity) CharacterCapacity <<= 1;
-                auto *ElementBuffer = new char16_t[CharacterSize];
-                memcpy(ElementBuffer, CharacterContainer, sizeof(char16_t) * CharacterSize);
-                delete[] CharacterContainer;
-                CharacterContainer = new char16_t[CharacterCapacity];
-                memcpy(CharacterContainer, ElementBuffer, sizeof(char16_t) * CharacterSize);
-                delete[] ElementBuffer;
-            }
-            memcpy(CharacterContainer + CharacterSize, StringSource.data(), sizeof(char16_t) * StringSource.size());
-            CharacterSize += StringSource.size();
+        void addString(const String &StringSource) noexcept {
+            CharacterStream << StringSource.toU16String();
         }
 
         void doClear() noexcept {
-            if (CharacterCapacity && CharacterSize && CharacterContainer) {
-                CharacterCapacity = 0;
-                CharacterSize = 0;
-                delete[] CharacterContainer;
-                CharacterContainer = nullptr;
-            }
+            CharacterStream.clear();
         }
 
         String toString() const noexcept override {
-            if (!CharacterContainer) return std::u16string(u"");
-            return std::u16string(CharacterContainer, CharacterContainer + CharacterSize);
+            return CharacterStream.str();
         }
     };
 }

@@ -1,6 +1,6 @@
 #include <Core/Exception.hpp>
 
-namespace eLibrary {
+namespace eLibrary::Core {
     char16_t String::getCharacter(intmax_t CharacterIndex) const {
         if (CharacterIndex < 0) CharacterIndex += CharacterSize;
         if (CharacterIndex < 0 || CharacterIndex >= CharacterSize)
@@ -10,25 +10,24 @@ namespace eLibrary {
 
     String String::doConcat(char16_t CharacterSource) const noexcept {
         StringStream CharacterStream;
-        CharacterStream.addString(CharacterContainer);
+        CharacterStream.addString({CharacterContainer});
         CharacterStream.addCharacter(CharacterSource);
         return CharacterStream.toString();
     }
 
     String String::doConcat(const String &StringOther) const noexcept {
         StringStream CharacterStream;
-        CharacterStream.addString(CharacterContainer);
-        CharacterStream.addString(StringOther.CharacterContainer);
+        CharacterStream.addString(*this);
+        CharacterStream.addString(StringOther);
         return CharacterStream.toString();
     }
 
     String String::doReplace(const String &StringTarget, const String &StringSource) const noexcept {
         StringStream CharacterStream;
-        std::u16string StringSource16(StringSource.toU16String());
         for (intmax_t Character1 = 0, Character2;Character1 < CharacterSize;++Character1) {
             for (Character2 = 0; Character2 < StringTarget.CharacterSize && CharacterContainer[Character1 + Character2] == StringTarget.CharacterContainer[Character2]; ++Character2);
             if (Character2 == StringTarget.CharacterSize) {
-                CharacterStream.addString(StringSource16);
+                CharacterStream.addString(StringSource);
                 Character1 += StringTarget.CharacterSize - 1;
             } else CharacterStream.addCharacter(CharacterContainer[Character1]);
         }

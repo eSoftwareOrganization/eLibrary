@@ -3,7 +3,7 @@ project(eLibraryTest)
 include_directories(../eLibrary)
 
 if(WIN32)
-link_libraries(ntdll.dll shlwapi.lib)
+link_libraries(ntdll.dll shlwapi.lib ws2_32.lib)
 endif()
 
 find_package(doctest CONFIG REQUIRED)

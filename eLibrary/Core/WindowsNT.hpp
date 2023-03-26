@@ -13,7 +13,7 @@
 #include <sstream>
 #include <winternl.h>
 
-namespace eLibrary {
+namespace eLibrary::Core {
     typedef NTSTATUS (NTAPI *NtCloseType)(IN HANDLE Handle);
     typedef NTSTATUS (NTAPI *NtCreateKeyType)(OUT HANDLE *KeyHandle, IN ACCESS_MASK DesiredAccess, IN OBJECT_ATTRIBUTES *ObjectAttributes, ULONG TitleIndex, IN OPTIONAL UNICODE_STRING *Class, IN ULONG CreateOptions, OUT OPTIONAL PULONG Disposition);
     typedef NTSTATUS (NTAPI *NtLoadDriverType)(IN UNICODE_STRING *DriverServiceName);
