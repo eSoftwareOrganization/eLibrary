@@ -13,20 +13,23 @@
 #include <sstream>
 #include <winternl.h>
 
-namespace eLibrary::Core {
-    typedef NTSTATUS (NTAPI *NtCloseType)(IN HANDLE Handle);
-    typedef NTSTATUS (NTAPI *NtCreateKeyType)(OUT HANDLE *KeyHandle, IN ACCESS_MASK DesiredAccess, IN OBJECT_ATTRIBUTES *ObjectAttributes, ULONG TitleIndex, IN OPTIONAL UNICODE_STRING *Class, IN ULONG CreateOptions, OUT OPTIONAL PULONG Disposition);
-    typedef NTSTATUS (NTAPI *NtLoadDriverType)(IN UNICODE_STRING *DriverServiceName);
-    typedef NTSTATUS (NTAPI *NtOpenProcessType)(OUT HANDLE *ProcessHandle, IN ACCESS_MASK DesiredAccess, IN OBJECT_ATTRIBUTES *ObjectAttributes, IN CLIENT_ID *ClientId);
-    typedef NTSTATUS (NTAPI *NtOpenThreadType)(OUT HANDLE *ThreadHandle, IN ACCESS_MASK DesiredAccess, IN OBJECT_ATTRIBUTES *ObjectAttributes, IN CLIENT_ID *ClientId);
-    typedef NTSTATUS (NTAPI *NtSetValueKeyType)(IN HANDLE KeyHandle, IN UNICODE_STRING *ValueName, IN OPTIONAL ULONG TitleIndex, IN ULONG Type, IN OPTIONAL PVOID Data, IN ULONG DataSize);
-    typedef NTSTATUS (NTAPI *NtTerminateProcessType)(IN OPTIONAL HANDLE ProcessHandle, IN NTSTATUS ExitStatus);
-    typedef NTSTATUS (NTAPI *NtTerminateThreadType)(IN OPTIONAL HANDLE ThreadHandle, IN NTSTATUS ExitStatus);
-    typedef NTSTATUS (NTAPI *NtUnloadDriverType)(IN UNICODE_STRING *DriverServiceName);
-    typedef NTSTATUS (NTAPI *RtlAdjustPrivilegeType)(IN ULONG Privilege, IN BOOLEAN Enable, IN BOOLEAN CurrentThread, OUT OPTIONAL BOOLEAN *Enabled);
-    typedef NTSTATUS (NTAPI *RtlInitUnicodeStringType)(OUT UNICODE_STRING *DestinationString, IN PCWSTR SourceString);
+extern "C" {
+NTAPI NTSTATUS NtCreateKey(OUT HANDLE *KeyHandle, IN ACCESS_MASK DesiredAccess, IN OBJECT_ATTRIBUTES *ObjectAttributes, unsigned long TitleIndex, IN OPTIONAL UNICODE_STRING *Class, IN unsigned long CreateOptions, OUT OPTIONAL unsigned long *Disposition);
+NTAPI NTSTATUS NtCreateProcess(OUT HANDLE *ProcessHandle, IN ACCESS_MASK DesiredAccess, IN OBJECT_ATTRIBUTES *ObjectAttributes, IN HANDLE InheritFromProcessHandle, IN BOOLEAN InheritHandles, IN HANDLE OPTIONAL SectionHandle, IN OPTIONAL HANDLE DebugPort, IN OPTIONAL HANDLE ExceptionPort);
+NTAPI NTSTATUS NtLoadDriver(IN UNICODE_STRING *DriverServiceName);
+NTAPI NTSTATUS NtOpenProcess(OUT HANDLE *ProcessHandle, IN ACCESS_MASK DesiredAccess, IN OBJECT_ATTRIBUTES *ObjectAttributes, IN CLIENT_ID *ClientId);
+NTAPI NTSTATUS NtReadFile(IN HANDLE FileHandle, IN OPTIONAL HANDLE Event, IN OPTIONAL PIO_APC_ROUTINE ApcRoutine, IN OPTIONAL void *ApcContext, OUT IO_STATUS_BLOCK *IoStatusBlock, OUT void *Buffer, IN unsigned long Length, IN OPTIONAL LARGE_INTEGER *ByteOffset, IN OPTIONAL unsigned long *Key);
+NTAPI NTSTATUS NtResumeProcess(IN HANDLE Process);
+NTAPI NTSTATUS NtSetValueKey(IN HANDLE KeyHandle, IN UNICODE_STRING *ValueName, IN OPTIONAL unsigned long TitleIndex, IN unsigned long Type, IN OPTIONAL void *Data, IN unsigned long DataSize);
+NTAPI NTSTATUS NtSuspendProcess(IN HANDLE Process);
+NTAPI NTSTATUS NtTerminateProcess(IN OPTIONAL HANDLE ProcessHandle, IN NTSTATUS ExitStatus);
+NTAPI NTSTATUS NtUnloadDriver(IN UNICODE_STRING *DriverServiceName);
+NTAPI NTSTATUS NtWriteFile(IN HANDLE FileHandle, IN OPTIONAL HANDLE Event, IN OPTIONAL PIO_APC_ROUTINE ApcRoutine, IN OPTIONAL void *ApcContext, OUT IO_STATUS_BLOCK *IoStatusBlock, IN void *Buffer, IN unsigned long Length, IN OPTIONAL LARGE_INTEGER *ByteOffset, IN OPTIONAL unsigned long *Key);
+NTAPI NTSTATUS RtlAdjustPrivilege(IN unsigned long Privilege, IN BOOLEAN Enable, IN BOOLEAN CurrentThread, OUT OPTIONAL BOOLEAN *Enabled);
+}
 
-#define SeLoadDriverPrivilege 0xa
+namespace eLibrary::Core {
+    #define SeLoadDriverPrivilege 0xa
 
     class NtModule final : public Object {
     private:
@@ -141,8 +144,20 @@ namespace eLibrary::Core {
             RtlInitUnicodeString(&FilePathString, FilePath.toWString().c_str());
             InitializeObjectAttributes(&FileObjectAttribute, &FilePathString, FilePathCaseSenstive ? 0 : OBJ_CASE_INSENSITIVE, nullptr, nullptr)
             if (!NT_SUCCESS(NtOpenFile(&FileHandle, (ACCESS_MASK) FileAccess, &FileObjectAttribute, &FileStatusBlock, (ULONG) FileShare, (ULONG) FileOption)))
-                throw Exception(String(u"NtFile::doOpen() NtOpenFile"));
+                throw Exception(String(u"NtFile::doOpen(const String&, bool, const NtFileAccess&, const NtFileOption&, const NtFileShare&) NtOpenFile"));
             return NtFile(FileHandle);
+        }
+
+        void doRead(void *FileBuffer, unsigned long FileBufferSize) const {
+            IO_STATUS_BLOCK FileStatusBlock;
+            if (!NT_SUCCESS(NtReadFile(FileHandle, nullptr, nullptr, nullptr, &FileStatusBlock, FileBuffer, FileBufferSize, nullptr, nullptr)))
+                throw Exception(String(u"NtFile::doRead(void*, unsigned long) NtReadFile"));
+        }
+
+        void doWrite(void *FileBuffer, unsigned long FileBufferSize) const {
+            IO_STATUS_BLOCK FileStatusBlock;
+            if (!NT_SUCCESS(NtWriteFile(FileHandle, nullptr, nullptr, nullptr, &FileStatusBlock, FileBuffer, FileBufferSize, nullptr, nullptr)))
+                throw Exception(String(u"NtFile::doWrite(void*, unsigned long) NtWriteFile"));
         }
     };
 
@@ -161,8 +176,15 @@ namespace eLibrary::Core {
             }
         }
 
+        static NtProcess doCreate(HANDLE ProcessInheritHandle, BOOLEAN ProcessInheritHandleStatus, HANDLE ProcessSectionHandle, HANDLE ProcessDebugPortHandle, HANDLE ProcessExceptionPortHandle) {
+            HANDLE ProcessHandle;
+            OBJECT_ATTRIBUTES ProcessObjectAttribute;
+            InitializeObjectAttributes(&ProcessObjectAttribute, nullptr, 0, nullptr, nullptr)
+            if (!NT_SUCCESS(NtCreateProcess(&ProcessHandle, PROCESS_ALL_ACCESS, &ProcessObjectAttribute, ProcessInheritHandle, ProcessInheritHandleStatus, ProcessSectionHandle, ProcessDebugPortHandle, ProcessExceptionPortHandle))) throw Exception(String(u"NtProcess::doCreate(HANDLE, BOOLEAN, HANDLE, HANDLE, HANDLE) NtCreateProcess"));
+            return NtProcess(ProcessHandle);
+        }
+
         static NtProcess doOpen(DWORD ProcessID) {
-            NtOpenProcessType NtOpenProcess = (NtOpenProcessType) ModuleNtDll.getFunction(String(u"NtOpenProcess"));
             CLIENT_ID ProcessClientID{ULongToHandle(ProcessID), nullptr};
             HANDLE ProcessHandle;
             OBJECT_ATTRIBUTES ProcessObjectAttribute;
@@ -171,8 +193,15 @@ namespace eLibrary::Core {
             return NtProcess(ProcessHandle);
         }
 
+        void doResume() {
+            if (!NT_SUCCESS(NtResumeProcess(ProcessHandle))) throw Exception(String(u"NtProcess::doResume() NtResumeProcess"));
+        }
+
+        void doSuspend() {
+            if (!NT_SUCCESS(NtSuspendProcess(ProcessHandle))) throw Exception(String(u"NtProcess::doSuspend() NtSuspendProcess"));
+        }
+
         void doTerminate(NTSTATUS ProcessStatus) const {
-            NtTerminateProcessType NtTerminateProcess = (NtTerminateProcessType) ModuleNtDll.getFunction(String(u"NtTerminateProcess"));
             if (!NT_SUCCESS(NtTerminateProcess(ProcessHandle, ProcessStatus))) throw Exception(String(u"NtProcess::doTerminate(NTSTATUS) NtTerminateProcess"));
         }
     };
@@ -334,11 +363,6 @@ namespace eLibrary::Core {
     class NtDriver final : public Object {
     public:
         static void doLoadNt(const String &DriverServiceName, const String &DriverFilePath, DWORD DriverErrorControl, DWORD DriverStartType) {
-            NtCreateKeyType NtCreateKey = (NtCreateKeyType) ModuleNtDll.getFunction(String(u"NtCreateKey"));
-            NtLoadDriverType NtLoadDriver = (NtLoadDriverType) ModuleNtDll.getFunction(String(u"NtLoadDriver"));
-            NtSetValueKeyType NtSetValueKey = (NtSetValueKeyType) ModuleNtDll.getFunction(String(u"NtSetValueKey"));
-            RtlAdjustPrivilegeType RtlAdjustPrivilege = (RtlAdjustPrivilegeType) ModuleNtDll.getFunction(String(u"RtlAdjustPrivilege"));
-
             std::basic_stringstream<wchar_t> DriverImagePathStream;
             DriverImagePathStream << L"\\??\\" << DriverFilePath.toWString();
 
@@ -375,9 +399,6 @@ namespace eLibrary::Core {
         }
 
         void doUnloadNt(const String &DriverServiceName) const {
-            NtUnloadDriverType NtUnloadDriver = (NtUnloadDriverType) ModuleNtDll.getFunction(String(u"NtUnloadDriver"));
-            RtlAdjustPrivilegeType RtlAdjustPrivilege = (RtlAdjustPrivilegeType) ModuleNtDll.getFunction(String(u"RtlAdjustPrivilege"));
-
             std::basic_stringstream<wchar_t> DriverRegistrationPathStream;
             DriverRegistrationPathStream << L"\\Registry\\Machine\\System\\CurrentControlSet\\Services\\" << DriverServiceName.toWString();
 

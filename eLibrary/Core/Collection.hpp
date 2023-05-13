@@ -40,7 +40,7 @@ namespace eLibrary::Core {
         }
 
         ArrayList(std::initializer_list<E> ElementList) noexcept : ElementCapacity(1), ElementSize((intmax_t) ElementList.size()) {
-            while (ElementCapacity < ElementList.size())
+            while (ElementCapacity < (intmax_t) ElementList.size())
                 ElementCapacity <<= 1;
             ElementContainer = new E[ElementCapacity];
             std::copy(ElementList.begin(), ElementList.end(), ElementContainer);
@@ -54,10 +54,10 @@ namespace eLibrary::Core {
             if (ElementCapacity == 0) ElementContainer = new E[ElementCapacity = 1];
             if (ElementSize == ElementCapacity) {
                 auto *ElementBuffer = new E[ElementSize];
-                memcpy(ElementBuffer, ElementContainer, sizeof(E) * ElementSize);
+                ::memcpy(ElementBuffer, ElementContainer, sizeof(E) * ElementSize);
                 delete[] ElementContainer;
                 ElementContainer = new E[ElementCapacity <<= 1];
-                memcpy(ElementContainer, ElementBuffer, sizeof(E) * ElementSize);
+                ::memcpy(ElementContainer, ElementBuffer, sizeof(E) * ElementSize);
                 delete[] ElementBuffer;
             }
             ElementContainer[ElementSize++] = ElementSource;
@@ -70,14 +70,13 @@ namespace eLibrary::Core {
             if (ElementCapacity == 0) ElementContainer = new E[ElementCapacity = 1];
             if (ElementSize == ElementCapacity) {
                 auto *ElementBuffer = new E[ElementSize];
-                memcpy(ElementBuffer, ElementContainer, sizeof(E) * ElementSize);
+                ::memcpy(ElementBuffer, ElementContainer, sizeof(E) * ElementSize);
                 delete[] ElementContainer;
                 ElementContainer = new E[ElementCapacity <<= 1];
-                memcpy(ElementContainer, ElementBuffer, sizeof(E) * ElementSize);
+                ::memcpy(ElementContainer, ElementBuffer, sizeof(E) * ElementSize);
                 delete[] ElementBuffer;
             }
-            memcpy(ElementContainer + ElementIndex + 1, ElementContainer + ElementIndex,
-                   sizeof(E) * (ElementSize - ElementIndex - 1));
+            ::memcpy(ElementContainer + ElementIndex + 1, ElementContainer + ElementIndex, sizeof(E) * (ElementSize - ElementIndex - 1));
             ElementContainer[ElementIndex] = ElementSource;
             ++ElementSize;
         }
@@ -86,11 +85,11 @@ namespace eLibrary::Core {
             if (&ElementSource == this) return;
             delete[] ElementContainer;
             ElementContainer = new E[ElementCapacity = ElementSource.ElementCapacity];
-            memcpy(ElementContainer, ElementSource.ElementContainer, sizeof(E) * (ElementSize = ElementSource.ElementSize));
+            ::memcpy(ElementContainer, ElementSource.ElementContainer, sizeof(E) * (ElementSize = ElementSource.ElementSize));
         }
 
         void doClear() noexcept {
-            if (ElementCapacity && ElementSize && ElementContainer) {
+            if (ElementCapacity && ElementContainer) {
                 ElementCapacity = 0;
                 ElementSize = 0;
                 delete[] ElementContainer;
@@ -100,8 +99,8 @@ namespace eLibrary::Core {
 
         ArrayList<E> doConcat(const ArrayList<E> &ElementSource) const noexcept {
             std::array<E, this->ElementSize + ElementSource.ElementSize> ElementBuffer;
-            memcpy(ElementBuffer, ElementContainer, sizeof(E) * ElementSize);
-            memcpy(ElementBuffer + ElementSize, ElementSource.ElementContainer, sizeof(E) * ElementSource.ElementSize);
+            ::memcpy(ElementBuffer, ElementContainer, sizeof(E) * ElementSize);
+            ::memcpy(ElementBuffer + ElementSize, ElementSource.ElementContainer, sizeof(E) * ElementSource.ElementSize);
             return ElementBuffer;
         }
 
@@ -109,7 +108,7 @@ namespace eLibrary::Core {
             E *ElementBuffer = new E[ElementSize];
             for (intmax_t ElementIndex = 0;ElementIndex < ElementSize;++ElementIndex)
                 ElementBuffer[ElementSize - ElementIndex - 1] = ElementContainer[ElementIndex];
-            memcpy(ElementContainer, ElementBuffer, sizeof(E) * ElementBuffer);
+            ::memcpy(ElementContainer, ElementBuffer, sizeof(E) * ElementBuffer);
             delete[] ElementBuffer;
         }
 
@@ -155,15 +154,15 @@ namespace eLibrary::Core {
             if (ElementIndex < 0) ElementIndex += ElementSize;
             if (ElementIndex < 0 || ElementIndex >= ElementSize)
                 throw Exception(String(u"ArrayList<E>::removeElement(intmax_t) ElementIndex"));
-            memcpy(ElementContainer + ElementIndex, ElementContainer + ElementIndex + 1,
+            ::memcpy(ElementContainer + ElementIndex, ElementContainer + ElementIndex + 1,
                    sizeof(E) * (ElementSize - ElementIndex - 1));
             if (ElementCapacity == 1) doClear();
             else if (--ElementSize <= ElementCapacity >> 1) {
                 auto *ElementBuffer = new E[ElementSize];
-                memcpy(ElementBuffer, ElementContainer, sizeof(E) * ElementSize);
+                ::memcpy(ElementBuffer, ElementContainer, sizeof(E) * ElementSize);
                 delete[] ElementContainer;
                 ElementContainer = new E[ElementCapacity >>= 1];
-                memcpy(ElementContainer, ElementBuffer, sizeof(E) * ElementSize);
+                ::memcpy(ElementContainer, ElementBuffer, sizeof(E) * ElementSize);
                 delete[] ElementBuffer;
             }
         }
@@ -195,6 +194,115 @@ namespace eLibrary::Core {
             }
             if (ElementSize) CharacterStream.addString(String::valueOf(ElementContainer[ElementSize - 1]));
             CharacterStream.addCharacter(u']');
+            return CharacterStream.toString();
+        }
+    };
+
+    template<typename E>
+    class ArraySet final : public Object {
+    private:
+        intmax_t ElementCapacity, ElementSize;
+        E *ElementContainer;
+    public:
+        constexpr ArraySet() noexcept : ElementCapacity(0), ElementSize(0), ElementContainer(nullptr) {}
+
+        ArraySet(const ArrayList<E> &ElementSource) noexcept : ElementCapacity(0), ElementSize(0), ElementContainer(nullptr) {
+            for (intmax_t ElementIndex = 0;ElementIndex < ElementSource.getElementSize();++ElementIndex)
+                addElement(ElementSource.getElement(ElementIndex));
+        }
+
+        ArraySet(const ArraySet<E> &SetSource) noexcept : ElementCapacity(SetSource.ElementCapacity), ElementSize(SetSource.ElementSize) {
+            if (ElementCapacity) ElementContainer = new E[ElementCapacity];
+            memcpy(ElementContainer, SetSource.ElementContainer, sizeof(E) * ElementSize);
+        }
+
+        ~ArraySet() noexcept {
+            if (ElementCapacity && ElementContainer) {
+                ElementCapacity = 0;
+                ElementSize = 0;
+                delete[] ElementContainer;
+                ElementContainer = nullptr;
+            }
+        }
+
+        void addElement(const E &ElementSource) noexcept {
+            if (isContains(ElementSource)) return;
+            if (ElementCapacity == 0) ElementContainer = new E[ElementCapacity = 1];
+            if (ElementSize == ElementCapacity) {
+                auto *ElementBuffer = new E[ElementSize];
+                ::memcpy(ElementBuffer, ElementContainer, sizeof(E) * ElementSize);
+                delete[] ElementContainer;
+                ElementContainer = new E[ElementCapacity <<= 1];
+                ::memcpy(ElementContainer, ElementBuffer, sizeof(E) * ElementSize);
+                delete[] ElementBuffer;
+            }
+            ElementContainer[ElementSize++] = ElementSource;
+        }
+
+        void doClear() noexcept {
+            if (ElementCapacity && ElementContainer) {
+                ElementCapacity = 0;
+                ElementSize = 0;
+                delete[] ElementContainer;
+                ElementContainer = nullptr;
+            }
+        }
+
+        ArraySet<E> doDifference(const ArraySet<E> &SetSource) const noexcept {
+            ArraySet<E> SetResult;
+            for (intmax_t ElementIndex = 0; ElementIndex < ElementSize; ++ElementIndex)
+                if (!SetSource.isContains(ElementContainer[ElementIndex])) SetResult.addElement(ElementContainer[ElementIndex]);
+            return SetResult;
+        }
+
+        ArraySet<E> doIntersection(const ArraySet<E> &SetSource) const noexcept {
+            ArraySet<E> SetResult;
+            for (intmax_t ElementIndex = 0; ElementIndex < ElementSize; ++ElementIndex)
+                if (SetSource.isContains(ElementContainer[ElementIndex])) SetResult.addElement(ElementContainer[ElementIndex]);
+            return SetResult;
+        }
+
+        ArraySet<E> doUnion(const ArraySet<E> &SetSource) const noexcept {
+            ArraySet<E> SetResult(*this);
+            for (intmax_t ElementIndex = 0; ElementIndex < SetSource.ElementSize; ++ElementIndex)
+                SetResult.addElement(SetSource.ElementContainer[ElementIndex]);
+            return SetResult;
+        }
+
+        bool isContains(const E &ElementSource) const noexcept {
+            for (intmax_t ElementIndex = 0; ElementIndex < ElementSize; ++ElementIndex)
+                if (ElementContainer[ElementIndex] == ElementSource) return true;
+            return false;
+        }
+
+        ArraySet<E> &operator=(const ArraySet<E> &SetSource) noexcept = delete;
+
+        void removeElement(const E &ElementSource) {
+            intmax_t ElementIndex = 0;
+            for (; ElementIndex < ElementSize; ++ElementIndex)
+                if (ElementContainer[ElementIndex] == ElementSource) break;
+            if (ElementIndex == ElementSize) throw Exception(String(u"ArraySet::removeElement(const E&) ElementSource"));
+            ::memcpy(ElementContainer + ElementIndex, ElementContainer + ElementIndex + 1, sizeof(E) * (ElementSize - ElementIndex - 1));
+            if (ElementCapacity == 1) doClear();
+            else if (--ElementSize <= ElementCapacity >> 1) {
+                auto *ElementBuffer = new E[ElementSize];
+                ::memcpy(ElementBuffer, ElementContainer, sizeof(E) * ElementSize);
+                delete[] ElementContainer;
+                ElementContainer = new E[ElementCapacity >>= 1];
+                ::memcpy(ElementContainer, ElementBuffer, sizeof(E) * ElementSize);
+                delete[] ElementBuffer;
+            }
+        }
+
+        String toString() const noexcept override {
+            StringStream CharacterStream;
+            CharacterStream.addCharacter(u'{');
+            for (intmax_t ElementIndex = 0; ElementIndex + 1 < ElementSize; ++ElementIndex) {
+                CharacterStream.addString(String::valueOf(ElementContainer[ElementIndex]));
+                CharacterStream.addCharacter(u',');
+            }
+            if (ElementSize) CharacterStream.addString(String::valueOf(ElementContainer[ElementSize - 1]));
+            CharacterStream.addCharacter(u'}');
             return CharacterStream.toString();
         }
     };
@@ -408,7 +516,7 @@ namespace eLibrary::Core {
             E NodeValue;
             LinkedNode *NodeNext;
 
-            explicit LinkedNode(const E &Value) noexcept: NodeValue(Value), NodeNext(nullptr) {}
+            explicit LinkedNode(const E &NodeValueSource) noexcept: NodeValue(NodeValueSource), NodeNext(nullptr) {}
         } *NodeHead, *NodeTail;
 
         intmax_t NodeSize;

@@ -9,6 +9,8 @@
 #include <sstream>
 #include <vector>
 
+#include <immintrin.h>
+
 namespace eLibrary::Core {
 #define NumberBaseUnit 10000000
 
@@ -85,8 +87,7 @@ namespace eLibrary::Core {
             NumberResult.NumberList.clear();
             intmax_t NumberCarry = 0;
             for (size_t NumberPart = 0;; ++NumberPart) {
-                if (!NumberCarry && NumberPart >= NumberList.size() &&
-                    NumberPart >= NumberOther.NumberList.size())
+                if (!NumberCarry && NumberPart >= NumberList.size() && NumberPart >= NumberOther.NumberList.size())
                     break;
                 intmax_t NumberCurrent = NumberCarry;
                 if (NumberPart < NumberList.size()) NumberCurrent += NumberList[NumberPart];
@@ -166,14 +167,13 @@ namespace eLibrary::Core {
             std::vector<intmax_t> NumberProduct(NumberList.size() + NumberOther.NumberList.size(), 0);
             for (size_t NumberDigit1 = 0; NumberDigit1 < NumberList.size(); ++NumberDigit1)
                 for (size_t NumberDigit2 = 0; NumberDigit2 < NumberOther.NumberList.size(); ++NumberDigit2)
-                    NumberProduct[NumberDigit1 + NumberDigit2] +=
-                            NumberList[NumberDigit1] * NumberOther.NumberList[NumberDigit2];
+                    NumberProduct[NumberDigit1 + NumberDigit2] += NumberList[NumberDigit1] * NumberOther.NumberList[NumberDigit2];
             Integer NumberResult;
             NumberResult.NumberList.clear();
             NumberResult.NumberSignature = !(NumberSignature ^ NumberOther.NumberSignature);
             intmax_t NumberCarry = 0;
             for (size_t NumberPart = 0;; ++NumberPart) {
-                if (!NumberCarry && NumberPart >= NumberProduct.size()) break;
+                if (!NumberCarry && NumberPart >= NumberList.size() + NumberOther.NumberList.size()) break;
                 intmax_t NumberCurrent = NumberProduct[NumberPart] + NumberCarry;
                 NumberResult.NumberList.push_back(NumberCurrent % NumberBaseUnit);
                 NumberCarry = NumberCurrent / NumberBaseUnit;
@@ -183,7 +183,8 @@ namespace eLibrary::Core {
             return NumberResult;
         }
 
-        Integer doPower(const Integer &NumberExponentSource) const noexcept {
+        Integer doPower(const Integer &NumberExponentSource) const {
+            if (NumberExponentSource.isNegative()) throw ArithmeticException(String(u"Integer::doPower(const Integer&) NumberExponentSource"));
             Integer NumberBase(*this), NumberExponent(NumberExponentSource), NumberResult(1);
             while (NumberExponent.doCompare(0)) {
                 if (NumberExponent.isOdd()) NumberResult = NumberResult.doMultiplication(NumberBase);
@@ -193,7 +194,8 @@ namespace eLibrary::Core {
             return NumberResult;
         }
 
-        Integer doPower(const Integer &NumberExponentSource, const Integer &NumberModulo) const noexcept {
+        Integer doPower(const Integer &NumberExponentSource, const Integer &NumberModulo) const {
+            if (NumberExponentSource.isNegative()) throw ArithmeticException(String(u"Integer::doPower(const Integer&, const Integer&) NumberExponentSource"));
             Integer NumberBase(*this), NumberExponent(NumberExponentSource), NumberResult(1);
             while (NumberExponent.doCompare(0)) {
                 if (NumberExponent.isOdd()) NumberResult = NumberResult.doMultiplication(NumberBase).doModulo(NumberModulo);
@@ -204,7 +206,7 @@ namespace eLibrary::Core {
         }
 
         Integer doSubtraction(const Integer &NumberOther) const noexcept {
-            if (NumberSignature && !NumberOther.NumberSignature) return doAddition(NumberOther.getAbsolute());
+            if (isPositive() && NumberOther.isNegative()) return doAddition(NumberOther.getAbsolute());
             if (doCompare(NumberOther) < 0) return NumberOther.doSubtraction(*this).getOpposite();
             Integer NumberResult;
             NumberResult.NumberList.clear();
@@ -237,10 +239,10 @@ namespace eLibrary::Core {
             return NumberResult;
         }
 
-        intmax_t getValue() const {
-            if ((NumberSignature && doCompare(std::numeric_limits<intmax_t>::max()) > 0) ||
-                (!NumberSignature && doCompare(std::numeric_limits<intmax_t>::min()) < 0))
-                throw ArithmeticException(String(u"Integer::getValue() Number value out of limits"));
+        template<typename T>
+        T getValue() const {
+            if ((isPositive() && doCompare(std::numeric_limits<T>::max()) > 0) || (isNegative() && doCompare(std::numeric_limits<T>::min()) < 0))
+                throw ArithmeticException(String(u"Integer::getValue<T>() Number value out of limits"));
             intmax_t NumberValue = NumberList.back();
             if (NumberList.size() == 1) return NumberSignature ? NumberValue : -NumberValue;
             for (auto NumberPart = (intmax_t) NumberList.size() - 2; NumberPart >= 0; --NumberPart)
@@ -338,6 +340,11 @@ namespace eLibrary::Core {
             return NumberResult;
         }
 
+        Fraction doPower(const Integer &NumberExponent) const noexcept {
+            if (NumberExponent.doCompare(0) < 0) return {NumberDenominator.doPower(NumberExponent.getAbsolute()), NumberNumerator.doPower(NumberExponent.getAbsolute())};
+            return {NumberNumerator.doPower(NumberExponent), NumberDenominator.doPower(NumberExponent)};
+        }
+
         Fraction doSubtraction(const Fraction &NumberOther) const noexcept {
             if (!NumberOther.NumberNumerator.doCompare(0)) return *this;
             if (isPositive() && NumberOther.isNegative()) return doAddition(NumberOther.getAbsolute());
@@ -346,7 +353,7 @@ namespace eLibrary::Core {
         }
 
         Fraction getAbsolute() const noexcept {
-            return Fraction(NumberNumerator, NumberDenominator);
+            return {NumberNumerator, NumberDenominator};
         }
 
         Integer getDenominator() const noexcept {
@@ -363,8 +370,9 @@ namespace eLibrary::Core {
             return NumberResult;
         }
 
+        template<typename T>
         [[deprecated]] auto getValue() const noexcept {
-            return (NumberSignature ? 1.0 : -1.0) * NumberNumerator.getValue() / NumberDenominator.getValue();
+            return (NumberSignature ? 1.0 : -1.0) * NumberNumerator.getValue<T>() / NumberDenominator.getValue<T>();
         }
 
         bool isNegative() const noexcept {

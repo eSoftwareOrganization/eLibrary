@@ -1,5 +1,7 @@
 #pragma once
 
+#include <functional>
+
 namespace eLibrary::Core {
     template<typename T>
     concept Comparable = requires (const T &ObjectSource) {

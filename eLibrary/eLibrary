@@ -18,5 +18,6 @@
 #include <IO/Exception.hpp>
 #include <IO/FileStream.hpp>
 #include <IO/Stream.hpp>
+#include <Network/Exception.hpp>
 #include <Network/Socket.hpp>
 #include <Core/WindowsNT.hpp>

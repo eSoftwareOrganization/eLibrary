@@ -1,7 +1,7 @@
 # eLibrary
 > An all-in-one cpp library
 
-[![FOSSA Status](https://app.fossa.com/api/projects/git%2Bgithub.com%2Fldgeng%2FeLibrary.svg?type=large)](https://app.fossa.com/projects/git%2Bgithub.com%2Fldgeng%2FeLibrary?ref=badge_large)
+[![FOSSA Status](https://app.fossa.com/api/projects/git%2Bgithub.com%2Fldgeng%2FeLibrary.svg?type=shield)](https://app.fossa.com/projects/git%2Bgithub.com%2Fldgeng%2FeLibrary?ref=badge_shield)
 
 Project Dependencies:
 + [doctest](https://github.com/doctest/doctest)
@@ -13,6 +13,17 @@ Project Reference:
 + [\<Unnamed>](https://www.cnblogs.com/CocoonFan/p/3164221.html)
 
 Project Update Log:
+> eLibrary V2023.08
+- Core::ArrayList doClear(...)
+- Core::ArraySet / addElement / doClear / doDifference / doIntersection / doUnion / removeElement(New)
+- Core::Fraction doPower(New) getValue(...)
+- Core::Integer doPower(NumberExponentSource < 0) getValue(...)
+- Core::NtFile doRead / doWrite(New)
+- Core::NtProcess doCreate / doResume / doSuspend(New)
+- Network::NetworkException(New)
+- Network::Socket doReceive / doSend(Remove) getInputStream / getOutputStream(Experimental / New)
+- Network::SocketInputStream / doRead / getInstance / isAvailable(Experimental / New)
+- Network::SocketOutputStream / doClose / doWrite / getInstance / isAvailable(Experimental / New)
 > eLibrary V2023.07
 - Core::ArithmeticException(New)
 - Core::Fraction doAddition / doSubtraction(isNegative / isPositive Implementation) toString(0)

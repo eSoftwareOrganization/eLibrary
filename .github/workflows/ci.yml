@@ -1,0 +1,42 @@
+name: CMake
+
+on:
+  push:
+    branches: [ "master" ]
+  pull_request:
+    branches: [ "master" ]
+
+env:
+  BUILD_TYPE: Release
+
+jobs:
+  build:
+    runs-on: ${{ matrix.os }}
+
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+        include:
+          - os: windows-latest
+            triplet: x64-windows
+          - os: ubuntu-latest
+            triplet: x64-linux
+          - os: macos-latest
+            triplet: x64-osx
+    env:
+
+    steps:
+    - uses: actions/checkout@v3
+
+    - name: CMake Setup
+      uses: lukka/get-cmake@latest
+
+    - name: VCPKG Setup
+      uses: lukka/run-vcpkg@v11
+
+    - name: CMake Running
+      uses: lukka/run-cmake@v10
+
+    - name: Codecov Uploading
+      uses: codecov/codecov-action@v3
