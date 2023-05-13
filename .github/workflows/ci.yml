@@ -24,8 +24,6 @@ jobs:
             triplet: x64-linux
           - os: macos-latest
             triplet: x64-osx
-    env:
-
     steps:
     - uses: actions/checkout@v3
 
