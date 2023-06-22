@@ -4,7 +4,9 @@
   "license": "Apache-2.0",
   "dependencies": [
     "doctest",
+    "ffmpeg",
     "nanobench",
+    "openal-soft",
     {
       "name": "vcpkg-cmake",
       "host": true

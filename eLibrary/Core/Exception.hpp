@@ -11,10 +11,10 @@
 namespace eLibrary::Core {
     class Exception : public Object, public std::exception {
     private:
-        std::string ErrorDetail;
-        String ErrorMessage;
+        std::string ExceptionDetail;
+        String ExceptionMessage;
     public:
-        explicit Exception(const String &ErrorMessageSource) noexcept : ErrorMessage(ErrorMessageSource) {
+        explicit Exception(const String &ExceptionMessageSource) noexcept : ExceptionMessage(ExceptionMessageSource) {
             std::stringstream ObjectStream;
             ObjectStream <<
 #ifdef __GNUC__
@@ -24,16 +24,16 @@ namespace eLibrary::Core {
 #ifdef __GNUC__
             , nullptr, nullptr, nullptr)
 #endif
-            << ' ' << ErrorMessage.toU8String();
-            ErrorDetail = ObjectStream.str();
+            << ' ' << ExceptionMessageSource.toU8String();
+            ExceptionDetail = ObjectStream.str();
         }
 
         String toString() const noexcept override {
-            return ErrorDetail;
+            return {ExceptionDetail};
         }
 
         const char *what() const noexcept override {
-            return ErrorDetail.data();
+            return ExceptionDetail.data();
         }
     };
 

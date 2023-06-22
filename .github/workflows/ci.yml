@@ -24,19 +24,27 @@ jobs:
             triplet: x64-linux
           - os: macos-latest
             triplet: x64-osx
-    env:
-
     steps:
-    - uses: actions/checkout@v3
+      - uses: actions/checkout@v3
 
-    - name: CMake Setup
-      uses: lukka/get-cmake@latest
+      - name: CMake Setup
+        uses: lukka/get-cmake@latest
 
-    - name: VCPKG Setup
-      uses: lukka/run-vcpkg@v11
+      - name: VCPKG Setup
+        run: |
+          git clone git://github.com/Microsoft/vcpkg.git
+          cd vcpkg
+          bootstrap-vcpkg
 
-    - name: CMake Running
-      uses: lukka/run-cmake@v10
+      - name: eLibrary Setup
+        run: |
+          cd ..
+          git clone git://github.com/eSoftwareOrganization/eLibrary.git
 
-    - name: Codecov Uploading
-      uses: codecov/codecov-action@v3
+      - name: CMake Build
+        run: |
+          cd eLibrary
+          cmake -DCMAKE_TOOLCHAIN_FILE=./../vcpkg/scripts/buildsystems/vcpkg.cmake .
+
+      - name: Codecov Uploading
+        uses: codecov/codecov-action@v3

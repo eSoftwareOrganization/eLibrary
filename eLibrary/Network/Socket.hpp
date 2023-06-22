@@ -12,13 +12,13 @@
 
 typedef SOCKET SocketHandleType;
 #else
+#include <fcntl.h>
 #include <netinet/in.h>
 #include <netinet/tcp.h>
+#include <unistd.h>
 
 typedef int SocketHandleType;
 #endif
-
-using namespace eLibrary::Core;
 
 namespace eLibrary::Network {
     class NetworkAddress final : public Object {
@@ -228,7 +228,7 @@ namespace eLibrary::Network {
 #else
             close(SocketSource);
 #endif
-            SocketSource = -1;
+            SocketSource = (SocketHandleType) -1;
         }
 
         int doReceive(char *SocketBuffer, int SocketBufferSize) {
@@ -313,7 +313,7 @@ namespace eLibrary::Network {
 #else
             close(SocketSource);
 #endif
-            SocketSource = -1;
+            SocketSource = (SocketHandleType) -1;
         }
 
         void doConnect() {
@@ -415,7 +415,8 @@ namespace eLibrary::Network {
             sockaddr SocketTargetAddress;
             getpeername(SocketTarget, &SocketTargetAddress, nullptr);
             if (SocketTargetAddress.sa_family == AF_INET) return StreamSocket::doDeposit(SocketTarget, NetworkSocketAddress(NetworkAddress(((sockaddr_in*) &SocketTargetAddress)->sin_addr), ntohs(((sockaddr_in*) &SocketTargetAddress)->sin_port)));
-            else return StreamSocket::doDeposit(SocketTarget, NetworkSocketAddress(NetworkAddress(((sockaddr_in6*) &SocketTargetAddress)->sin6_addr), ntohs(((sockaddr_in6*) &SocketTargetAddress)->sin6_port)));
+            else if (SocketTargetAddress.sa_family == AF_INET6) return StreamSocket::doDeposit(SocketTarget, NetworkSocketAddress(NetworkAddress(((sockaddr_in6*) &SocketTargetAddress)->sin6_addr), ntohs(((sockaddr_in6*) &SocketTargetAddress)->sin6_port)));
+            else throw Exception(String(u"StreamSocketServer::doAccept() SocketTargetAddress.sa_family"));
         }
 
         void doBind() {
@@ -440,7 +441,7 @@ namespace eLibrary::Network {
 #else
             close(SocketSource);
 #endif
-            SocketSource = -1;
+            SocketSource = (SocketHandleType) -1;
         }
 
         void doListen(int SocketBacklog = 0) const {
@@ -493,7 +494,7 @@ namespace eLibrary::Network {
 
         static SocketInputStream getInstance(const StreamSocket &SocketSource) {
             if (!SocketSource.isConnected()) throw NetworkException(String(u"SocketInputStream::getInstance(const StreamSocket&) SocketSource.isConnected"));
-            return SocketInputStream(SocketSource);
+            return {SocketSource};
         }
 
         bool isAvailable() const noexcept override {
@@ -524,7 +525,7 @@ namespace eLibrary::Network {
 
         static SocketOutputStream getInstance(const StreamSocket &SocketSource) {
             if (!SocketSource.isConnected()) throw NetworkException(String(u"SocketOutputStream::getInstance(const StreamSocket&) SocketSource.isConnected"));
-            return SocketOutputStream(SocketSource);
+            return {SocketSource};
         }
 
         bool isAvailable() const noexcept {

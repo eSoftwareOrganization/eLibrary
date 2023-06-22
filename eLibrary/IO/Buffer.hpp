@@ -2,8 +2,6 @@
 
 #include <IO/Exception.hpp>
 
-using namespace eLibrary::Core;
-
 namespace eLibrary::IO {
     class Buffer : public Object {
     protected:

@@ -10,28 +10,23 @@
 #include <Core/Object.hpp>
 
 namespace eLibrary::Core {
+    /**
+     * The String class provides support for string storage and operation
+     */
     class String final : public Object {
     private:
         intmax_t CharacterSize;
         char16_t *CharacterContainer;
-        uintmax_t *CharacterReference;
     public:
-        String() noexcept: CharacterSize(0), CharacterContainer(nullptr) {
-            CharacterReference = new uintmax_t;
-            *CharacterReference = 1;
-        }
+        String() noexcept: CharacterSize(0), CharacterContainer(nullptr) {}
 
         explicit String(char16_t CharacterSource) noexcept : CharacterSize(1) {
             CharacterContainer = new char16_t[2];
             CharacterContainer[0] = CharacterSource;
             CharacterContainer[1] = char16_t();
-            CharacterReference = new uintmax_t;
-            *CharacterReference = 1;
         }
 
-        String(const String &StringSource) noexcept : CharacterSize(StringSource.CharacterSize), CharacterContainer(StringSource.CharacterContainer), CharacterReference(StringSource.CharacterReference) {
-            ++(*CharacterReference);
-        }
+        String(const String &StringSource) noexcept : CharacterSize(StringSource.CharacterSize), CharacterContainer(StringSource.CharacterContainer) {}
 
         String(const std::string &StringSource) noexcept : CharacterSize((intmax_t) StringSource.size()) {
             static std::wstring_convert<std::codecvt_utf8_utf16<char16_t>, char16_t> StringConverter;
@@ -39,16 +34,12 @@ namespace eLibrary::Core {
             CharacterContainer = new char16_t[String16Source.size() + 1];
             std::copy(String16Source.begin(), String16Source.end(), CharacterContainer);
             CharacterContainer[CharacterSize] = char16_t();
-            CharacterReference = new uintmax_t;
-            *CharacterReference = 1;
         }
 
         String(const std::u16string &StringSource) noexcept : CharacterSize((intmax_t) StringSource.size()) {
             CharacterContainer = new char16_t[StringSource.size() + 1];
             std::copy(StringSource.begin(), StringSource.end(), CharacterContainer);
             CharacterContainer[CharacterSize] = char16_t();
-            CharacterReference = new uintmax_t;
-            *CharacterReference = 1;
         }
 
         String(const std::u32string &StringSource) noexcept : CharacterSize((intmax_t) StringSource.size()) {
@@ -58,36 +49,27 @@ namespace eLibrary::Core {
             CharacterContainer = new char16_t[String16Source.size() + 1];
             std::copy(String16Source.begin(), String16Source.end(), CharacterContainer);
             CharacterContainer[CharacterSize] = char16_t();
-            CharacterReference = new uintmax_t;
-            *CharacterReference = 1;
         }
 
         String(const std::wstring &StringSource) noexcept : CharacterSize((intmax_t) StringSource.size()) {
             CharacterContainer = new char16_t[StringSource.size() + 1];
             std::copy(StringSource.begin(), StringSource.end(), CharacterContainer);
             CharacterContainer[CharacterSize] = char16_t();
-            CharacterReference = new uintmax_t;
-            *CharacterReference = 1;
         }
 
         ~String() noexcept {
-            if (CharacterReference && --(*CharacterReference) == 0) {
+            if (CharacterContainer && CharacterSize) {
                 CharacterSize = 0;
                 delete[] CharacterContainer;
                 CharacterContainer = nullptr;
-                delete CharacterReference;
-                CharacterReference = nullptr;
             }
         }
 
         void doAssign(const String &StringSource) noexcept {
-            if (&StringSource == this) return;
+            if (std::addressof(StringSource) == this) return;
             delete[] CharacterContainer;
-            delete[] CharacterReference;
-            CharacterContainer = StringSource.CharacterContainer;
-            CharacterSize = StringSource.CharacterSize;
-            CharacterReference = StringSource.CharacterReference;
-            ++(*CharacterReference);
+            CharacterContainer = new char16_t[(CharacterSize = StringSource.CharacterSize) + 1];
+            memcpy(CharacterContainer, StringSource.CharacterContainer, sizeof(char16_t) * CharacterSize);
         }
 
         intmax_t doCompare(const String &StringOther) const noexcept {
@@ -216,22 +198,42 @@ namespace eLibrary::Core {
 
     class StringStream final : public Object {
     private:
-        std::basic_stringstream<char16_t> CharacterStream;
+        intmax_t CharacterCapacity = 0;
+        intmax_t CharacterSize = 0;
+        char16_t *CharacterContainer = nullptr;
     public:
+        ~StringStream() noexcept {
+            doClear();
+        }
+
         void addCharacter(char16_t CharacterSource) noexcept {
-            CharacterStream << CharacterSource;
+            if (CharacterCapacity == 0) CharacterContainer = new char16_t[CharacterCapacity = 1];
+            if (CharacterSize == CharacterCapacity) {
+                auto *ElementBuffer = new char16_t[CharacterSize];
+                ::memcpy(ElementBuffer, CharacterContainer, sizeof(char16_t) * CharacterSize);
+                delete[] CharacterContainer;
+                CharacterContainer = new char16_t[CharacterCapacity <<= 1];
+                ::memcpy(CharacterContainer, ElementBuffer, sizeof(char16_t) * CharacterSize);
+                delete[] ElementBuffer;
+            }
+            CharacterContainer[CharacterSize++] = CharacterSource;
         }
 
         void addString(const String &StringSource) noexcept {
-            CharacterStream << StringSource.toU16String();
+            for (intmax_t CharacterIndex = 0;CharacterIndex < StringSource.getCharacterSize();++CharacterIndex)
+                addCharacter(StringSource.getCharacter(CharacterIndex));
         }
 
         void doClear() noexcept {
-            CharacterStream.clear();
+            if (CharacterCapacity && CharacterContainer) {
+                CharacterCapacity = 0;
+                delete[] CharacterContainer;
+                CharacterContainer = nullptr;
+            }
         }
 
         String toString() const noexcept override {
-            return CharacterStream.str();
+            return {{CharacterContainer, (size_t) CharacterSize}};
         }
     };
 }

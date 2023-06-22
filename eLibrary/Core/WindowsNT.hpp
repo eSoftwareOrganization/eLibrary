@@ -59,8 +59,6 @@ namespace eLibrary::Core {
         }
     };
 
-    static NtModule ModuleNtDll = NtModule::doLoad(String(u"ntdll.dll"));
-
     class NtFile final : public Object {
     private:
         HANDLE FileHandle;

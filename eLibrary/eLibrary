@@ -2,22 +2,17 @@
 
 // *** An all-in-one cpp library ***
 //     Copyright (C) by ldgeng
-// Compiler: GCC 12.2.0 + LLVM/Clang/LLD/LLDB 15.0.7 + MinGW-w64 10.0.0 (UCRT)
+// Compiler: GCC 13.1.0 + LLVM/Clang/LLD/LLDB 16.0.3 + MinGW-w64 11.0.0 (UCRT)
 // Cpp Language Standard: C++20 (/std:c++20)
 // Code compiles cleanly at warning level all (/Wall) on 64-bit builds.
 
 #include <Core/Collection.hpp>
 #include <Core/Concurrent.hpp>
-#include <Core/Constant.hpp>
-#include <Core/Exception.hpp>
 #include <Core/Mathematics.hpp>
 #include <Core/Number.hpp>
-#include <Core/String.hpp>
 #include <Core/Tree.hpp>
+#include <IO/AudioSegment.hpp>
 #include <IO/Buffer.hpp>
-#include <IO/Exception.hpp>
 #include <IO/FileStream.hpp>
-#include <IO/Stream.hpp>
-#include <Network/Exception.hpp>
 #include <Network/Socket.hpp>
 #include <Core/WindowsNT.hpp>

@@ -1,18 +1,66 @@
 # eLibrary
 > An all-in-one cpp library
 
-[![FOSSA Status](https://app.fossa.com/api/projects/git%2Bgithub.com%2Fldgeng%2FeLibrary.svg?type=shield)](https://app.fossa.com/projects/git%2Bgithub.com%2Fldgeng%2FeLibrary?ref=badge_shield)
+![](https://img.shields.io/github/actions/workflow/status/eSoftwareOrganization/eLibrary/ci.yml)
+![](https://ci.appveyor.com/api/projects/status/fn5qnydylfm5xe93?svg=true)
+![](https://img.shields.io/github/license/eSoftwareOrganization/eLibrary)
+![](https://app.fossa.com/api/projects/git%2Bgithub.com%2Fldgeng%2FeLibrary.svg?type=shield)
+![](https://img.shields.io/github/repo-size/eSoftwareOrganization/eLibrary)
+![](https://img.shields.io/tokei/lines/github/eSoftwareOrganization/eLibrary)
+
+Project Credits:
+
+This repository draws from some preexisting work. Credits to their authors.
++ [audioop(Python)](https://docs.python.org/3/library/audioop.html)
+
+This project implements the audio processing api
+
++ [pydub(Python)](https://github.com/jiaaro/pydub)
+
+This project implements the audio processing api
+
++ [sympy(Python)](https://github.com/sympy/sympy)
+
+This project implements the Baillie-PSW Primality Test Algorithm
++ [\<Unnamed>](https://blog.csdn.net/code4101/article/details/38705155)
+
+This project implements the large integer structure
++ [\<Unnamed>](https://www.cnblogs.com/CocoonFan/p/3164221.html)
+
+This project implements parts of the mathematical algorithms
 
 Project Dependencies:
 + [doctest](https://github.com/doctest/doctest)
++ [ffmpeg](https://ffmpeg.org)
 + [nanobench](https://github.com/martinus/nanobench)
++ [OpenAL Soft](https://github.com/kcat/openal-soft)
 
-Project Reference:
-+ [sympy](https://github.com/sympy/sympy)
-+ [\<Unnamed>](https://blog.csdn.net/code4101/article/details/38705155)
-+ [\<Unnamed>](https://www.cnblogs.com/CocoonFan/p/3164221.html)
+Project Repository: [GitHub](https://github.com/eSoftwareOrganization/eLibrary)
 
 Project Update Log:
+> eLibrary V2023.09
+- Core::ArrayList addElement / doAssign / doConcat / doReverse / removeIndex(std::copy Implementation) indexOf / isContains(Comparison)
+- Core::ArraySet addElement / removeElement(std::copy Implementation) getElementSize / isEmpty / toArrayList(New) isContains(Comparison)
+- Core::DoubleLinkedList addElement / removeIndex(Segmentation Fault) / indexOf(Comparison & Modifier) getElementSize / isContains / isEmpty(New) removeElement(...)
+- Core::DoubleLinkedSet / addElement / doDifference / doIntersection / doUnion / getElementSize / isContains / isEmpty / removeElement / toDoubleLinkedSet(New)
+- Core::Integer doDivision / doModulo / doSubtraction(Signature) doPower(0⁰)
+- Core::Object isEqual(Remove)
+- Core::RedBlackTree NodeColorEnumeration(...)
+- Core::SingleLinkedList indexOf(Comparison & Modifier) getElementSize / isContains / isEmpty(New)
+- Core::SingleLinkedSet / addElement / doDifference / doIntersection / doUnion / getElementSize / isContains / isEmpty / removeElement / toSingleLinkedList(New)
+- Core::String Constructor / ~Constructor / doAssign(...)
+- Core::StringStream(...)
+- IO::AudioBuffer getBufferIndex / setBufferData(New)
+- IO::AudioSegment / doAssign / doOpenWAV / doSplitChannel / doSynchronize / getBitSample / getChannelCount / getSampleRate / setBitSample / setChannelCount / setSampleRate / toAudioBuffer(New) doExport / doExportWAV / doOpen(Experimental / New)
+- IO::AudioSource / doPause / doPlay / doRewind / doStop / setAudioBuffer / setAudioGain / setAudioLoop / setAudioPitch(New)
+- IO::FileInputStream Constructor / doSeek / getFileLength / getFilePosition(...)
+- IO::FileOutputStream Constructor / doSeek / doTruncate / getFilePosition(...)
+- IO::MediaCodec / doFindDecoder / doFindEncoder / getCodecObject(New)
+- IO::MediaCodecContext / doAllocate / getChannelCount / getContextObject / getSampleRate(New)
+- IO::MediaFormatContext / doFindBestStream / doFindStreamInformation / doOpen / getContextObject / setIOContext / setOutputFormat(New)
+- IO::MediaFrame / doAllocate / getFrameObject(New)
+- IO::MediaIOContext / doOpen / getContextObject(New)
+- IO::MediaPacket / doAllocate / getPacketObject(New)
 > eLibrary V2023.08
 - Core::ArrayList doClear(...)
 - Core::ArraySet / addElement / doClear / doDifference / doIntersection / doUnion / removeElement(New)
@@ -92,45 +140,3 @@ Project Update Log:
 - IO::IOException(Remove)
 - IO::OutputStream doWrite(byte[], int, int)(Remove)
 - IO::SocketInetAddress Constructor(...)
-> eLibrary V2023.03
-- Core::ArrayList begin / end(Remove) doFind(From doFindElement)
-- Core::ArrayListIterator(Remove)
-- Core::ConcurrentArrayList / addElement / doClear / doFind / getElement / getElementSize / removeElement / removeIndex / setElement / toArray / toString(New)
-> eLibrary V2023.02
-- Core::ArrayList doConcat / toArray(New) toString(...)
-- Core::Comparable(New)
-- Core::DoubleLinkedList toString(...)
-- Core::Fraction Constructor(const Integer&) doCompare(±0)
-- Core::getSummationAVX(Remove)
-- Core::Hashable(New)
-- Core::Integer Constructor() / Constructor(T)(From Constructor(intmax_t)) Constructor(const String&, unsigned short)(...) doCompare(±0) doPower / toString(unsigned short)(New)
-- Core::Mathematics doCosine / doEvolution / doExponent / doHyperbolicCosine / doHyperbolicSine / doHyperbolicTangent / doInverseHyperbolicTangent / doLogarithmE / doPower / doSine / doTangent / getNearestPower2Lower / getNearestPower2Upper / toDegrees / toRadians(std::enable_if => requires) doCosineFraction / doEvolutionFraction / doExponentFraction / doInverseHyperbolicTangentFraction / doLogarithmEFraction / doHyperbolicCosineFraction / doHyperbolicSineFraction / doHyperbolicTangentFraction / doPowerFraction / getTrailingZeroCount / isPrime / isPrimeLucas(Not Implemented) / isPrimeNative / isPrimeRabinMiller(New)
-- Core::NtDriver doCancel(Remove)
-- Core::NtFile / doCreate(New)
-- Core::NtFileAccess(New)
-- Core::NtFileAttribute(New)
-- Core::NtFileDisposition(New)
-- Core::NtFileOption(New)
-- Core::NtFileShare(New)
-- Core::NtProcess / doOpen / doTerminate(New)
-- Core::NtService addDependency / getServiceName / getServicePath / setServicePath / updateServiceConfiguration(New) Constructor / getServiceErrorControl / setServiceErrorControl(Parameter & Return)
-- Core::NtServiceErrorControl(New)
-- Core::NtServiceManager doOpenService(...)
-- Core::NtServiceStartType(New)
-- Core::Object toString(New)
-- Core::RedBlackTree / doRemove(...)
-- Core::SingleLinkedList toString(...)
-- Core::String begin / Constructor(char16_t*, intmax_t) / Constructor(char16_t*, intmax_t, bool) / end(Remove) doConcat(char16_t) / doConcat(const String&) / doReplace / doStrip / doTruncate / toLowerCase / toUpperCase(std::basic_stringstream<char16_t> Implementation) valueOf(const T&)(New) valueOf(T, unsigned short)(std::enable_if => requires)
-- Core::StringIterator(Remove)
-- IO::AudioSegment / doOpenWAV(New)
-- IO::FastBufferedInputStream doInput(From operator>> & operator()) operator bool(Remove)
-- IO::FastBufferedOutputStream doOutput(From operator<< & operator())
-- IO::InputStream doRead(Modifier) doSkip(...)
-- IO::SocketInetAddress getSocketIP / getSocketPort(New)
-- std::equal_to\<Comparable>
-- std::less\<Comparable>
-- std::less_equal\<Comparable>
-- std::greater\<Comparable>
-- std::greater_equal\<Comparable>
-- std::hash\<Hashable>
-- std::not_equal_to\<Comparable>

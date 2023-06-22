@@ -8,7 +8,7 @@ namespace eLibrary::Core {
     template<Comparable K, typename V>
     class RedBlackTree final : public Object {
     private:
-        enum NodeColorEnumeration {
+        enum class NodeColorEnumeration {
             ColorRed,
             ColorBlack,
         };
@@ -17,9 +17,9 @@ namespace eLibrary::Core {
             K NodeKey;
             V NodeValue;
             NodeColorEnumeration NodeColor;
-            RedBlackNode *NodeChildLeft, *NodeChildRight, *NodeParent;
+            RedBlackNode *NodeChildLeft = nullptr, *NodeChildRight = nullptr, *NodeParent = nullptr;
 
-            constexpr RedBlackNode(const K &NodeKeySource, const V &NodeValueSource) noexcept: NodeChildLeft(nullptr), NodeChildRight(nullptr), NodeColor(ColorRed), NodeKey(NodeKeySource), NodeParent(nullptr), NodeValue(NodeValueSource) {}
+            constexpr RedBlackNode(const K &NodeKeySource, const V &NodeValueSource) noexcept: NodeColor(NodeColorEnumeration::ColorRed), NodeKey(NodeKeySource), NodeValue(NodeValueSource) {}
 
             ~RedBlackNode() noexcept {
                 NodeParent = nullptr;
@@ -32,7 +32,7 @@ namespace eLibrary::Core {
                     NodeChildRight = nullptr;
                 }
             }
-        } *NodeRoot;
+        } *NodeRoot = nullptr;
 
         void doRotateLeft(RedBlackNode *NodeTarget) noexcept {
             auto *NodeChildRight = NodeTarget->NodeChildRight;
@@ -91,7 +91,7 @@ namespace eLibrary::Core {
         }
 
     public:
-        constexpr RedBlackTree() noexcept: NodeRoot(nullptr) {}
+        constexpr RedBlackTree() noexcept = default;
 
         ~RedBlackTree() noexcept {
             if (NodeRoot) {
@@ -103,7 +103,7 @@ namespace eLibrary::Core {
         void doInsert(const K &NodeKey, const V &NodeValue) noexcept {
             auto *NodeTarget = new RedBlackNode(NodeKey, NodeValue);
             if (NodeRoot == nullptr) {
-                NodeTarget->NodeColor = ColorBlack;
+                NodeTarget->NodeColor = NodeColorEnumeration::ColorBlack;
                 NodeRoot = NodeTarget;
                 return;
             }
@@ -127,13 +127,13 @@ namespace eLibrary::Core {
                     NodeParent = NodeParent->NodeChildLeft;
                 }
             }
-            while ((NodeParent = NodeTarget->NodeParent) && NodeParent->NodeColor == ColorRed)
+            while ((NodeParent = NodeTarget->NodeParent) && NodeParent->NodeColor == NodeColorEnumeration::ColorRed)
                 if (NodeParent == NodeParent->NodeParent->NodeChildLeft) {
                     RedBlackNode *NodeUncle = NodeParent->NodeParent->NodeChildRight;
-                    if (NodeUncle && NodeUncle->NodeColor == ColorRed) {
-                        NodeParent->NodeColor = ColorBlack;
-                        NodeParent->NodeParent->NodeColor = ColorRed;
-                        NodeUncle->NodeColor = ColorBlack;
+                    if (NodeUncle && NodeUncle->NodeColor == NodeColorEnumeration::ColorRed) {
+                        NodeParent->NodeColor = NodeColorEnumeration::ColorBlack;
+                        NodeParent->NodeParent->NodeColor = NodeColorEnumeration::ColorRed;
+                        NodeUncle->NodeColor = NodeColorEnumeration::ColorBlack;
                         NodeTarget = NodeParent->NodeParent;
                         continue;
                     }
@@ -141,15 +141,15 @@ namespace eLibrary::Core {
                         doRotateLeft(NodeParent);
                         std::swap(NodeTarget, NodeParent);
                     }
-                    NodeParent->NodeColor = ColorBlack;
-                    NodeParent->NodeParent->NodeColor = ColorRed;
+                    NodeParent->NodeColor = NodeColorEnumeration::ColorBlack;
+                    NodeParent->NodeParent->NodeColor = NodeColorEnumeration::ColorRed;
                     doRotateRight(NodeParent->NodeParent);
                 } else {
                     RedBlackNode *NodeUncle = NodeParent->NodeParent->NodeChildLeft;
-                    if (NodeUncle && NodeUncle->NodeColor == ColorRed) {
-                        NodeParent->NodeColor = ColorBlack;
-                        NodeParent->NodeParent->NodeColor = ColorRed;
-                        NodeUncle->NodeColor = ColorBlack;
+                    if (NodeUncle && NodeUncle->NodeColor == NodeColorEnumeration::ColorRed) {
+                        NodeParent->NodeColor = NodeColorEnumeration::ColorBlack;
+                        NodeParent->NodeParent->NodeColor = NodeColorEnumeration::ColorRed;
+                        NodeUncle->NodeColor = NodeColorEnumeration::ColorBlack;
                         NodeTarget = NodeParent->NodeParent;
                         continue;
                     }
@@ -157,11 +157,11 @@ namespace eLibrary::Core {
                         doRotateRight(NodeParent);
                         std::swap(NodeTarget, NodeParent);
                     }
-                    NodeParent->NodeColor = ColorBlack;
-                    NodeParent->NodeParent->NodeColor = ColorRed;
+                    NodeParent->NodeColor = NodeColorEnumeration::ColorBlack;
+                    NodeParent->NodeParent->NodeColor = NodeColorEnumeration::ColorRed;
                     doRotateLeft(NodeParent->NodeParent);
                 }
-            NodeRoot->NodeColor = ColorBlack;
+            NodeRoot->NodeColor = NodeColorEnumeration::ColorBlack;
         }
 
         void doRemove(const K &NodeKey) noexcept {
@@ -190,7 +190,7 @@ namespace eLibrary::Core {
                 NodeReplace->NodeColor = NodeTarget->NodeColor;
                 NodeReplace->NodeParent = NodeTarget->NodeParent;
                 NodeTarget->NodeChildLeft->NodeParent = NodeReplace;
-                if (NodeColor == ColorBlack) goto doRemoveFixup;
+                if (NodeColor == NodeColorEnumeration::ColorBlack) goto doRemoveFixup;
                 return;
             }
             NodeChild = NodeTarget->NodeChildLeft ? NodeTarget->NodeChildLeft : NodeTarget->NodeChildRight;
@@ -201,65 +201,65 @@ namespace eLibrary::Core {
             else if (NodeParent->NodeChildLeft == NodeTarget)
                 NodeParent->NodeChildLeft = NodeChild;
             else NodeParent->NodeChildRight = NodeChild;
-            if (NodeColor == ColorRed) return;
+            if (NodeColor == NodeColorEnumeration::ColorRed) return;
             doRemoveFixup:
-            while ((!NodeChild || NodeChild->NodeColor == ColorBlack) && NodeChild != NodeRoot)
+            while ((!NodeChild || NodeChild->NodeColor == NodeColorEnumeration::ColorBlack) && NodeChild != NodeRoot)
                 if (NodeParent->NodeChildLeft == NodeChild) {
                     RedBlackNode *NodeUncle = NodeParent->NodeChildRight;
-                    if (NodeUncle->NodeColor == ColorRed) {
-                        NodeParent->NodeColor = ColorRed;
-                        NodeUncle->NodeColor = ColorBlack;
+                    if (NodeUncle->NodeColor == NodeColorEnumeration::ColorRed) {
+                        NodeParent->NodeColor = NodeColorEnumeration::ColorRed;
+                        NodeUncle->NodeColor = NodeColorEnumeration::ColorBlack;
                         doRotateLeft(NodeParent);
                         NodeUncle = NodeParent->NodeChildRight;
                     }
-                    if ((!NodeUncle->NodeChildLeft || NodeUncle->NodeChildLeft->NodeColor == ColorBlack) &&
-                        (!NodeUncle->NodeChildRight || NodeUncle->NodeChildRight->NodeColor == ColorBlack)) {
-                        NodeUncle->NodeColor = ColorRed;
+                    if ((!NodeUncle->NodeChildLeft || NodeUncle->NodeChildLeft->NodeColor == NodeColorEnumeration::ColorBlack) &&
+                        (!NodeUncle->NodeChildRight || NodeUncle->NodeChildRight->NodeColor == NodeColorEnumeration::ColorBlack)) {
+                        NodeUncle->NodeColor = NodeColorEnumeration::ColorRed;
                         NodeChild = NodeParent;
                         NodeParent = NodeChild->NodeParent;
                     } else {
-                        if (!NodeUncle->NodeChildRight || NodeUncle->NodeChildRight->NodeColor == ColorBlack) {
-                            NodeUncle->NodeChildLeft->NodeColor = ColorBlack;
-                            NodeUncle->NodeColor = ColorRed;
+                        if (!NodeUncle->NodeChildRight || NodeUncle->NodeChildRight->NodeColor == NodeColorEnumeration::ColorBlack) {
+                            NodeUncle->NodeChildLeft->NodeColor = NodeColorEnumeration::ColorBlack;
+                            NodeUncle->NodeColor = NodeColorEnumeration::ColorRed;
                             doRotateRight(NodeUncle);
                             NodeUncle = NodeParent->NodeChildRight;
                         }
                         NodeUncle->NodeColor = NodeParent->NodeColor;
-                        NodeParent->NodeColor = ColorBlack;
-                        NodeUncle->NodeChildRight->NodeColor = ColorBlack;
+                        NodeParent->NodeColor = NodeColorEnumeration::ColorBlack;
+                        NodeUncle->NodeChildRight->NodeColor = NodeColorEnumeration::ColorBlack;
                         doRotateLeft(NodeParent);
                         NodeChild = NodeRoot;
                         break;
                     }
                 } else {
                     RedBlackNode *NodeUncle = NodeParent->NodeChildLeft;
-                    if (NodeUncle->NodeColor == ColorRed) {
-                        NodeParent->NodeColor = ColorRed;
-                        NodeUncle->NodeColor = ColorBlack;
+                    if (NodeUncle->NodeColor == NodeColorEnumeration::ColorRed) {
+                        NodeParent->NodeColor = NodeColorEnumeration::ColorRed;
+                        NodeUncle->NodeColor = NodeColorEnumeration::ColorBlack;
                         doRotateRight(NodeParent);
                         NodeUncle = NodeParent->NodeChildLeft;
                     }
-                    if ((!NodeUncle->NodeChildLeft || NodeUncle->NodeChildLeft->NodeColor == ColorBlack) &&
-                        (!NodeUncle->NodeChildRight || NodeUncle->NodeChildRight->NodeColor == ColorBlack)) {
-                        NodeUncle->NodeColor = ColorRed;
+                    if ((!NodeUncle->NodeChildLeft || NodeUncle->NodeChildLeft->NodeColor == NodeColorEnumeration::ColorBlack) &&
+                        (!NodeUncle->NodeChildRight || NodeUncle->NodeChildRight->NodeColor == NodeColorEnumeration::ColorBlack)) {
+                        NodeUncle->NodeColor = NodeColorEnumeration::ColorRed;
                         NodeChild = NodeParent;
                         NodeParent = NodeChild->NodeParent;
                     } else {
-                        if (!NodeUncle->NodeChildLeft || NodeUncle->NodeChildLeft->NodeColor == ColorBlack) {
-                            NodeUncle->NodeChildRight->NodeColor = ColorBlack;
-                            NodeUncle->NodeColor = ColorRed;
+                        if (!NodeUncle->NodeChildLeft || NodeUncle->NodeChildLeft->NodeColor == NodeColorEnumeration::ColorBlack) {
+                            NodeUncle->NodeChildRight->NodeColor = NodeColorEnumeration::ColorBlack;
+                            NodeUncle->NodeColor = NodeColorEnumeration::ColorRed;
                             doRotateLeft(NodeUncle);
                             NodeUncle = NodeParent->NodeChildLeft;
                         }
                         NodeUncle->NodeColor = NodeParent->NodeColor;
-                        NodeParent->NodeColor = ColorBlack;
-                        NodeUncle->NodeChildLeft->NodeColor = ColorBlack;
+                        NodeParent->NodeColor = NodeColorEnumeration::ColorBlack;
+                        NodeUncle->NodeChildLeft->NodeColor = NodeColorEnumeration::ColorBlack;
                         doRotateRight(NodeParent);
                         NodeChild = NodeRoot;
                         break;
                     }
                 }
-            if (NodeChild) NodeChild->NodeColor = ColorBlack;
+            if (NodeChild) NodeChild->NodeColor = NodeColorEnumeration::ColorBlack;
         }
 
         std::optional<V> doSearch(const K &NodeKey) const noexcept {
@@ -276,4 +276,6 @@ namespace eLibrary::Core {
             return NodeRoot ? getSizeCore(NodeRoot) : 0;
         }
     };
+
+    class SegmentTree final : public Object {};
 }

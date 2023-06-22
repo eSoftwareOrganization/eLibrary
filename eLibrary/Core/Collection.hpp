@@ -8,11 +8,20 @@
 #include <vector>
 
 namespace eLibrary::Core {
+    /**
+     * The ArrayList class provides support for continuous storage of objects
+     */
     template<typename E>
     class ArrayList final : public Object {
     private:
         intmax_t ElementCapacity, ElementSize;
         E *ElementContainer;
+
+        ArrayList(E *ElementSource, uintmax_t ElementSourceSize) noexcept : ElementCapacity(1), ElementSize(ElementSourceSize) {
+            while (ElementCapacity < ElementSourceSize) ElementCapacity <<= 1;
+            ElementContainer = new E[ElementCapacity];
+            std::copy(ElementSource, ElementSource + ElementSourceSize, ElementContainer);
+        }
 
         void doInitialize() noexcept {}
 
@@ -54,10 +63,10 @@ namespace eLibrary::Core {
             if (ElementCapacity == 0) ElementContainer = new E[ElementCapacity = 1];
             if (ElementSize == ElementCapacity) {
                 auto *ElementBuffer = new E[ElementSize];
-                ::memcpy(ElementBuffer, ElementContainer, sizeof(E) * ElementSize);
+                std::copy(ElementContainer, ElementContainer + ElementSize, ElementBuffer);
                 delete[] ElementContainer;
                 ElementContainer = new E[ElementCapacity <<= 1];
-                ::memcpy(ElementContainer, ElementBuffer, sizeof(E) * ElementSize);
+                std::copy(ElementBuffer, ElementBuffer + ElementSize, ElementContainer);
                 delete[] ElementBuffer;
             }
             ElementContainer[ElementSize++] = ElementSource;
@@ -70,13 +79,13 @@ namespace eLibrary::Core {
             if (ElementCapacity == 0) ElementContainer = new E[ElementCapacity = 1];
             if (ElementSize == ElementCapacity) {
                 auto *ElementBuffer = new E[ElementSize];
-                ::memcpy(ElementBuffer, ElementContainer, sizeof(E) * ElementSize);
+                std::copy(ElementContainer, ElementContainer + ElementSize, ElementBuffer);
                 delete[] ElementContainer;
                 ElementContainer = new E[ElementCapacity <<= 1];
-                ::memcpy(ElementContainer, ElementBuffer, sizeof(E) * ElementSize);
+                std::copy(ElementBuffer, ElementBuffer + ElementSize, ElementContainer);
                 delete[] ElementBuffer;
             }
-            ::memcpy(ElementContainer + ElementIndex + 1, ElementContainer + ElementIndex, sizeof(E) * (ElementSize - ElementIndex - 1));
+            std::copy(ElementContainer + ElementIndex, ElementContainer + ElementSize, ElementContainer + ElementIndex + 1);
             ElementContainer[ElementIndex] = ElementSource;
             ++ElementSize;
         }
@@ -85,7 +94,8 @@ namespace eLibrary::Core {
             if (&ElementSource == this) return;
             delete[] ElementContainer;
             ElementContainer = new E[ElementCapacity = ElementSource.ElementCapacity];
-            ::memcpy(ElementContainer, ElementSource.ElementContainer, sizeof(E) * (ElementSize = ElementSource.ElementSize));
+            ElementSize = ElementSource.ElementSize;
+            std::copy(ElementSource.ElementContainer, ElementSource.ElementContainer + ElementSource.ElementSize, ElementContainer);
         }
 
         void doClear() noexcept {
@@ -98,21 +108,19 @@ namespace eLibrary::Core {
         }
 
         ArrayList<E> doConcat(const ArrayList<E> &ElementSource) const noexcept {
-            std::array<E, this->ElementSize + ElementSource.ElementSize> ElementBuffer;
-            ::memcpy(ElementBuffer, ElementContainer, sizeof(E) * ElementSize);
-            ::memcpy(ElementBuffer + ElementSize, ElementSource.ElementContainer, sizeof(E) * ElementSource.ElementSize);
-            return ElementBuffer;
+            E *ElementBuffer = new E[ElementSize + ElementSource.ElementSize];
+            std::copy(ElementContainer, ElementContainer + ElementSize, ElementBuffer);
+            std::copy(ElementSource.ElementContainer, ElementSource.ElementContainer + ElementSource.ElementSize, ElementBuffer + ElementSize);
+            return {ElementBuffer, ElementSize + ElementSource.ElementSize};
         }
 
         void doReverse() noexcept {
             E *ElementBuffer = new E[ElementSize];
-            for (intmax_t ElementIndex = 0;ElementIndex < ElementSize;++ElementIndex)
-                ElementBuffer[ElementSize - ElementIndex - 1] = ElementContainer[ElementIndex];
-            ::memcpy(ElementContainer, ElementBuffer, sizeof(E) * ElementBuffer);
+            std::copy(ElementBuffer, ElementBuffer + ElementSize, ElementContainer);
             delete[] ElementBuffer;
         }
 
-        E getElement(intmax_t ElementIndex) const {
+        E &getElement(intmax_t ElementIndex) const {
             if (ElementIndex < 0) ElementIndex += ElementSize;
             if (ElementIndex < 0 || ElementIndex >= ElementSize)
                 throw Exception(String(u"ArrayList<E>::getElement(intmax_t) ElementIndex"));
@@ -125,13 +133,13 @@ namespace eLibrary::Core {
 
         intmax_t indexOf(const E &ElementSource) const noexcept {
             for (intmax_t ElementIndex = 0; ElementIndex < ElementSize; ++ElementIndex)
-                if (ElementContainer[ElementIndex] == ElementSource) return ElementIndex;
+                if (ElementContainer[ElementIndex].doCompare(ElementSource) == 0) return ElementIndex;
             return -1;
         }
 
         bool isContains(const E &ElementSource) const noexcept {
             for (intmax_t ElementIndex = 0; ElementIndex < ElementSize; ++ElementIndex)
-                if (ElementContainer[ElementIndex] == ElementSource) return true;
+                if (ElementContainer[ElementIndex].doCompare(ElementSource) == 0) return true;
             return false;
         }
 
@@ -154,15 +162,14 @@ namespace eLibrary::Core {
             if (ElementIndex < 0) ElementIndex += ElementSize;
             if (ElementIndex < 0 || ElementIndex >= ElementSize)
                 throw Exception(String(u"ArrayList<E>::removeElement(intmax_t) ElementIndex"));
-            ::memcpy(ElementContainer + ElementIndex, ElementContainer + ElementIndex + 1,
-                   sizeof(E) * (ElementSize - ElementIndex - 1));
+            std::copy(ElementContainer + ElementIndex + 1, ElementContainer + ElementSize, ElementContainer + ElementIndex);
             if (ElementCapacity == 1) doClear();
             else if (--ElementSize <= ElementCapacity >> 1) {
                 auto *ElementBuffer = new E[ElementSize];
-                ::memcpy(ElementBuffer, ElementContainer, sizeof(E) * ElementSize);
+                std::copy(ElementContainer, ElementContainer + ElementSize, ElementBuffer);
                 delete[] ElementContainer;
                 ElementContainer = new E[ElementCapacity >>= 1];
-                ::memcpy(ElementContainer, ElementBuffer, sizeof(E) * ElementSize);
+                std::copy(ElementBuffer, ElementBuffer + ElementSize, ElementContainer);
                 delete[] ElementBuffer;
             }
         }
@@ -198,6 +205,9 @@ namespace eLibrary::Core {
         }
     };
 
+    /**
+     * The ArraySet class provides support for continuous storage of unique objects
+     */
     template<typename E>
     class ArraySet final : public Object {
     private:
@@ -213,7 +223,7 @@ namespace eLibrary::Core {
 
         ArraySet(const ArraySet<E> &SetSource) noexcept : ElementCapacity(SetSource.ElementCapacity), ElementSize(SetSource.ElementSize) {
             if (ElementCapacity) ElementContainer = new E[ElementCapacity];
-            memcpy(ElementContainer, SetSource.ElementContainer, sizeof(E) * ElementSize);
+            std::copy(SetSource.ElementContainer, SetSource.ElementContainer + ElementSize, ElementContainer);
         }
 
         ~ArraySet() noexcept {
@@ -230,10 +240,10 @@ namespace eLibrary::Core {
             if (ElementCapacity == 0) ElementContainer = new E[ElementCapacity = 1];
             if (ElementSize == ElementCapacity) {
                 auto *ElementBuffer = new E[ElementSize];
-                ::memcpy(ElementBuffer, ElementContainer, sizeof(E) * ElementSize);
+                std::copy(ElementContainer, ElementContainer + ElementSize, ElementBuffer);
                 delete[] ElementContainer;
                 ElementContainer = new E[ElementCapacity <<= 1];
-                ::memcpy(ElementContainer, ElementBuffer, sizeof(E) * ElementSize);
+                std::copy(ElementBuffer, ElementBuffer + ElementSize, ElementContainer);
                 delete[] ElementBuffer;
             }
             ElementContainer[ElementSize++] = ElementSource;
@@ -269,10 +279,18 @@ namespace eLibrary::Core {
             return SetResult;
         }
 
+        intmax_t getElementSize() const noexcept {
+            return ElementSize;
+        }
+
         bool isContains(const E &ElementSource) const noexcept {
             for (intmax_t ElementIndex = 0; ElementIndex < ElementSize; ++ElementIndex)
-                if (ElementContainer[ElementIndex] == ElementSource) return true;
+                if (ElementContainer[ElementIndex].doCompare(ElementSource) == 0) return true;
             return false;
+        }
+
+        bool isEmpty() const noexcept {
+            return ElementSize == 0;
         }
 
         ArraySet<E> &operator=(const ArraySet<E> &SetSource) noexcept = delete;
@@ -282,16 +300,23 @@ namespace eLibrary::Core {
             for (; ElementIndex < ElementSize; ++ElementIndex)
                 if (ElementContainer[ElementIndex] == ElementSource) break;
             if (ElementIndex == ElementSize) throw Exception(String(u"ArraySet::removeElement(const E&) ElementSource"));
-            ::memcpy(ElementContainer + ElementIndex, ElementContainer + ElementIndex + 1, sizeof(E) * (ElementSize - ElementIndex - 1));
+            std::copy(ElementContainer + ElementIndex + 1, ElementContainer + ElementSize, ElementContainer + ElementIndex);
             if (ElementCapacity == 1) doClear();
             else if (--ElementSize <= ElementCapacity >> 1) {
                 auto *ElementBuffer = new E[ElementSize];
-                ::memcpy(ElementBuffer, ElementContainer, sizeof(E) * ElementSize);
+                std::copy(ElementContainer, ElementContainer + ElementSize, ElementBuffer);
                 delete[] ElementContainer;
                 ElementContainer = new E[ElementCapacity >>= 1];
-                ::memcpy(ElementContainer, ElementBuffer, sizeof(E) * ElementSize);
+                std::copy(ElementBuffer, ElementBuffer + ElementSize, ElementContainer);
                 delete[] ElementBuffer;
             }
+        }
+
+        ArrayList<E> toArrayList() const noexcept {
+            ArrayList<E> ListResult;
+            for (intmax_t ElementIndex = 0; ElementIndex < ElementSize;++ElementIndex)
+                ListResult.addElement(ElementContainer[ElementIndex]);
+            return ListResult;
         }
 
         String toString() const noexcept override {
@@ -307,6 +332,9 @@ namespace eLibrary::Core {
         }
     };
 
+    /**
+     * The DoubleLinkedList class provides support for discrete storage of objects
+     */
     template<typename E>
     class DoubleLinkedList final : public Object {
     private:
@@ -356,23 +384,21 @@ namespace eLibrary::Core {
                 addElement(ElementSource);
                 return;
             }
-            if (ElementIndex < (NodeSize >> 1)) {
-                LinkedNode *NodeCurrent = NodeHead;
-                if (ElementIndex) while (--ElementIndex) NodeCurrent = NodeCurrent->NodeNext;
-                auto *NodeTarget = new LinkedNode(ElementSource);
-                NodeTarget->NodePrevious = NodeCurrent;
-                NodeTarget->NodeNext = NodeCurrent->NodeNext;
-                NodeCurrent->NodeNext = NodeTarget;
-            } else {
-                LinkedNode *NodeCurrent = NodeTail;
-                ElementIndex = NodeSize - ElementIndex - 1;
-                if (ElementIndex) while (--ElementIndex) NodeCurrent = NodeCurrent->NodePrevious;
-                auto *NodeTarget = new LinkedNode(ElementSource);
-                NodeTarget->NodeNext = NodeCurrent;
-                NodeTarget->NodePrevious = NodeCurrent->NodePrevious;
-                NodeCurrent->NodePrevious = NodeTarget;
-                NodeTarget->NodePrevious->NodeNext = NodeTarget;
+            if (ElementIndex == 0) {
+                LinkedNode *NodeCurrent = new LinkedNode(ElementSource);
+                NodeCurrent->NodeNext = NodeHead;
+                NodeHead->NodePrevious = NodeCurrent;
+                NodeHead = NodeCurrent;
+                ++NodeSize;
+                return;
             }
+            LinkedNode *NodeCurrent = NodeHead;
+            while (--ElementIndex) NodeCurrent = NodeCurrent->NodeNext;
+            auto *NodeTarget = new LinkedNode(ElementSource);
+            NodeTarget->NodePrevious = NodeCurrent;
+            NodeTarget->NodeNext = NodeCurrent->NodeNext;
+            NodeCurrent->NodeNext->NodePrevious = NodeTarget;
+            NodeCurrent->NodeNext = NodeTarget;
             ++NodeSize;
         }
 
@@ -396,7 +422,7 @@ namespace eLibrary::Core {
             NodeHead->NodeNext = NodeTemporary->NodeNext;
         }
 
-        E getElement(intmax_t ElementIndex) const {
+        E &getElement(intmax_t ElementIndex) const {
             if (ElementIndex < 0) ElementIndex += NodeSize;
             if (ElementIndex < 0 || ElementIndex >= NodeSize)
                 throw Exception(String(u"DoubleLinkedList<E>::getElement(intmax_t) ElementIndex"));
@@ -412,16 +438,33 @@ namespace eLibrary::Core {
             return NodeCurrent->NodeValue;
         }
 
-        intmax_t indexOf(const E &ElementSource) const {
+        intmax_t getElementSize() const noexcept {
+            return NodeSize;
+        }
+
+        intmax_t indexOf(const E &ElementSource) const noexcept {
             intmax_t NodeIndex = 0;
             LinkedNode *NodeCurrent = NodeHead;
-            while (NodeCurrent && NodeCurrent->NodeValue != ElementSource) NodeCurrent = NodeCurrent->NodeNext, ++NodeIndex;
+            while (NodeCurrent && NodeCurrent->NodeValue.doCompare(ElementSource)) NodeCurrent = NodeCurrent->NodeNext, ++NodeIndex;
             if (!NodeCurrent) return -1;
             return NodeIndex;
         }
 
+        bool isContains(const E &ElementSource) const noexcept {
+            LinkedNode *NodeCurrent = NodeHead;
+            while (NodeCurrent) {
+                if (NodeCurrent->NodeValue.doCompare(ElementSource) == 0) return true;
+                NodeCurrent = NodeCurrent->NodeNext;
+            }
+            return false;
+        }
+
+        bool isEmpty() const noexcept {
+            return NodeSize == 0;
+        }
+
         void removeElement(const E &ElementSource) {
-            intmax_t ElementIndex = doFindElement(ElementSource);
+            intmax_t ElementIndex = indexOf(ElementSource);
             if (ElementIndex == -1) throw Exception(String(u"DoubleLinkedList<E>::removeElement(const E&) ElementSource"));
             removeIndex(ElementIndex);
         }
@@ -431,13 +474,16 @@ namespace eLibrary::Core {
             if (ElementIndex < 0 || ElementIndex >= NodeSize)
                 throw Exception(String(u"DoubleLinkedList<E>::removeElement(intmax_t) ElementIndex"));
             LinkedNode *NodeCurrent;
-            if (ElementIndex == 0) {
+            if (NodeSize == 1) {
+                delete NodeHead;
+                NodeHead = NodeTail = nullptr;
+            } else if (ElementIndex == 0) {
                 NodeHead = NodeHead->NodeNext;
-                if (NodeHead->NodePrevious) delete NodeHead->NodePrevious;
+                delete NodeHead->NodePrevious;
                 NodeHead->NodePrevious = nullptr;
             } else if (ElementIndex == NodeSize - 1) {
                 NodeTail = NodeTail->NodePrevious;
-                if (NodeTail->NodeNext) delete NodeTail->NodeNext;
+                delete NodeTail->NodeNext;
                 NodeTail->NodeNext = nullptr;
             } else if (ElementIndex < (NodeSize >> 1)) {
                 NodeCurrent = NodeHead;
@@ -509,6 +555,166 @@ namespace eLibrary::Core {
         }
     };
 
+    /**
+     * The DoubleLinkedSet class provides support for discrete storage of unique objects
+     */
+    template<typename E>
+    class DoubleLinkedSet final : public Object {
+    private:
+        struct LinkedNode final {
+            E NodeValue;
+            LinkedNode *NodeNext, *NodePrevious;
+
+            explicit LinkedNode(const E &Value) noexcept: NodeValue(Value), NodeNext(nullptr), NodePrevious(nullptr) {}
+        } *NodeHead = nullptr, *NodeTail = nullptr;
+
+        intmax_t NodeSize = 0;
+    public:
+        constexpr DoubleLinkedSet() noexcept = default;
+
+        DoubleLinkedSet(const DoubleLinkedSet<E> &SetSource) noexcept {
+            LinkedNode *NodeCurrent = SetSource.NodeHead;
+            while (NodeCurrent) {
+                addElement(NodeCurrent->NodeValue);
+                NodeCurrent = NodeCurrent->NodeNext;
+            }
+        }
+
+        ~DoubleLinkedSet() noexcept {
+            NodeSize = 0;
+            NodeTail = nullptr;
+            LinkedNode *NodeCurrent = NodeHead, *NodePrevious;
+            NodeHead = nullptr;
+            while (NodeCurrent) {
+                NodePrevious = NodeCurrent;
+                NodeCurrent = NodeCurrent->NodeNext;
+                delete NodePrevious;
+            }
+        }
+
+        void addElement(const E &ElementSource) noexcept {
+            if (isContains(ElementSource)) return;
+            auto *NodeCurrent = new LinkedNode(ElementSource);
+            if (!NodeHead) NodeHead = NodeTail = NodeCurrent;
+            else {
+                NodeTail->NodeNext = NodeCurrent;
+                NodeCurrent->NodePrevious = NodeTail;
+                NodeTail = NodeCurrent;
+            }
+            ++NodeSize;
+        }
+
+        DoubleLinkedSet<E> doDifference(const DoubleLinkedSet<E> &SetSource) const noexcept {
+            DoubleLinkedSet<E> SetResult;
+            LinkedNode *NodeCurrent = NodeHead;
+            while (NodeCurrent) {
+                if (!SetSource.isContains(NodeCurrent->NodeValue))
+                    SetResult.addElement(NodeCurrent->NodeValue);
+                NodeCurrent = NodeCurrent->NodeNext;
+            }
+            return SetResult;
+        }
+
+        DoubleLinkedSet<E> doIntersection(const DoubleLinkedSet<E> &SetSource) const noexcept {
+            DoubleLinkedSet<E> SetResult;
+            LinkedNode *NodeCurrent = NodeHead;
+            while (NodeCurrent) {
+                if (SetSource.isContains(NodeCurrent->NodeValue))
+                    SetResult.addElement(NodeCurrent->NodeValue);
+                NodeCurrent = NodeCurrent->NodeNext;
+            }
+            return SetResult;
+        }
+
+        DoubleLinkedSet<E> doUnion(const DoubleLinkedSet<E> &SetSource) const noexcept {
+            DoubleLinkedSet<E> SetResult(*this);
+            LinkedNode *NodeCurrent = SetSource.NodeHead;
+            while (NodeCurrent) {
+                SetResult.addElement(NodeCurrent->NodeValue);
+                NodeCurrent = NodeCurrent->NodeNext;
+            }
+            return SetResult;
+        }
+
+        intmax_t getElementSize() const noexcept {
+            return NodeSize;
+        }
+
+        bool isContains(const E &ElementSource) const noexcept {
+            LinkedNode *NodeCurrent = NodeHead;
+            while (NodeCurrent) {
+                if (NodeCurrent->NodeValue.doCompare(ElementSource) == 0) return true;
+                NodeCurrent = NodeCurrent->NodeNext;
+            }
+            return false;
+        }
+
+        bool isEmpty() const noexcept {
+            return NodeSize == 0;
+        }
+
+        DoubleLinkedSet<E> &operator=(const DoubleLinkedSet<E>&) noexcept = delete;
+
+        void removeElement(const E &ElementSource) {
+            intmax_t ElementIndex = 0;
+            LinkedNode *NodeCurrent = NodeHead;
+            while (NodeCurrent && NodeCurrent->NodeValue.doCompare(ElementSource)) NodeCurrent = NodeCurrent->NodeNext, ++ElementIndex;
+            if (!NodeCurrent) throw Exception(String(u"DoubleLinkedSet<E>::removeElement(const E&) ElementSource"));
+            if (ElementIndex == 0) {
+                NodeHead = NodeHead->NodeNext;
+                if (NodeHead->NodePrevious) delete NodeHead->NodePrevious;
+                NodeHead->NodePrevious = nullptr;
+            } else if (ElementIndex == NodeSize - 1) {
+                NodeTail = NodeTail->NodePrevious;
+                if (NodeTail->NodeNext) delete NodeTail->NodeNext;
+                NodeTail->NodeNext = nullptr;
+            } else if (ElementIndex < (NodeSize >> 1)) {
+                NodeCurrent = NodeHead;
+                while (--ElementIndex) NodeCurrent = NodeCurrent->NodeNext;
+                NodeCurrent->NodeNext = NodeCurrent->NodeNext->NodeNext;
+                delete NodeCurrent->NodeNext->NodePrevious;
+                NodeCurrent->NodeNext->NodePrevious = NodeCurrent;
+            } else {
+                NodeCurrent = NodeTail;
+                ElementIndex = NodeSize - ElementIndex - 1;
+                while (--ElementIndex) NodeCurrent = NodeCurrent->NodePrevious;
+                NodeCurrent->NodePrevious = NodeCurrent->NodePrevious->NodePrevious;
+                delete NodeCurrent->NodePrevious->NodeNext;
+                NodeCurrent->NodePrevious->NodeNext = NodeCurrent;
+            }
+            --NodeSize;
+        }
+
+        DoubleLinkedList<E> toDoubleLinkedList() const noexcept {
+            DoubleLinkedList<E> ListResult;
+            LinkedNode *NodeCurrent = NodeHead;
+            while (NodeCurrent) {
+                ListResult.addElement(NodeCurrent->NodeValue);
+                NodeCurrent = NodeCurrent->NodeNext;
+            }
+            return ListResult;
+        }
+
+        String toString() const noexcept override {
+            StringStream CharacterStream;
+            CharacterStream.addCharacter(u'{');
+            if (NodeHead) {
+                LinkedNode *NodeCurrent = NodeHead;
+                while (NodeCurrent->NodeNext) {
+                    CharacterStream.addString(String::valueOf(NodeCurrent->NodeValue));
+                    CharacterStream.addCharacter(u',');
+                    NodeCurrent = NodeCurrent->NodeNext;
+                }
+                CharacterStream.addString(String::valueOf(NodeCurrent->NodeValue));
+            }
+            CharacterStream.addCharacter(u'}');
+            return CharacterStream.toString();
+        }
+    };
+
+    /**
+     * The SingleLinkedList class provides support for discrete storage of objects
+     */
     template<typename E>
     class SingleLinkedList final : public Object {
     private:
@@ -577,12 +783,29 @@ namespace eLibrary::Core {
             return NodeCurrent->NodeValue;
         }
 
-        intmax_t indexOf(const E &ElementSource) noexcept {
+        intmax_t getElementSize() const noexcept {
+            return NodeSize;
+        }
+
+        intmax_t indexOf(const E &ElementSource) const noexcept {
             intmax_t NodeIndex = 0;
             LinkedNode *NodeCurrent = NodeHead;
-            while (NodeCurrent && NodeCurrent->NodeValue != ElementSource) NodeCurrent = NodeCurrent->NodeNext, ++NodeIndex;
+            while (NodeCurrent && NodeCurrent->NodeValue.doCompare(ElementSource)) NodeCurrent = NodeCurrent->NodeNext, ++NodeIndex;
             if (!NodeCurrent) return -1;
             return NodeIndex;
+        }
+
+        bool isContains(const E &ElementSource) const noexcept {
+            LinkedNode *NodeCurrent = NodeHead;
+            while (NodeCurrent) {
+                if (NodeCurrent->NodeValue.doCompare(ElementSource) == 0) return true;
+                NodeCurrent = NodeCurrent->NodeNext;
+            }
+            return false;
+        }
+
+        bool isEmpty() const noexcept {
+            return NodeSize == 0;
         }
 
         void removeElement(const E &ElementSource) {
@@ -664,6 +887,156 @@ namespace eLibrary::Core {
                 CharacterStream.addString(String::valueOf(NodeCurrent->NodeValue));
             }
             CharacterStream.addCharacter(u']');
+            return CharacterStream.toString();
+        }
+    };
+
+    /**
+     * The SingleLinkedSet class provides support for discrete storage of unique objects
+     */
+    template<typename E>
+    class SingleLinkedSet final : public Object {
+    private:
+        struct LinkedNode final {
+            E NodeValue;
+            LinkedNode *NodeNext;
+
+            explicit LinkedNode(const E &NodeValueSource) noexcept: NodeValue(NodeValueSource), NodeNext(nullptr) {}
+        } *NodeHead = nullptr, *NodeTail = nullptr;
+
+        intmax_t NodeSize = 0;
+    public:
+        constexpr SingleLinkedSet() noexcept = default;
+
+        SingleLinkedSet(const SingleLinkedSet<E> &SetSource) noexcept {
+            LinkedNode *NodeCurrent = SetSource.NodeHead;
+            while (NodeCurrent) {
+                addElement(NodeCurrent->NodeValue);
+                NodeCurrent = NodeCurrent->NodeNext;
+            }
+        }
+
+        ~SingleLinkedSet() noexcept {
+            NodeSize = 0;
+            NodeTail = nullptr;
+            LinkedNode *NodeCurrent = NodeHead, *NodePrevious;
+            NodeHead = nullptr;
+            while (NodeCurrent) {
+                NodePrevious = NodeCurrent;
+                NodeCurrent = NodeCurrent->NodeNext;
+                delete NodePrevious;
+            }
+        }
+
+        void addElement(const E &ElementSource) noexcept {
+            if (isContains(ElementSource)) return;
+            auto *NodeCurrent = new LinkedNode(ElementSource);
+            if (!NodeHead) {
+                NodeHead = NodeCurrent;
+                NodeTail = NodeCurrent;
+            } else {
+                NodeTail->NodeNext = NodeCurrent;
+                NodeTail = NodeCurrent;
+            }
+            ++NodeSize;
+        }
+
+        SingleLinkedSet<E> doDifference(const SingleLinkedSet<E> &SetSource) const noexcept {
+            SingleLinkedSet<E> SetResult;
+            LinkedNode *NodeCurrent = NodeHead;
+            while (NodeCurrent) {
+                if (!SetSource.isContains(NodeCurrent->NodeValue))
+                    SetResult.addElement(NodeCurrent->NodeValue);
+                NodeCurrent = NodeCurrent->NodeNext;
+            }
+            return SetResult;
+        }
+
+        SingleLinkedSet<E> doIntersection(const SingleLinkedSet<E> &SetSource) const noexcept {
+            SingleLinkedSet<E> SetResult;
+            LinkedNode *NodeCurrent = NodeHead;
+            while (NodeCurrent) {
+                if (SetSource.isContains(NodeCurrent->NodeValue))
+                    SetResult.addElement(NodeCurrent->NodeValue);
+                NodeCurrent = NodeCurrent->NodeNext;
+            }
+            return SetResult;
+        }
+
+        SingleLinkedSet<E> doUnion(const SingleLinkedSet<E> &SetSource) const noexcept {
+            SingleLinkedSet<E> SetResult(*this);
+            LinkedNode *NodeCurrent = SetSource.NodeHead;
+            while (NodeCurrent) {
+                SetResult.addElement(NodeCurrent->NodeValue);
+                NodeCurrent = NodeCurrent->NodeNext;
+            }
+            return SetResult;
+        }
+
+        intmax_t getElementSize() const noexcept {
+            return NodeSize;
+        }
+
+        bool isContains(const E &ElementSource) const noexcept {
+            LinkedNode *NodeCurrent = NodeHead;
+            while (NodeCurrent) {
+                if (NodeCurrent->NodeValue.doCompare(ElementSource) == 0) return true;
+                NodeCurrent = NodeCurrent->NodeNext;
+            }
+            return false;
+        }
+
+        bool isEmpty() const noexcept {
+            return NodeSize == 0;
+        }
+
+        SingleLinkedSet<E> &operator=(const SingleLinkedSet<E>&) noexcept = delete;
+
+        void removeElement(const E &ElementSource) {
+            intmax_t ElementIndex = 0;
+            LinkedNode *NodeCurrent = NodeHead;
+            while (NodeCurrent && NodeCurrent->NodeValue.doCompare(ElementSource)) NodeCurrent = NodeCurrent->NodeNext, ++ElementIndex;
+            if (!NodeCurrent) throw Exception(String(u"SingleLinkedSet<E>::removeElement(const E&) ElementSource"));
+            NodeCurrent = NodeHead;
+            if (ElementIndex == 0) {
+                NodeHead = NodeHead->NodeNext;
+                delete NodeCurrent;
+                --NodeSize;
+                return;
+            }
+            bool NodeLast = false;
+            if (ElementIndex == NodeSize - 1) NodeLast = true;
+            while (--ElementIndex) NodeCurrent = NodeCurrent->NodeNext;
+            LinkedNode *NodeNext = NodeCurrent->NodeNext->NodeNext;
+            delete NodeCurrent->NodeNext;
+            NodeCurrent->NodeNext = NodeNext;
+            if (NodeLast) NodeTail = NodeCurrent;
+            --NodeSize;
+        }
+
+        SingleLinkedList<E> toSingleLinkedList() const noexcept {
+            SingleLinkedList<E> ListResult;
+            LinkedNode *NodeCurrent = NodeHead;
+            while (NodeCurrent) {
+                ListResult.addElement(NodeCurrent->NodeValue);
+                NodeCurrent = NodeCurrent->NodeNext;
+            }
+            return ListResult;
+        }
+
+        String toString() const noexcept override {
+            StringStream CharacterStream;
+            CharacterStream.addCharacter(u'{');
+            if (NodeHead) {
+                LinkedNode *NodeCurrent = NodeHead;
+                while (NodeCurrent->NodeNext) {
+                    CharacterStream.addString(String::valueOf(NodeCurrent->NodeValue));
+                    CharacterStream.addCharacter(u',');
+                    NodeCurrent = NodeCurrent->NodeNext;
+                }
+                CharacterStream.addString(String::valueOf(NodeCurrent->NodeValue));
+            }
+            CharacterStream.addCharacter(u'}');
             return CharacterStream.toString();
         }
     };

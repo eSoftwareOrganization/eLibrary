@@ -9,15 +9,16 @@
 #include <sstream>
 #include <vector>
 
-#include <immintrin.h>
-
 namespace eLibrary::Core {
 #define NumberBaseUnit 10000000
 
+    /**
+     * The Integer class provides support for integral operation and storage
+     */
     class Integer final : public Object {
     private:
         bool NumberSignature;
-        std::vector<intmax_t> NumberList;
+        std::vector<uintmax_t> NumberList;
 
         template<std::signed_integral T>
         static T getAbsolute(T NumberSource) noexcept {
@@ -34,19 +35,10 @@ namespace eLibrary::Core {
             static_assert(std::is_integral<decltype(NumberBaseUnit)>::value && NumberBaseUnit > 0, "Invalid NumberBaseUnit");
         }
 
-        template<std::signed_integral T>
-        Integer(T NumberValue) noexcept {
-            NumberSignature = NumberValue >= 0;
+        template<std::integral T>
+        Integer(T NumberValue) noexcept : NumberSignature(NumberValue >= 0) {
             do {
                 NumberList.push_back(getAbsolute(NumberValue % NumberBaseUnit));
-                NumberValue /= NumberBaseUnit;
-            } while (NumberValue);
-        }
-
-        template<std::unsigned_integral T>
-        Integer(T NumberValue) noexcept : NumberSignature(true) {
-            do {
-                NumberList.push_back(NumberValue % NumberBaseUnit);
                 NumberValue /= NumberBaseUnit;
             } while (NumberValue);
         }
@@ -119,13 +111,13 @@ namespace eLibrary::Core {
                 intmax_t NumberMiddle, NumberStart = 0, NumberStop = NumberBaseUnit - 1;
                 for (;;) {
                     NumberMiddle = (NumberStart + NumberStop) >> 1;
-                    if (NumberOther.doMultiplication(NumberMiddle).doCompare(NumberRemainder) <= 0)
-                        if (NumberOther.doMultiplication(NumberMiddle + 1).doCompare(NumberRemainder) > 0) break;
+                    if (NumberOther.getAbsolute().doMultiplication(NumberMiddle).doCompare(NumberRemainder) <= 0)
+                        if (NumberOther.getAbsolute().doMultiplication(NumberMiddle + 1).doCompare(NumberRemainder) > 0) break;
                         else NumberStart = NumberMiddle;
                     else NumberStop = NumberMiddle;
                 }
                 NumberResult.NumberList[NumberPart] = NumberMiddle;
-                NumberRemainder = NumberRemainder.doSubtraction(NumberOther.doMultiplication(NumberResult.NumberList[NumberPart]));
+                NumberRemainder = NumberRemainder.doSubtraction(NumberOther.getAbsolute().doMultiplication(NumberResult.NumberList[NumberPart]));
             }
             while (!NumberResult.NumberList.back() && NumberResult.NumberList.size() > 1)
                 NumberResult.NumberList.pop_back();
@@ -150,14 +142,13 @@ namespace eLibrary::Core {
                 intmax_t NumberMiddle, NumberStart = 0, NumberStop = NumberBaseUnit - 1;
                 for (;;) {
                     NumberMiddle = (NumberStart + NumberStop) >> 1;
-                    if (NumberOther.doMultiplication(NumberMiddle).doCompare(NumberRemainder) <= 0)
-                        if (NumberOther.doMultiplication(NumberMiddle + 1).doCompare(NumberRemainder) > 0) break;
+                    if (NumberOther.getAbsolute().doMultiplication(NumberMiddle).doCompare(NumberRemainder) <= 0)
+                        if (NumberOther.getAbsolute().doMultiplication(NumberMiddle + 1).doCompare(NumberRemainder) > 0) break;
                         else NumberStart = NumberMiddle;
                     else NumberStop = NumberMiddle;
                 }
                 NumberResult.NumberList[NumberPart] = NumberMiddle;
-                Integer NumberRemainderNew = NumberRemainder.doSubtraction(NumberOther.doMultiplication(NumberResult.NumberList[NumberPart]));
-                NumberRemainder.NumberList = NumberRemainderNew.NumberList;
+                NumberRemainder = NumberRemainder.doSubtraction(NumberOther.getAbsolute().doMultiplication(NumberResult.NumberList[NumberPart]));
             }
             NumberRemainder.NumberSignature = NumberSignature;
             return NumberRemainder;
@@ -184,6 +175,7 @@ namespace eLibrary::Core {
         }
 
         Integer doPower(const Integer &NumberExponentSource) const {
+            if (!doCompare(0) && !NumberExponentSource.doCompare(0)) throw ArithmeticException({u"Integer::doPower(const Integer&, const Integer&) 0⁰"});
             if (NumberExponentSource.isNegative()) throw ArithmeticException(String(u"Integer::doPower(const Integer&) NumberExponentSource"));
             Integer NumberBase(*this), NumberExponent(NumberExponentSource), NumberResult(1);
             while (NumberExponent.doCompare(0)) {
@@ -195,6 +187,7 @@ namespace eLibrary::Core {
         }
 
         Integer doPower(const Integer &NumberExponentSource, const Integer &NumberModulo) const {
+            if (!doCompare(0) && !NumberExponentSource.doCompare(0)) throw ArithmeticException({u"Integer::doPower(const Integer&, const Integer&) 0⁰"});
             if (NumberExponentSource.isNegative()) throw ArithmeticException(String(u"Integer::doPower(const Integer&, const Integer&) NumberExponentSource"));
             Integer NumberBase(*this), NumberExponent(NumberExponentSource), NumberResult(1);
             while (NumberExponent.doCompare(0)) {
@@ -206,16 +199,16 @@ namespace eLibrary::Core {
         }
 
         Integer doSubtraction(const Integer &NumberOther) const noexcept {
-            if (isPositive() && NumberOther.isNegative()) return doAddition(NumberOther.getAbsolute());
+            if (NumberOther.isNegative()) return doAddition(NumberOther.getAbsolute());
             if (doCompare(NumberOther) < 0) return NumberOther.doSubtraction(*this).getOpposite();
             Integer NumberResult;
             NumberResult.NumberList.clear();
             intmax_t NumberBorrow = 0;
-            for (size_t NumberPart = 0;; ++NumberPart) {
+            for (uintmax_t NumberPart = 0;; ++NumberPart) {
                 if (!NumberBorrow && NumberPart >= NumberList.size() && NumberPart >= NumberOther.NumberList.size())
                     break;
-                intmax_t NumberCurrent = NumberList[NumberPart] - NumberBorrow;
-                if (NumberPart < NumberOther.NumberList.size()) NumberCurrent -= NumberOther.NumberList[NumberPart];
+                intmax_t NumberCurrent = (intmax_t) NumberList[NumberPart] - NumberBorrow;
+                if (NumberPart < NumberOther.NumberList.size()) NumberCurrent -= (intmax_t) NumberOther.NumberList[NumberPart];
                 if (NumberCurrent < 0) {
                     NumberBorrow = 1;
                     NumberCurrent += NumberBaseUnit;
@@ -239,11 +232,11 @@ namespace eLibrary::Core {
             return NumberResult;
         }
 
-        template<typename T>
+        template<std::integral T>
         T getValue() const {
             if ((isPositive() && doCompare(std::numeric_limits<T>::max()) > 0) || (isNegative() && doCompare(std::numeric_limits<T>::min()) < 0))
-                throw ArithmeticException(String(u"Integer::getValue<T>() Number value out of limits"));
-            intmax_t NumberValue = NumberList.back();
+                throw ArithmeticException(String(u"Integer::getValue<T>() (isPositive() && doCompare(std::numeric_limits<T>::max()) > 0) || (isNegative() && doCompare(std::numeric_limits<T>::min()) < 0)"));
+            T NumberValue = NumberList.back();
             if (NumberList.size() == 1) return NumberSignature ? NumberValue : -NumberValue;
             for (auto NumberPart = (intmax_t) NumberList.size() - 2; NumberPart >= 0; --NumberPart)
                 NumberValue = NumberValue * NumberBaseUnit + NumberList[NumberPart];
@@ -273,7 +266,6 @@ namespace eLibrary::Core {
         String toString(unsigned short NumberRadix) const {
             if (NumberRadix < 2 || NumberRadix > 36) throw Exception(String(u"Integer::toString(unsigned short) NumberRadix"));
             StringStream CharacterStream;
-            if (!NumberSignature) CharacterStream.addCharacter(u'-');
             static std::map<unsigned short, char16_t> NumberDigitMapping;
             if (NumberDigitMapping.empty()) {
                 for (unsigned short NumberDigit = 0; NumberDigit < 10; ++NumberDigit)
@@ -287,10 +279,14 @@ namespace eLibrary::Core {
                 CharacterStream.addCharacter(NumberDigitMapping[NumberCurrent.doModulo(NumberRadixInteger).NumberList[0]]);
                 NumberCurrent.NumberList = NumberCurrent.doDivision(NumberRadixInteger).NumberList;
             }
+            if (!NumberSignature) CharacterStream.addCharacter(u'-');
             return CharacterStream.toString().doReverse();
         }
     };
 
+    /**
+     * The Fraction class provides support for fractional operation and storage
+     */
     class Fraction final : public Object {
     private:
         bool NumberSignature;

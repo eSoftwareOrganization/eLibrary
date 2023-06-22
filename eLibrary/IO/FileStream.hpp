@@ -6,15 +6,16 @@
 #include <cstdio>
 #include <unistd.h>
 
-using namespace eLibrary::Core;
-
 namespace eLibrary::IO {
+    /**
+     * The FileInputStream class provides support for operating files
+     */
     class FileInputStream final : public InputStream {
     private:
         FILE *FileOperator;
     public:
         explicit FileInputStream(const String &FilePath) {
-            FileOperator = fopen(FilePath.toU8String().c_str(), "rb");
+            FileOperator = fopen64(FilePath.toU8String().c_str(), "rb");
             if (!FileOperator) throw IOException(String(u"FileInputStream::FileInputStream() fopen"));
         }
 
@@ -39,38 +40,41 @@ namespace eLibrary::IO {
             fread(FileBuffer + FileBufferOffset, FileBufferSize, 1, FileOperator);
         }
 
-        void doSeek(long FileOffset, int FileOrigin) {
-            if (!FileOperator) throw IOException(String(u"FileInputStream::doSeek(long, int) FileOperator"));
-            fseek(FileOperator, FileOffset, FileOrigin);
+        void doSeek(off64_t FileOffset, int FileOrigin) {
+            if (!FileOperator) throw IOException(String(u"FileInputStream::doSeek(off64_t, int) FileOperator"));
+            fseeko64(FileOperator, FileOffset, FileOrigin);
         }
 
         bool isAvailable() const noexcept override {
             return FileOperator;
         }
 
-        long getFileLength() const {
+        off64_t getFileLength() const {
             if (!FileOperator) throw IOException(String(u"FileInputStream::getFileLength() FileOperator"));
-            long FilePosition = ftell(FileOperator);
-            fseek(FileOperator, 0, SEEK_END);
-            long FileLength = ftell(FileOperator);
-            fseek(FileOperator, FilePosition, SEEK_SET);
+            off64_t FilePosition = ftello64(FileOperator);
+            fseeko64(FileOperator, 0, SEEK_END);
+            off64_t FileLength = ftello64(FileOperator);
+            fseeko64(FileOperator, FilePosition, SEEK_SET);
             return FileLength;
         }
 
-        long getFilePosition() const {
+        off64_t getFilePosition() const {
             if (!FileOperator) throw IOException(String(u"FileInputStream::getFilePosition() FileOperator"));
-            return ftell(FileOperator);
+            return ftello64(FileOperator);
         }
 
         FileInputStream &operator=(const FileInputStream&) noexcept = delete;
     };
 
+    /**
+     * The FileOutputStream class provides support for operating files
+     */
     class FileOutputStream final : public OutputStream {
     private:
         FILE *FileOperator;
     public:
         FileOutputStream(const String &FilePath, bool FileAppend) {
-            FileOperator = fopen(FilePath.toU8String().c_str(), FileAppend ? "ab" : "wb");
+            FileOperator = fopen64(FilePath.toU8String().c_str(), FileAppend ? "ab" : "wb");
             if (!FileOperator) throw IOException(String(u"FileOutputStream::FileOutputStream() fopen"));
         }
 
@@ -90,14 +94,14 @@ namespace eLibrary::IO {
             fflush(FileOperator);
         }
 
-        void doSeek(long FileOffset, int FileOrigin) {
-            if (!FileOperator) throw IOException(String(u"FileOutputStream::doSeek(long, int) FileOperator"));
-            fseek(FileOperator, FileOffset, FileOrigin);
+        void doSeek(off64_t FileOffset, int FileOrigin) {
+            if (!FileOperator) throw IOException(String(u"FileOutputStream::doSeek(off64_t, int) FileOperator"));
+            fseeko64(FileOperator, FileOffset, FileOrigin);
         }
 
-        void doTruncate(long FileOffset) {
-            if (!FileOperator) throw IOException(String(u"FileOutputStream::doTruncate(long) FileOperator"));
-            ftruncate(fileno(FileOperator), FileOffset);
+        void doTruncate(off64_t FileOffset) {
+            if (!FileOperator) throw IOException(String(u"FileOutputStream::doTruncate(off64_t) FileOperator"));
+            ftruncate64(fileno(FileOperator), FileOffset);
         }
 
         void doWrite(int FileCharacter) override {
@@ -110,9 +114,9 @@ namespace eLibrary::IO {
             fwrite(FileBuffer + FileBufferOffset, FileBufferSize, 1, FileOperator);
         }
 
-        long getFilePosition() const {
+        off64_t getFilePosition() const {
             if (!FileOperator) throw IOException(String(u"FileOutputStream::getFilePosition() FileOperator"));
-            return ftell(FileOperator);
+            return ftello64(FileOperator);
         }
 
         FileOutputStream &operator=(const FileOutputStream&) noexcept = delete;

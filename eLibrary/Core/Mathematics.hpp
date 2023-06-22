@@ -23,6 +23,9 @@ namespace eLibrary::Core {
 
     Integer MathematicsContext::FunctionPrecision{10000000};
 
+    /**
+     * The Mathematics class provides support for mathematical operations
+     */
     class Mathematics final : public Object {
     private:
         static bool isPrimeLucas(const Integer &NumberSource) noexcept {
@@ -396,7 +399,7 @@ namespace eLibrary::Core {
                 62, 5, 39, 46, 44, 42, 22, 9, 24, 35, 59, 56, 49, 18, 29, 11,
                 63, 52, 6, 26, 37, 40, 33, 47, 61, 45, 43, 21, 23, 58, 17, 10,
                 51, 25, 36, 32, 60, 20, 57, 16, 50, 31, 19, 15, 30, 14, 13, 12};
-            return ConvertTable[(NumberSource & ~(NumberSource - 1)) * 0x022FDD63CC95386D >> 58];
+            return ConvertTable[(NumberSource & ~(NumberSource - 1)) * 0x22FDD63CC95386D >> 58];
         }
 
         static Integer getTrailingZeroCount(const Integer &NumberSourceSource) noexcept {
@@ -421,13 +424,13 @@ namespace eLibrary::Core {
             if (NumberSource.doCompare(2809) < 0) return true;
             if (NumberSource.doCompare(23001) <= 0)
                 return Integer(2).doPower(NumberSource, NumberSource).doCompare(2) == 0 && NumberSource.doCompare(7957) && NumberSource.doCompare(8321) && NumberSource.doCompare(13747) && NumberSource.doCompare(18721) && NumberSource.doCompare(19951);
-            if (NumberSource.doCompare(341531) < 0) return isPrimeRabinMiller(NumberSource, {String(u"9345883071009581737")});
+            if (NumberSource.doCompare(341531) < 0) return isPrimeRabinMiller(NumberSource, {{{u"9345883071009581737"}}});
             if (NumberSource.doCompare(885594169) < 0) return isPrimeRabinMiller(NumberSource, {725270293939359937, 3569819667048198375});
-            if (NumberSource.doCompare(350269456337) < 0) return isPrimeRabinMiller(NumberSource, {4230279247111683200, String(u"14694767155120705706"), String(u"16641139526367750375")});
-            if (NumberSource.doCompare(55245642489451) < 0) return isPrimeRabinMiller(NumberSource, {2, 141889084524735, 1199124725622454117, String(u"11096072698276303650")});
+            if (NumberSource.doCompare(350269456337) < 0) return isPrimeRabinMiller(NumberSource, {4230279247111683200, {{u"14694767155120705706"}}, {{u"16641139526367750375"}}});
+            if (NumberSource.doCompare(55245642489451) < 0) return isPrimeRabinMiller(NumberSource, {2, 141889084524735, 1199124725622454117, {{u"11096072698276303650"}}});
             if (NumberSource.doCompare(7999252175582851) < 0) return isPrimeRabinMiller(NumberSource, {2, 4130806001517, 149795463772692060, 186635894390467037, 3967304179347715805});
             if (NumberSource.doCompare(585226005592931977) < 0) return isPrimeRabinMiller(NumberSource, {2, 123635709730000, 9233062284813009, 43835965440333360, 761179012939631437, 1263739024124850375});
-            if (NumberSource.doCompare(String(u"18446744073709551616")) < 0) return isPrimeRabinMiller(NumberSource, {2, 325, 9375, 28178, 450775, 9780504, 1795265022});
+            if (NumberSource.doCompare({{u"18446744073709551616"}}) < 0) return isPrimeRabinMiller(NumberSource, {2, 325, 9375, 28178, 450775, 9780504, 1795265022});
             return isPrimeRabinMiller(NumberSource, {2}) && isPrimeLucas(NumberSource);
         }
 

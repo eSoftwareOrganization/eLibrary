@@ -1,8 +1,6 @@
 #pragma once
 
-#include <Core/Object.hpp>
-
-using namespace eLibrary::Core;
+#include <IO/Exception.hpp>
 
 namespace eLibrary::IO {
     class InputStream : public Object {

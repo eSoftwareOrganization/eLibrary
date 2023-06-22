@@ -67,7 +67,7 @@ namespace eLibrary::Core {
     };
 
     class AbstractQueuedSynchronizer : public Object {
-    public:
+    private:
         struct AbstractQueuedNode {
             volatile AbstractQueuedNode *NodeNext = nullptr;
             volatile AbstractQueuedNode *NodePrevious = nullptr;

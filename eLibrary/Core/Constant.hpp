@@ -1,5 +1,6 @@
 #pragma once
 
+#include <cstdint>
 #include <functional>
 
 namespace eLibrary::Core {
@@ -19,6 +20,7 @@ namespace eLibrary::Core {
 namespace std {
     template<eLibrary::Core::Comparable T>
     struct equal_to<T> {
+    public:
         bool operator()(const T &Object1, const T &Object2) const noexcept {
             return !Object1.doCompare(Object2);
         }
@@ -26,6 +28,7 @@ namespace std {
 
     template<eLibrary::Core::Comparable T>
     struct less<T> {
+    public:
         bool operator()(const T &Object1, const T &Object2) const noexcept {
             return Object1.doCompare(Object2) < 0;
         }
@@ -33,6 +36,7 @@ namespace std {
 
     template<eLibrary::Core::Comparable T>
     struct less_equal<T> {
+    public:
         bool operator()(const T &Object1, const T &Object2) const noexcept {
             return Object1.doCompare(Object2) <= 0;
         }
@@ -40,6 +44,7 @@ namespace std {
 
     template<eLibrary::Core::Comparable T>
     struct greater<T> {
+    public:
         bool operator()(const T &Object1, const T &Object2) const noexcept {
             return Object1.doCompare(Object2) > 0;
         }
@@ -47,6 +52,7 @@ namespace std {
 
     template<eLibrary::Core::Comparable T>
     struct greater_equal<T> {
+    public:
         bool operator()(const T &Object1, const T &Object2) const noexcept {
             return Object1.doCompare(Object2) >= 0;
         }
@@ -54,6 +60,7 @@ namespace std {
 
     template<eLibrary::Core::Hashable T>
     struct hash<T> {
+    public:
         auto operator()(const T &ObjectSource) const noexcept {
             return ObjectSource.hashCode();
         }
@@ -61,6 +68,7 @@ namespace std {
 
     template<eLibrary::Core::Comparable T>
     struct not_equal_to<T> {
+    public:
         bool operator()(const T &Object1, const T &Object2) const noexcept {
             return Object1.doCompare(Object2);
         }
