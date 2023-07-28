@@ -1,10 +1,10 @@
 #pragma once
 
-#ifdef _WIN32
+#if eLibrarySystem(Windows)
 
 #include <Core/Exception.hpp>
 
-#include <Windows.h>
+#include <libloaderapi.h>
 #include <map>
 #include <ntstatus.h>
 #include <set>
@@ -37,6 +37,8 @@ namespace eLibrary::Core {
         HMODULE ModuleHandle;
 
         NtModule(HMODULE ModuleHandleSource) : ModuleHandle(ModuleHandleSource) {}
+
+        doDisableCopyAssignConstruct(NtModule);
     public:
         ~NtModule() noexcept {
             if (ModuleHandle) {
@@ -66,6 +68,8 @@ namespace eLibrary::Core {
         NtFile(HANDLE FileHandleSource) : FileHandle(FileHandleSource) {
             if (!FileHandleSource) throw Exception(String(u"NtFile::NtFile(HANDLE) FileHandleSource"));
         }
+
+        doDisableCopyAssignConstruct(NtFile);
     public:
         enum class NtFileAccess {
             AccessAll = FILE_ALL_ACCESS,
@@ -166,6 +170,8 @@ namespace eLibrary::Core {
         NtProcess(HANDLE ProcessHandleSource) : ProcessHandle(ProcessHandleSource) {
             if (!ProcessHandleSource) throw Exception(String(u"NtProcess::NtProcess(HANDLE) ProcessHandleSource"));
         }
+
+        doDisableCopyAssignConstruct(NtProcess);
     public:
         ~NtProcess() noexcept {
             if (ProcessHandle) {
@@ -204,6 +210,40 @@ namespace eLibrary::Core {
         }
     };
 
+    class NtSecurityBuffer final : public Object {
+    private:
+        uintmax_t BufferSize;
+        uint8_t *BufferContainer;
+
+        doDisableCopyAssignConstruct(NtSecurityBuffer);
+    public:
+        NtSecurityBuffer(uintmax_t BufferSizeSource) : BufferSize(BufferSizeSource) {
+            BufferContainer = (uint8_t*) VirtualAlloc(0, BufferSize, MEM_COMMIT | MEM_RESERVE, PAGE_READWRITE);
+            if (!VirtualLock(BufferContainer, BufferSize)) {
+                VirtualFree(BufferContainer, 0, MEM_RELEASE);
+                throw Exception(String(u"NtSecurityBuffer::NtSecurityBuffer(uintmax_t) VirtualLock"));
+            }
+        }
+
+        ~NtSecurityBuffer() {
+            if (BufferContainer && BufferSize) {
+                RtlSecureZeroMemory(BufferContainer, BufferSize);
+                VirtualUnlock(BufferContainer, BufferSize);
+                VirtualFree(BufferContainer, BufferSize, MEM_RELEASE);
+                BufferSize = 0;
+                BufferContainer = nullptr;
+            }
+        }
+
+        explicit operator uint8_t*() const noexcept {
+            return BufferContainer;
+        }
+
+        uintmax_t getBufferSize() const noexcept {
+            return BufferSize;
+        }
+    };
+
     class NtService final : public Object {
     public:
         enum class NtServiceErrorControl {
@@ -232,6 +272,8 @@ namespace eLibrary::Core {
         NtServiceStartType ServiceStartType;
         NtServiceType ServiceType;
         std::set<String> ServiceDependencySet;
+
+        doDisableCopyAssignConstruct(NtService);
     public:
         NtService(SC_HANDLE ServiceHandleSource, const String &ServiceNameSource, const String &ServicePathSource, const NtServiceErrorControl &ServiceErrorControlSource, const NtServiceStartType &ServiceStartTypeSource, const NtServiceType &ServiceTypeSource) : ServiceHandle(ServiceHandleSource), ServiceName(ServiceNameSource), ServicePath(ServicePathSource), ServiceErrorControl(ServiceErrorControlSource), ServiceStartType(ServiceStartTypeSource), ServiceType(ServiceTypeSource) {
             if (!ServiceHandleSource) throw Exception(String(u"NtService::NtService(SC_HANDLE, const String&, const String&, const String&, const NtServiceErrorControl&, const NtServiceStartType&, const NtServiceType&) ServiceHandleSource"));
@@ -329,6 +371,8 @@ namespace eLibrary::Core {
     class NtServiceManager final : public Object {
     private:
         SC_HANDLE ManagerHandle;
+
+        doDisableCopyAssignConstruct(NtServiceManager);
     public:
         NtServiceManager(const String &ManagerMachineName, const String &ManagerDatabaseName) {
             if (!(ManagerHandle = OpenSCManagerW(ManagerMachineName.isNull() ? nullptr : ManagerMachineName.toWString().c_str(), ManagerDatabaseName.isNull() ? nullptr : ManagerDatabaseName.toWString().c_str(), SC_MANAGER_ALL_ACCESS)))
@@ -360,6 +404,8 @@ namespace eLibrary::Core {
 
     class NtDriver final : public Object {
     public:
+        constexpr NtDriver() noexcept = delete;
+
         static void doLoadNt(const String &DriverServiceName, const String &DriverFilePath, DWORD DriverErrorControl, DWORD DriverStartType) {
             std::basic_stringstream<wchar_t> DriverImagePathStream;
             DriverImagePathStream << L"\\??\\" << DriverFilePath.toWString();

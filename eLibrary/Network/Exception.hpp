@@ -1,5 +1,7 @@
 #pragma once
 
+#if eLibraryFeature(Network)
+
 #include <IO/Exception.hpp>
 
 namespace eLibrary::Network {
@@ -8,3 +10,4 @@ namespace eLibrary::Network {
         explicit NetworkException(const String &ExceptionMessage) noexcept : IO::IOException(ExceptionMessage) {}
     };
 }
+#endif

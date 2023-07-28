@@ -1,1 +1,1 @@
-doxygen ./../eLibraryDocumentation/Doxyfile
+doxygen ./Doxyfile

@@ -8,12 +8,19 @@
 ![](https://img.shields.io/github/repo-size/eSoftwareOrganization/eLibrary)
 ![](https://img.shields.io/tokei/lines/github/eSoftwareOrganization/eLibrary)
 
+Project Code Style and Conventions:
++ [C++](https://github.com/isocpp/CppCoreGuidelines/blob/master/CppCoreGuidelines.md)
+
 Project Credits:
 
 This repository draws from some preexisting work. Credits to their authors.
 + [audioop(Python)](https://docs.python.org/3/library/audioop.html)
 
 This project implements the audio processing api
+
++ [pillow(Python)](https://github.com/python-pillow/Pillow)
+
+This project implements the image processing api
 
 + [pydub(Python)](https://github.com/jiaaro/pydub)
 
@@ -32,12 +39,78 @@ This project implements parts of the mathematical algorithms
 Project Dependencies:
 + [doctest](https://github.com/doctest/doctest)
 + [ffmpeg](https://ffmpeg.org)
++ [Libarchive](https://github.com/libarchive/libarchive)
 + [nanobench](https://github.com/martinus/nanobench)
 + [OpenAL Soft](https://github.com/kcat/openal-soft)
++ [OpenSSL](https://github.com/openssl/openssl)
 
 Project Repository: [GitHub](https://github.com/eSoftwareOrganization/eLibrary)
 
 Project Update Log:
+> eLibrary V2023.10
+- Core::Any / doAssign / doReset / getValue / getValueType / hasValue(New)
+- Core::Arithmetic(New)
+- Core::Array doAssign / getElement / getElementSize / isEmpty(New)
+- Core::ArrayIterator(New)
+- Core::ArrayList(Memory Allocation) begin / doReverse / end(New)
+- Core::ArraySet(Memory Allocation) begin / doAssign / end(New) removeElement(doCompare Implementation)
+- Core::AtomicNumber andAndGet / getAndAnd / getAndOr / getAndXor / orAndGet / xorAndGet(New)
+- Core::ConcurrentReference / compareAndSet / getAndSet / getValue(New)
+- Core::Character / doAssign / doCompare / isAlpha / isLowerCase / isNull / isNumber / isUpperCase / toLowerCase / toUpperCase(New)
+- Core::ConcurrentUtility getAndAndNumber / getAndOrNumber / getAndXorNumber(New)
+- Core::DoubleLinkedList(Memory Allocation) doAssign / doClear(New)
+- Core::DoubleLinkedSet(Memory Allocation) doAssign / doClear(New)
+- Core::Integer doFactorial(const Integer&)(doFactorial() Optimization(NumberStep=1))
+- Core::InterruptedException(New)
+- Core::Mathematics doCosine / doSine(NumberSource > 1)
+- Core::MemoryAllocator / newArray / newObject(New)
+- Core::NtSecurityBuffer / getBufferSize(New)
+- Core::ObjectDerived(New)
+- Core::Objects / doCompare / getAddress / getMaximum / getMinimum(New)
+- Core::RedBlackTree doAssign / doOrder(New)
+- Core::RuntimeException(New)
+- Core::SegmentTree / doBuild / doQuery / doUpdate / setElement(New)
+- Core::SingleLinkedList(Memory Allocation) doAssign / doClear(New) toArrayList / toDoubleLinkedList(Remove)
+- Core::SingleLinkedSet(Memory Allocation) doAssign / doClear(New)
+- Core::String(...)
+- Core::StringStream(...)
+- Core::Thread / doExecute / doInterrupt / doJoin / doStart / doYield / isFinished / isInterrupted(New)
+- Core::TreeMap getElementSize / isContains / isEmpty / removeMapping / setMapping(New)
+- Core::TreeSet addElement / doDifference / doIntersection / doUnion / getElementSize / isContains / isEmpty / removeElement(New)
+- IO::ArchiveDescriptor / doAssign / doClose / doSupportFilter / doSupportFormat / isAvailable(New)
+- IO::ArchiveEntry / doAllocate / doAssign / doClear / doClose / getPathname / isAvailable(New)
+- IO::ArchiveInputStream / doClose / doOpen / doRead / doReadNextHeader / isAvailable / isEncrypted(New)
+- IO::ByteBuffer doAllocate / getValue / setValue(New)
+- IO::FileDescriptor / doAssign / doClose / doOpen / isAvailable(New)
+- IO::FileInputStream doOpen(New)
+- IO::FileOutputStream doOpen(New)
+- IO::InputStream doRead(doRead)
+- IO::OutputStream isAvailable(New)
+- Multimedia::AudioSegment(IO::AudioSegment Remake) doExport / doOpen(Experimental->Stable) doExportWAV / doOpenWAV / getBitSample / getChannelCount / setBitSample / setChannelCount(Remove) getChannelLayout / setChannelLayout(New) toMediaBuffer(toAudioBuffer)
+- Multimedia::FFMpegInitializer(Remove)
+- Multimedia::MediaBuffer(AudioBuffer) getBufferIndex / setBufferData(Remove)
+- Multimedia::MediaChannelLayout(New)
+- Multimedia::MediaCodec getCodecObject(Remove)
+- Multimedia::MediaCodecContext(IO::MediaCodecContext) doOpen / doSendFrame / doSendPacket / setParameter(New) getContextObject(Remove)
+- Multimedia::MediaContext / doDestroy / setContextCurrent / setContextCurrentNull(New)
+- Multimedia::MediaDevice / doClose(New)
+- Multimedia::MediaFormatContext doWriteFrame / doWriteHeader / doWriteTrailer(New) getContextObject / setIOContext(Remove)
+- Multimedia::MediaFrame getFrameObject(Remove)
+- Multimedia::MediaIOContext(Remove)
+- Multimedia::MediaPacket getPacketObject(Remove)
+- Multimedia::MediaSource(AudioSource) setAudioVelocity / setSourceDirection / setSourceRelative(New) setSourceBuffer(setAudioBuffer) setSourceLoop(setAudioLoop)
+- Multimedia::MediaSWRContext(IO::MediaSWRContext) / doAllocate / doConvert / doInitialize(New)
+- Multimedia::OpenALInitializer(Remove)
+- Network::DatagramSocket isAvailable(isClosed) setBroadcast(Remove) setSocketOption(New)
+- Network::NetworkSocketDescriptor / doAssign / doClose / isAvailable(New)
+- Network::NetworkSocketOption(New)
+- Network::NetworkSSLContext(New)
+- Network::NetworkSSLDescriptor / doConnect / doRead / doShutdown / doWrite / setFileDescriptor(New)
+- Network::NetworkSSLInitializer / doDestroy / doInitialize(New)
+- Network::NetworkSSLMethod / getMethodTLS / getMethodTLSClient / getMethodTLSServer(New)
+- Network::StreamSocket doDeposit / getInputStream / getOutputStream / getSocketHandle / setAddressReuse / setKeepAlive / setReceiveTimeout / setSendTimeout(Remove) isAvailable(isClosed) setSocketOption(New)
+- Network::StreamSocketServer isAvailable / setSocketOption(New) isClosed / setAddressReuse(Remove)
+- std::formatter<ObjectT(ObjectDerived), CharacterT> / format<ContextT>(const ObjectT&, ContextT&)(New)
 > eLibrary V2023.09
 - Core::ArrayList addElement / doAssign / doConcat / doReverse / removeIndex(std::copy Implementation) indexOf / isContains(Comparison)
 - Core::ArraySet addElement / removeElement(std::copy Implementation) getElementSize / isEmpty / toArrayList(New) isContains(Comparison)

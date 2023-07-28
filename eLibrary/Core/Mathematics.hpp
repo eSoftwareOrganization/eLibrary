@@ -2,7 +2,6 @@
 
 #include <Core/Number.hpp>
 
-#include <concepts>
 #include <numbers>
 
 namespace eLibrary::Core {
@@ -24,7 +23,7 @@ namespace eLibrary::Core {
     Integer MathematicsContext::FunctionPrecision{10000000};
 
     /**
-     * The Mathematics class provides support for mathematical operations
+     * Support for mathematical operations
      */
     class Mathematics final : public Object {
     private:
@@ -124,7 +123,7 @@ namespace eLibrary::Core {
     public:
         static Fraction NumberPi;
 
-        Mathematics() = delete;
+        constexpr Mathematics() noexcept = delete;
 
         static Integer doCombinator(const Integer &NumberM, const Integer &NumberN) {
             if (NumberN.doCompare(NumberM) < 0) throw ArithmeticException(String(u"Mathematics::doCombinator(const Integer&, const Integer&) NumberM NumberN"));
@@ -137,14 +136,15 @@ namespace eLibrary::Core {
         }
 
         static Fraction doCosecantFraction(const Fraction &NumberSource) noexcept {
-            return Fraction(1, 1).doDivision(doSineFraction(NumberSource));
+            return Fraction(1).doDivision(doSineFraction(NumberSource));
         }
 
-        template<std::floating_point T>
+        template<Arithmetic T>
         static T doCosine(T NumberSource) noexcept {
+            NumberSource -= intmax_t(NumberSource / (std::numbers::pi * 2)) * 2 * std::numbers::pi;
             T NumberResult = 1, NumberTerminate = 1;
-            unsigned short NumberDigit = 2;
-            while (std::abs(NumberTerminate) > 1e-12) {
+            uintmax_t NumberDigit = 2;
+            while (std::abs(NumberTerminate) >= 1e-10) {
                 NumberTerminate *= -(NumberSource * NumberSource / (NumberDigit * (NumberDigit - 1)));
                 NumberResult += NumberTerminate;
                 NumberDigit += 2;
@@ -163,7 +163,7 @@ namespace eLibrary::Core {
             return NumberResult;
         }
 
-        template<std::floating_point T>
+        template<Arithmetic T>
         static T doCotangent(T NumberSource) noexcept {
             return doCosine(NumberSource) / doSine(NumberSource);
         }
@@ -172,20 +172,20 @@ namespace eLibrary::Core {
             return doCosineFraction(NumberSource).doDivision(doSineFraction(NumberSource));
         }
 
-        template<std::floating_point T>
+        template<Arithmetic T>
         static T doEvolution(T NumberBase, T NumberPower) noexcept {
-            return doPower(NumberBase, 1.0 / NumberPower);
+            return doPower(NumberBase, 1 / NumberPower);
         }
 
         static Fraction doEvolutionFraction(const Fraction &NumberBase, const Fraction &NumberPower) noexcept {
             return doPowerFraction(NumberBase, Fraction(1, 1).doDivision(NumberPower));
         }
 
-        template<std::floating_point T>
+        template<Arithmetic T>
         static T doExponent(T NumberSource) noexcept {
             T NumberDenominator = 1, NumberNumerator = NumberSource, NumberResult = 1, NumberTerminate = NumberSource;
             unsigned short NumberDigit = 1;
-            while (std::abs(NumberTerminate) > 1e-12) {
+            while (std::abs(NumberTerminate) >= 1e-10) {
                 NumberResult += NumberTerminate;
                 NumberNumerator *= NumberSource;
                 NumberDenominator *= ++NumberDigit;
@@ -206,25 +206,25 @@ namespace eLibrary::Core {
             return NumberResult;
         }
 
-        template<std::floating_point T>
+        template<Arithmetic T>
         static T doHyperbolicCosine(T NumberSource) noexcept {
-            return (doExponent(NumberSource) + doExponent(-NumberSource)) / 2.0;
+            return (doExponent(NumberSource) + doExponent(-NumberSource)) / 2;
         }
 
         static Fraction doHyperbolicCosineFraction(const Fraction &NumberSource) noexcept {
             return doExponentFraction(NumberSource).doAddition(doExponentFraction(NumberSource.getOpposite())).doDivision(Integer(2));
         }
 
-        template<std::floating_point T>
+        template<Arithmetic T>
         static T doHyperbolicSine(T NumberSource) noexcept {
-            return (doExponent(NumberSource) - doExponent(-NumberSource)) / 2.0;
+            return (doExponent(NumberSource) - doExponent(-NumberSource)) / 2;
         }
 
         static Fraction doHyperbolicSineFraction(const Fraction &NumberSource) noexcept {
             return doExponentFraction(NumberSource).doSubtraction(doExponentFraction(NumberSource.getOpposite())).doDivision(Integer(2));
         }
 
-        template<std::floating_point T>
+        template<Arithmetic T>
         static T doHyperbolicTangent(T NumberSource) noexcept {
             return doHyperbolicSine(NumberSource) / doHyperbolicCosine(NumberSource);
         }
@@ -233,11 +233,11 @@ namespace eLibrary::Core {
             return doHyperbolicSineFraction(NumberSource).doDivision(doHyperbolicCosineFraction(NumberSource));
         }
 
-        template<std::floating_point T>
+        template<Arithmetic T>
         static T doInverseHyperbolicTangent(T NumberDegree) noexcept {
             T NumberNumerator = NumberDegree, NumberResult = 0, NumberTerminate = NumberDegree;
             unsigned short NumberDigit = 1;
-            while (std::abs(NumberTerminate) > 1e-12) {
+            while (std::abs(NumberTerminate) >= 1e-10) {
                 NumberResult += NumberTerminate;
                 NumberNumerator *= NumberDegree * NumberDegree;
                 NumberDigit += 2;
@@ -258,7 +258,7 @@ namespace eLibrary::Core {
             return NumberResult;
         }
 
-        template<std::floating_point T>
+        template<Arithmetic T>
         static T doLogarithmE(T NumberSource) noexcept {
             return doInverseHyperbolicTangent((NumberSource - 1) / (NumberSource + 1)) * 2;
         }
@@ -267,7 +267,7 @@ namespace eLibrary::Core {
             return doInverseHyperbolicTangentFraction(NumberSource.doSubtraction(Integer(1)).doDivision(NumberSource.doAddition(Integer(1)))).doMultiplication(Integer(2));
         }
 
-        template<std::floating_point T>
+        template<Arithmetic T>
         static T doPower(T NumberBase, T NumberExponent) noexcept {
             return doExponent(doLogarithmE(NumberBase) * NumberExponent);
         }
@@ -287,7 +287,7 @@ namespace eLibrary::Core {
             return doExponentFraction(doLogarithmEFraction(NumberBase).doMultiplication(NumberExponent));
         }
 
-        template<std::floating_point T>
+        template<Arithmetic T>
         static T doSecant(T NumberSource) {
             return 1 / doCosine(NumberSource);
         }
@@ -296,13 +296,12 @@ namespace eLibrary::Core {
             return Fraction(1, 1).doDivision(doCosineFraction(NumberSource));
         }
 
-        template<std::floating_point T>
+        template<Arithmetic T>
         static T doSine(T NumberSource) noexcept {
-            NumberSource -= (int) std::abs(NumberSource / (std::numbers::pi * 2)) * 2 * std::numbers::pi;
-            if (!NumberSource) return 0;
+            NumberSource -= intmax_t(NumberSource / (std::numbers::pi * 2)) * 2 * std::numbers::pi;
             T NumberDenominator = 1, NumberNumerator = NumberSource, NumberResult = 0, NumberSignature = 1, NumberTerminate = NumberSource;
             unsigned short NumberDigit = 1;
-            while (std::abs(NumberTerminate) >= 1e-12) {
+            while (std::abs(NumberTerminate) >= 1e-10) {
                 NumberResult += NumberTerminate;
                 ++NumberDigit;
                 NumberSignature = -NumberSignature;
@@ -328,7 +327,7 @@ namespace eLibrary::Core {
             return NumberResult;
         }
 
-        template<std::floating_point T>
+        template<Arithmetic T>
         static T doTangent(T NumberSource) noexcept {
             return doSine(NumberSource) / doCosine(NumberSource);
         }
@@ -337,7 +336,7 @@ namespace eLibrary::Core {
             return doSineFraction(NumberSource).doDivision(doCosineFraction(NumberSource));
         }
 
-        template<std::integral T>
+        template<Arithmetic T>
         static T getAbsolute(T NumberSource) noexcept {
             return NumberSource >= 0 ? NumberSource : -NumberSource;
         }
@@ -444,14 +443,14 @@ namespace eLibrary::Core {
             return true;
         }
 
-        template<typename T> requires std::is_arithmetic<T>::value
+        template<Arithmetic T>
         static T toDegrees(T NumberSource) noexcept {
-            return 180.0 / std::numbers::pi * NumberSource;
+            return 180. / std::numbers::pi * NumberSource;
         }
 
-        template<typename T> requires std::is_arithmetic<T>::value
+        template<Arithmetic T>
         static T toRadians(T NumberSource) noexcept {
-            return std::numbers::pi / 180.0 * NumberSource;
+            return std::numbers::pi / 180. * NumberSource;
         }
     };
 

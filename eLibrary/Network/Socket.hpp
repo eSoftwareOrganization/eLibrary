@@ -1,24 +1,14 @@
 #pragma once
 
+#if eLibraryFeature(Network)
+
+#include <Core/Number.hpp>
 #include <IO/Stream.hpp>
-#include <Network/Exception.hpp>
+#include <Network/NetworkUtility.hpp>
 
 #include <algorithm>
 #include <any>
 #include <array>
-
-#ifdef _WIN32
-#include <ws2tcpip.h>
-
-typedef SOCKET SocketHandleType;
-#else
-#include <fcntl.h>
-#include <netinet/in.h>
-#include <netinet/tcp.h>
-#include <unistd.h>
-
-typedef int SocketHandleType;
-#endif
 
 namespace eLibrary::Network {
     class NetworkAddress final : public Object {
@@ -28,25 +18,25 @@ namespace eLibrary::Network {
         };
     protected:
         NetworkAddressProtocol AddressProtocol;
-        byte *AddressFieldList;
+        uint8_t *AddressFieldList;
     public:
-        explicit NetworkAddress(const std::array<byte, 4> &AddressSource) noexcept : AddressProtocol(NetworkAddressProtocol::ProtocolIPv4) {
-            AddressFieldList = new byte[4];
+        explicit NetworkAddress(const std::array<uint8_t, 4> &AddressSource) noexcept : AddressProtocol(NetworkAddressProtocol::ProtocolIPv4) {
+            AddressFieldList = new uint8_t[4];
             std::copy(AddressSource.begin(), AddressSource.end(), AddressFieldList);
         }
 
-        explicit NetworkAddress(const std::array<byte, 16> &AddressSource) noexcept : AddressProtocol(NetworkAddressProtocol::ProtocolIPv6) {
-            AddressFieldList = new byte[16];
+        explicit NetworkAddress(const std::array<uint8_t, 16> &AddressSource) noexcept : AddressProtocol(NetworkAddressProtocol::ProtocolIPv6) {
+            AddressFieldList = new uint8_t[16];
             std::copy(AddressSource.begin(), AddressSource.end(), AddressFieldList);
         }
 
-        NetworkAddress(const std::initializer_list<byte> &AddressSource) noexcept {
+        NetworkAddress(const std::initializer_list<uint8_t> &AddressSource) noexcept {
             if (AddressSource.size() == 4) {
-                AddressFieldList = new byte[4];
+                AddressFieldList = new uint8_t[4];
                 std::copy(AddressSource.begin(), AddressSource.end(), AddressFieldList);
                 AddressProtocol = NetworkAddressProtocol::ProtocolIPv4;
             } else if (AddressSource.size() == 16) {
-                AddressFieldList = new byte[16];
+                AddressFieldList = new uint8_t[16];
                 std::copy(AddressSource.begin(), AddressSource.end(), AddressFieldList);
                 AddressProtocol = NetworkAddressProtocol::ProtocolIPv6;
             } else {
@@ -56,42 +46,41 @@ namespace eLibrary::Network {
         }
 
         explicit NetworkAddress(const in_addr &AddressSource) noexcept : AddressProtocol(NetworkAddressProtocol::ProtocolIPv4) {
-            AddressFieldList = new byte[4];
-#ifdef _WIN32
-            AddressFieldList[0] = AddressSource.S_un.S_un_b.s_b1;
-            AddressFieldList[1] = AddressSource.S_un.S_un_b.s_b2;
-            AddressFieldList[2] = AddressSource.S_un.S_un_b.s_b3;
-            AddressFieldList[3] = AddressSource.S_un.S_un_b.s_b4;
-#else
-            AddressFieldList[3] = AddressSource.s_addr >> 24 & 0xFF;
-            AddressFieldList[2] = AddressSource.s_addr >> 16 & 0xFF;
-            AddressFieldList[1] = AddressSource.s_addr >> 8 & 0xFF;
+            AddressFieldList = new uint8_t[4];
             AddressFieldList[0] = AddressSource.s_addr & 0xFF;
-#endif
+            AddressFieldList[1] = AddressSource.s_addr >> 8 & 0xFF;
+            AddressFieldList[2] = AddressSource.s_addr >> 16 & 0xFF;
+            AddressFieldList[3] = AddressSource.s_addr >> 24 & 0xFF;
         }
 
         explicit NetworkAddress(const in6_addr &AddressSource) noexcept : AddressProtocol(NetworkAddressProtocol::ProtocolIPv6) {
-            AddressFieldList = new byte[16];
-            memcpy(AddressFieldList, AddressSource.s6_addr, sizeof(byte) * 16);
+            AddressFieldList = new uint8_t[16];
+            memcpy(AddressFieldList, AddressSource.s6_addr, sizeof(uint8_t) * 16);
         }
 
-        NetworkAddress(const NetworkAddress &AddressSource) noexcept : AddressProtocol(AddressSource.AddressProtocol) {
-            if (AddressProtocol == NetworkAddressProtocol::ProtocolIPv4) {
-                AddressFieldList = new byte[4];
-                memcpy(AddressFieldList, AddressSource.AddressFieldList, sizeof(byte) * 4);
-            } else if (AddressProtocol == NetworkAddressProtocol::ProtocolIPv6) {
-                AddressFieldList = new byte[16];
-                memcpy(AddressFieldList, AddressSource.AddressFieldList, sizeof(byte) * 16);
-            } else {
-                AddressFieldList = nullptr;
-                AddressProtocol = NetworkAddressProtocol::ProtocolUnknown;
-            }
+        NetworkAddress(const NetworkAddress &AddressSource) noexcept {
+            doAssign(AddressSource);
         }
 
         ~NetworkAddress() noexcept {
             if (AddressFieldList) {
                 delete[] AddressFieldList;
                 AddressFieldList = nullptr;
+            }
+        }
+
+        void doAssign(const NetworkAddress &AddressSource) noexcept {
+            AddressProtocol = AddressSource.AddressProtocol;
+            delete[] AddressFieldList;
+            if (AddressProtocol == NetworkAddressProtocol::ProtocolIPv4) {
+                AddressFieldList = new uint8_t[4];
+                memcpy(AddressFieldList, AddressSource.AddressFieldList, sizeof(uint8_t) * 4);
+            } else if (AddressProtocol == NetworkAddressProtocol::ProtocolIPv6) {
+                AddressFieldList = new uint8_t[16];
+                memcpy(AddressFieldList, AddressSource.AddressFieldList, sizeof(uint8_t) * 16);
+            } else {
+                AddressFieldList = nullptr;
+                AddressProtocol = NetworkAddressProtocol::ProtocolUnknown;
             }
         }
 
@@ -147,35 +136,44 @@ namespace eLibrary::Network {
             return false;
         }
 
-        NetworkAddress &operator=(const NetworkAddress&) = delete;
+        NetworkAddress &operator=(const NetworkAddress &AddressSource) noexcept {
+            doAssign(AddressSource);
+            return *this;
+        }
 
-        std::any toAddressIn() const {
+        Any toAddressIn() const {
             if (AddressProtocol == NetworkAddressProtocol::ProtocolIPv4) {
                 in_addr AddressResult;
                 AddressResult.s_addr = htonl((AddressFieldList[0] << 24) | (AddressFieldList[1] << 16) | (AddressFieldList[2] << 8) | AddressFieldList[3]);
-                return AddressResult;
+                return {AddressResult};
             }
             if (AddressProtocol == NetworkAddressProtocol::ProtocolIPv6) {
                 in6_addr AddressResult;
-                memcpy(AddressResult.s6_addr, AddressFieldList, sizeof(byte) * 16);
-                return AddressResult;
+                memcpy(AddressResult.s6_addr, AddressFieldList, sizeof(uint8_t) * 16);
+                return {AddressResult};
             }
             throw NetworkException(String(u"NetworkAddress::toAddressIn() AddressProtocol"));
         }
 
         String toString() const noexcept override {
-            std::stringstream CharacterStream;
-            if (AddressProtocol == NetworkAddressProtocol::ProtocolIPv4)
-                CharacterStream << std::to_string(AddressFieldList[0]) << '.' << std::to_string(AddressFieldList[1]) << '.' << std::to_string(AddressFieldList[2]) << '.' << std::to_string(AddressFieldList[3]);
+            StringStream CharacterStream;
+            if (AddressProtocol == NetworkAddressProtocol::ProtocolIPv4) {
+                CharacterStream.addString(std::to_string(AddressFieldList[0]));
+                CharacterStream.addCharacter(u'.');
+                CharacterStream.addString(std::to_string(AddressFieldList[1]));
+                CharacterStream.addCharacter(u'.');
+                CharacterStream.addString(std::to_string(AddressFieldList[2]));
+                CharacterStream.addCharacter(u'.');
+                CharacterStream.addString(std::to_string(AddressFieldList[3]));
+            }
             if (AddressProtocol == NetworkAddressProtocol::ProtocolIPv6) {
-                CharacterStream << std::hex;
                 for (int AddressPartition = 0; AddressPartition < 8; ++AddressPartition) {
-                    CharacterStream << ((AddressFieldList[AddressPartition << 1] << 8) | AddressFieldList[AddressPartition << 1 | 1]);
-                    if (AddressPartition < 7) CharacterStream << ':';
+                    CharacterStream.addString(Integer((AddressFieldList[AddressPartition << 1] << 8) | AddressFieldList[AddressPartition << 1 | 1]).toString(16));
+                    if (AddressPartition < 7) CharacterStream.addCharacter(u':');
                 }
             }
-            if (AddressProtocol == NetworkAddressProtocol::ProtocolUnknown) CharacterStream << "<Unknown>";
-            return {CharacterStream.str()};
+            if (AddressProtocol == NetworkAddressProtocol::ProtocolUnknown) CharacterStream.addString({u"<Unknown>"});
+            return CharacterStream.toString();
         }
     };
 
@@ -205,47 +203,48 @@ namespace eLibrary::Network {
         }
     };
 
+    enum class NetworkSocketOption : int {
+        OptionAddressReuse = SO_REUSEADDR,
+        OptionBroadcast = SO_BROADCAST,
+        OptionKeepAlive = SO_KEEPALIVE,
+        OptionLinger = SO_LINGER,
+        OptionReceiveBufferSize = SO_RCVBUF,
+        OptionReceiveTimeout = SO_RCVTIMEO,
+        OptionSendBufferSize = SO_SNDBUF,
+        OptionSendTimeout = SO_SNDTIMEO,
+    };
+
     class DatagramSocket final : public Object {
     private:
-        SocketHandleType SocketSource;
+        NetworkSocketDescriptor SocketDescriptor;
         NetworkSocketAddress SocketAddress;
+
+        doDisableCopyAssignConstruct(DatagramSocket)
     public:
         DatagramSocket(const NetworkSocketAddress &AddressSource) : SocketAddress(AddressSource) {
             if (AddressSource.getSocketAddress().getAddressProtocol() == NetworkAddress::NetworkAddressProtocol::ProtocolUnknown)
                 throw NetworkException(String(u"DatagramSocket::DatagramSocket(const NetworkSocketAddress&) AddressSource"));
-            SocketSource = socket(AddressSource.getSocketAddress().getAddressProtocol() == NetworkAddress::NetworkAddressProtocol::ProtocolIPv4 ? AF_INET : AF_INET6, SOCK_DGRAM, 0);
-            if (SocketSource == (SocketHandleType) -1) throw NetworkException(String(u"DatagramSocket::DatagramSocket(const NetworkSocketAddress&) socket"));
+            SocketDescriptor.doAssign(socket(AddressSource.getSocketAddress().getAddressProtocol() == NetworkAddress::NetworkAddressProtocol::ProtocolIPv4 ? AF_INET : AF_INET6, SOCK_DGRAM, 0));
+            if (!SocketDescriptor.isAvailable()) throw NetworkException(String(u"DatagramSocket::DatagramSocket(const NetworkSocketAddress&) isAvailable"));
         }
 
         ~DatagramSocket() noexcept {
-            if (!isClosed()) doClose();
+            if (isAvailable()) doClose();
         }
 
         void doClose() {
-            if (isClosed()) throw NetworkException(String(u"DatagramSocket::doClose() isClosed"));
-#ifdef _WIN32
-            closesocket(SocketSource);
-#else
-            close(SocketSource);
-#endif
-            SocketSource = (SocketHandleType) -1;
+            SocketDescriptor.doClose();
         }
 
         int doReceive(char *SocketBuffer, int SocketBufferSize) {
             int SocketSize;
             if (SocketAddress.getSocketAddress().getAddressProtocol() == NetworkAddress::NetworkAddressProtocol::ProtocolIPv4) {
-                sockaddr_in SocketAddressIn;
-                SocketAddressIn.sin_addr = std::any_cast<in_addr>(SocketAddress.getSocketAddress().toAddressIn());
-                SocketAddressIn.sin_family = AF_INET;
-                SocketAddressIn.sin_port = htons(SocketAddress.getSocketPort());
-                if ((SocketSize = recvfrom(SocketSource, SocketBuffer, SocketBufferSize, 0, (sockaddr*) &SocketAddressIn, nullptr)) < 0)
+                sockaddr_in SocketAddressIn = {AF_INET, htons(SocketAddress.getSocketPort()), SocketAddress.getSocketAddress().toAddressIn().getValue<in_addr>(), {}};
+                if ((SocketSize = recvfrom((SocketHandleType) SocketDescriptor, SocketBuffer, SocketBufferSize, 0, (sockaddr*) &SocketAddressIn, nullptr)) < 0)
                     throw NetworkException(String(u"DatagramSocket::doReceive(char*, int) recvfrom"));
             } else {
-                sockaddr_in6 SocketAddressIn;
-                SocketAddressIn.sin6_addr = std::any_cast<in6_addr>(SocketAddress.getSocketAddress().toAddressIn());
-                SocketAddressIn.sin6_family = AF_INET6;
-                SocketAddressIn.sin6_port = htons(SocketAddress.getSocketPort());
-                if ((SocketSize = recvfrom(SocketSource, SocketBuffer, SocketBufferSize, 0, (sockaddr*) &SocketAddressIn, nullptr)) < 0)
+                sockaddr_in6 SocketAddressIn = {AF_INET6, htons(SocketAddress.getSocketPort()), 0, SocketAddress.getSocketAddress().toAddressIn().getValue<in6_addr>(), {}};
+                if ((SocketSize = recvfrom((SocketHandleType) SocketDescriptor, SocketBuffer, SocketBufferSize, 0, (sockaddr*) &SocketAddressIn, nullptr)) < 0)
                     throw NetworkException(String(u"DatagramSocket::doReceive(char*, int) recvfrom"));
             }
             return SocketSize;
@@ -255,131 +254,92 @@ namespace eLibrary::Network {
             int SocketSize;
             if (SocketAddress.getSocketAddress().getAddressProtocol() == NetworkAddress::NetworkAddressProtocol::ProtocolIPv4) {
                 sockaddr_in SocketAddressIn;
-                SocketAddressIn.sin_addr = std::any_cast<in_addr>(SocketAddress.getSocketAddress().toAddressIn());
+                SocketAddressIn.sin_addr = SocketAddress.getSocketAddress().toAddressIn().getValue<in_addr>();
                 SocketAddressIn.sin_family = AF_INET;
                 SocketAddressIn.sin_port = htons(SocketAddress.getSocketPort());
-                if ((SocketSize = sendto(SocketSource, SocketBuffer, SocketBufferSize, 0, (sockaddr*) &SocketAddressIn, sizeof(sockaddr_in))) < 0)
+                if ((SocketSize = sendto((SocketHandleType) SocketDescriptor, SocketBuffer, SocketBufferSize, 0, (sockaddr*) &SocketAddressIn, sizeof(sockaddr_in))) < 0)
                     throw NetworkException(String(u"DatagramSocket::doSend(char*, int) sendto"));
             } else {
-                sockaddr_in6 SocketAddressIn;
-                SocketAddressIn.sin6_addr = std::any_cast<in6_addr>(SocketAddress.getSocketAddress().toAddressIn());
-                SocketAddressIn.sin6_family = AF_INET6;
-                SocketAddressIn.sin6_port = htons(SocketAddress.getSocketPort());
-                if ((SocketSize = sendto(SocketSource, SocketBuffer, SocketBufferSize, 0, (sockaddr*) &SocketAddressIn, sizeof(sockaddr_in6))) < 0)
+                sockaddr_in6 SocketAddressIn = {AF_INET6, htons(SocketAddress.getSocketPort()), 0, SocketAddress.getSocketAddress().toAddressIn().getValue<in6_addr>(), {}};
+                if ((SocketSize = sendto((SocketHandleType) SocketDescriptor, SocketBuffer, SocketBufferSize, 0, (sockaddr*) &SocketAddressIn, sizeof(sockaddr_in6))) < 0)
                     throw NetworkException(String(u"DatagramSocket::doSend(char*, int) sendto"));
             }
             return SocketSize;
         }
 
-        bool isClosed() const noexcept {
-            return SocketSource == (SocketHandleType) -1;
+        bool isAvailable() const noexcept {
+            return SocketDescriptor.isAvailable();
         }
 
-        DatagramSocket &operator=(const DatagramSocket&) noexcept = delete;
-
-        void setBroadcast(bool OptionValue) const {
-            if (setsockopt(SocketSource, SOL_SOCKET, SO_BROADCAST, (char*) &OptionValue, sizeof(bool)) != 0)
-                throw NetworkException(String(u"DatagramSocket::setBroadcast(bool) setsockopt"));
+        void setSocketOption(NetworkSocketOption OptionType, int OptionValue) {
+            if (::setsockopt((SocketHandleType) SocketDescriptor, SOL_SOCKET, (int) OptionType, (char*) &OptionValue, sizeof(int)))
+                throw NetworkException(String(u"DatagramSocket::setSendTimeout(NetworkSocketOption, int) setsockopt"));
         }
     };
-
-    class SocketInputStream;
-
-    class SocketOutputStream;
 
     class StreamSocket final : public Object {
     private:
         bool SocketConnected = false;
-        SocketHandleType SocketSource;
+        NetworkSocketDescriptor SocketDescriptor;
         NetworkSocketAddress SocketAddress;
 
-        StreamSocket(SocketHandleType SocketSourceSource, const NetworkSocketAddress &AddressSource) noexcept : SocketSource(SocketSourceSource), SocketAddress(AddressSource) {}
+        StreamSocket(NetworkSocketDescriptor SocketDescriptorSource, const NetworkSocketAddress &AddressSource) noexcept : SocketDescriptor(std::move(SocketDescriptorSource)), SocketAddress(AddressSource) {}
+
+        doDisableCopyAssignConstruct(StreamSocket)
+
+        friend class SocketInputStream;
+        friend class SocketOutputStream;
+        friend class StreamSocketServer;
     public:
         explicit StreamSocket(const NetworkSocketAddress &AddressSource) : SocketAddress(AddressSource) {
             if (AddressSource.getSocketAddress().getAddressProtocol() == NetworkAddress::NetworkAddressProtocol::ProtocolUnknown)
                 throw NetworkException(String(u"StreamSocket::StreamSocket(const NetworkSocketAddress&) AddressSource"));
-            SocketSource = socket(AddressSource.getSocketAddress().getAddressProtocol() == NetworkAddress::NetworkAddressProtocol::ProtocolIPv4 ? AF_INET : AF_INET6, SOCK_STREAM, 0);
-            if (SocketSource == (SocketHandleType) -1) throw NetworkException(String(u"StreamSocket::StreamSocket(const NetworkSocketAddress&) socket"));
+            SocketDescriptor.doAssign(socket(AddressSource.getSocketAddress().getAddressProtocol() == NetworkAddress::NetworkAddressProtocol::ProtocolIPv4 ? AF_INET : AF_INET6, SOCK_STREAM, 0));
+            if (!SocketDescriptor.isAvailable()) throw NetworkException(String(u"StreamSocket::StreamSocket(const NetworkSocketAddress&) SocketDescriptor::isAvailable"));
         }
 
         ~StreamSocket() noexcept {
-            if (!isClosed()) doClose();
+            if (isAvailable()) doClose();
         }
 
         void doClose() {
-            if (isClosed()) throw NetworkException(String(u"StreamSocket::doClose() isClosed"));
-#ifdef _WIN32
-            closesocket(SocketSource);
-#else
-            close(SocketSource);
-#endif
-            SocketSource = (SocketHandleType) -1;
+            SocketDescriptor.doClose();
         }
 
         void doConnect() {
             if (isConnected()) throw NetworkException(String(u"StreamSocket::doConnect() isConnected"));
             if (SocketAddress.getSocketAddress().getAddressProtocol() == NetworkAddress::NetworkAddressProtocol::ProtocolIPv4) {
-                sockaddr_in SocketAddress4 = {AF_INET, htons(SocketAddress.getSocketPort()), std::any_cast<in_addr>(SocketAddress.getSocketAddress().toAddressIn()), {}};
-                if (connect(SocketSource, (sockaddr*) &SocketAddress4, sizeof(sockaddr_in)) != 0)
+                sockaddr_in SocketAddress4 = {AF_INET, htons(SocketAddress.getSocketPort()), SocketAddress.getSocketAddress().toAddressIn().getValue<in_addr>(), {}};
+                if (connect((SocketHandleType) SocketDescriptor, (sockaddr*) &SocketAddress4, sizeof(sockaddr_in)) != 0)
                     throw NetworkException(String(u"StreamSocket::doConnect() connect"));
             } else {
-                sockaddr_in6 SocketAddress6 = {AF_INET6, htons(SocketAddress.getSocketPort()), 0, std::any_cast<in6_addr>(SocketAddress.getSocketAddress().toAddressIn()), {}};
-                if (connect(SocketSource, (sockaddr*) &SocketAddress6, sizeof(sockaddr_in6)) != 0)
+                sockaddr_in6 SocketAddress6 = {AF_INET6, htons(SocketAddress.getSocketPort()), 0, SocketAddress.getSocketAddress().toAddressIn().getValue<in6_addr>(), {}};
+                if (connect((SocketHandleType) SocketDescriptor, (sockaddr*) &SocketAddress6, sizeof(sockaddr_in6)) != 0)
                     throw NetworkException(String(u"StreamSocket::doConnect() connect"));
             }
             SocketConnected = true;
         }
 
-        static StreamSocket doDeposit(SocketHandleType SocketSource, const NetworkSocketAddress &AddressSource) {
-            if (SocketSource == (SocketHandleType) -1) throw NetworkException(String(u"StreamSocket::doDeposit(SocketHandleType, const NetworkSocketAddress&) SocketSource"));
-            return {SocketSource, AddressSource};
-        }
-
-        bool isClosed() const noexcept {
-            return SocketSource == (SocketHandleType) -1;
+        bool isAvailable() const noexcept {
+            return SocketDescriptor.isAvailable();
         }
 
         bool isConnected() const noexcept {
             return SocketConnected;
         }
 
-        SocketInputStream getInputStream() const;
-
-        SocketOutputStream getOutputStream() const;
-
         NetworkSocketAddress getRemoteSocketAddress() const noexcept {
             return SocketAddress;
         }
 
-        SocketHandleType getSocketHandle() const noexcept {
-            return SocketSource;
-        }
-
-        StreamSocket &operator=(const StreamSocket&) noexcept = delete;
-
-        void setAddressReuse(bool OptionValue) const {
-            if (setsockopt(SocketSource, SOL_SOCKET, SO_REUSEADDR, (char*) &OptionValue, sizeof(bool)))
-                throw NetworkException(String(u"StreamSocket::setAddressReuse(bool) setsockopt"));
-        }
-
-        void setKeepAlive(bool OptionValue) const {
-            if (setsockopt(SocketSource, SOL_SOCKET, SO_KEEPALIVE, (char*) &OptionValue, sizeof(bool)) != 0)
-                throw NetworkException(String(u"StreamSocket::setKeepAlive(bool) setsockopt"));
-        }
-
-        void setReceiveTimeout(int OptionValue) const {
-            if (setsockopt(SocketSource, SOL_SOCKET, SO_RCVTIMEO, (char*) &OptionValue, sizeof(int)) != 0)
-                throw NetworkException(String(u"StreamSocket::setReceiveTimeout(int) setsockopt"));
-        }
-
-        void setSendTimeout(int OptionValue) const {
-            if (setsockopt(SocketSource, SOL_SOCKET, SO_SNDTIMEO, (char*) &OptionValue, sizeof(int)) != 0)
-                throw NetworkException(String(u"StreamSocket::setSendTimeout(int) setsockopt"));
+        void setSocketOption(NetworkSocketOption OptionType, int OptionValue) {
+            if (::setsockopt((SocketHandleType) SocketDescriptor, SOL_SOCKET, (int) OptionType, (char*) &OptionValue, sizeof(int)))
+                throw NetworkException(String(u"StreamSocket::setSocketOption(NetworkSocketOption, int) setsockopt"));
         }
 
         void setTCPNoDelay(bool OptionValue) const {
-            if (setsockopt(SocketSource, IPPROTO_TCP, TCP_NODELAY, (char*) &OptionValue, sizeof(bool)) != 0)
-                throw NetworkException(String(u"StreamSocket::setSendTimeout(bool) setsockopt"));
+            if (::setsockopt((SocketHandleType) SocketDescriptor, IPPROTO_TCP, TCP_NODELAY, (char*) &OptionValue, sizeof(bool)) != 0)
+                throw NetworkException(String(u"StreamSocket::setTCPNoDelay(bool) setsockopt"));
         }
 
         String toString() const noexcept override {
@@ -394,101 +354,97 @@ namespace eLibrary::Network {
     class StreamSocketServer final : public Object {
     private:
         bool SocketBound = false;
-        SocketHandleType SocketSource;
+        NetworkSocketDescriptor SocketDescriptor;
         NetworkSocketAddress SocketAddress;
+
+        doDisableCopyAssignConstruct(StreamSocketServer)
     public:
         explicit StreamSocketServer(const NetworkSocketAddress &AddressSource) : SocketAddress(AddressSource) {
             if (AddressSource.getSocketAddress().getAddressProtocol() == NetworkAddress::NetworkAddressProtocol::ProtocolUnknown)
                 throw NetworkException(String(u"StreamSocketServer::StreamSocketServer(const NetworkSocketAddress&) AddressSource"));
-            SocketSource = socket(SocketAddress.getSocketAddress().getAddressProtocol() == NetworkAddress::NetworkAddressProtocol::ProtocolIPv4 ? AF_INET : AF_INET6, SOCK_STREAM, 0);
-            if (SocketSource == (SocketHandleType) -1) throw NetworkException(String(u"StreamSocket::StreamSocket(const NetworkSocketAddress&) socket"));
+            SocketDescriptor.doAssign(socket(SocketAddress.getSocketAddress().getAddressProtocol() == NetworkAddress::NetworkAddressProtocol::ProtocolIPv4 ? AF_INET : AF_INET6, SOCK_STREAM, 0));
+            if (!SocketDescriptor.isAvailable()) throw NetworkException(String(u"StreamSocket::StreamSocket(const NetworkSocketAddress&) SocketDescriptor::isAvailable"));
         }
 
         ~StreamSocketServer() noexcept {
-            if (!isClosed()) doClose();
+            if (isAvailable()) doClose();
         }
 
         StreamSocket doAccept() const {
-            if (isClosed()) throw NetworkException(String(u"StreamSocketServer::doAccept() isClosed"));
+            if (!isAvailable()) throw NetworkException(String(u"StreamSocketServer::doAccept() isAvailable"));
             if (!isBound()) throw NetworkException(String(u"StreamSocketServer::doAccept() isBound"));
-            SocketHandleType SocketTarget = accept(SocketSource, nullptr, nullptr);
+            SocketHandleType SocketTarget = accept((SocketHandleType) SocketDescriptor, nullptr, nullptr);
             sockaddr SocketTargetAddress;
             getpeername(SocketTarget, &SocketTargetAddress, nullptr);
-            if (SocketTargetAddress.sa_family == AF_INET) return StreamSocket::doDeposit(SocketTarget, NetworkSocketAddress(NetworkAddress(((sockaddr_in*) &SocketTargetAddress)->sin_addr), ntohs(((sockaddr_in*) &SocketTargetAddress)->sin_port)));
-            else if (SocketTargetAddress.sa_family == AF_INET6) return StreamSocket::doDeposit(SocketTarget, NetworkSocketAddress(NetworkAddress(((sockaddr_in6*) &SocketTargetAddress)->sin6_addr), ntohs(((sockaddr_in6*) &SocketTargetAddress)->sin6_port)));
-            else throw Exception(String(u"StreamSocketServer::doAccept() SocketTargetAddress.sa_family"));
+            if (SocketTargetAddress.sa_family == AF_INET) return {SocketTarget, NetworkSocketAddress(NetworkAddress(((sockaddr_in*) &SocketTargetAddress)->sin_addr), ntohs(((sockaddr_in*) &SocketTargetAddress)->sin_port))};
+            else if (SocketTargetAddress.sa_family == AF_INET6) return {SocketTarget, NetworkSocketAddress(NetworkAddress(((sockaddr_in6*) &SocketTargetAddress)->sin6_addr), ntohs(((sockaddr_in6*) &SocketTargetAddress)->sin6_port))};
+            else throw NetworkException(String(u"StreamSocketServer::doAccept() SocketTargetAddress.sa_family"));
         }
 
         void doBind() {
-            if (isClosed()) throw NetworkException(String(u"StreamSocketServer::doBind() isClosed"));
+            if (!isAvailable()) throw NetworkException(String(u"StreamSocketServer::doBind() isClosed"));
             if (isBound()) throw NetworkException(String(u"StreamSocketServer::doBind() isBound"));
             if (SocketAddress.getSocketAddress().getAddressProtocol() == NetworkAddress::NetworkAddressProtocol::ProtocolIPv4) {
-                sockaddr_in SocketAddress4 = {AF_INET, htons(SocketAddress.getSocketPort()), std::any_cast<in_addr>(SocketAddress.getSocketAddress().toAddressIn()), {}};
-                if (bind(SocketSource, (sockaddr*) &SocketAddress4, sizeof(sockaddr_in)))
+                sockaddr_in SocketAddress4 = {AF_INET, htons(SocketAddress.getSocketPort()), SocketAddress.getSocketAddress().toAddressIn().getValue<in_addr>(), {}};
+                if (bind((SocketHandleType) SocketDescriptor, (sockaddr*) &SocketAddress4, sizeof(sockaddr_in)))
                     throw NetworkException(String(u"StreamSocketServer::doBind() bind"));
             } else {
-                sockaddr_in6 SocketAddress6 = {AF_INET6, htons(SocketAddress.getSocketPort()), 0, std::any_cast<in6_addr>(SocketAddress.getSocketAddress().toAddressIn()), {}};
-                if (bind(SocketSource, (sockaddr*) &SocketAddress6, sizeof(sockaddr_in6)))
+                sockaddr_in6 SocketAddress6 = {AF_INET6, htons(SocketAddress.getSocketPort()), 0, SocketAddress.getSocketAddress().toAddressIn().getValue<in6_addr>(), {}};
+                if (bind((SocketHandleType) SocketDescriptor, (sockaddr*) &SocketAddress6, sizeof(sockaddr_in6)))
                     throw NetworkException(String(u"StreamSocketServer::doBind() bind"));
             }
             SocketBound = true;
         }
 
         void doClose() {
-            if (isClosed()) throw NetworkException(String(u"StreamSocketServer::doClose() isClosed"));
-#ifdef _WIN32
-            closesocket(SocketSource);
-#else
-            close(SocketSource);
-#endif
-            SocketSource = (SocketHandleType) -1;
+            SocketDescriptor.doClose();
         }
 
         void doListen(int SocketBacklog = 0) const {
-            if (isClosed()) throw NetworkException(String(u"StreamSocketServer::doListen(int=0) isClosed()"));
+            if (!isAvailable()) throw NetworkException(String(u"StreamSocketServer::doListen(int=0) isAvailable()"));
             if (!isBound()) throw NetworkException(String(u"StreamSocketServer::doListen(int=0) isBound()"));
-            if (listen(SocketSource, SocketBacklog))
+            if (listen((SocketHandleType) SocketDescriptor, SocketBacklog))
                 throw NetworkException(String(u"StreamSocketServer::doListen(int=0) listen"));
+        }
+
+        bool isAvailable() const noexcept {
+            return SocketDescriptor.isAvailable();
         }
 
         bool isBound() const noexcept {
             return SocketBound;
         }
 
-        bool isClosed() const noexcept {
-            return SocketSource == (SocketHandleType) -1;
-        }
-
-        StreamSocketServer &operator=(const StreamSocketServer&) noexcept = delete;
-
-        void setAddressReuse(bool OptionValue) const {
-            if (setsockopt(SocketSource, SOL_SOCKET, SO_REUSEADDR, (char*) &OptionValue, sizeof(bool)))
-                throw NetworkException(String(u"StreamSocketServer::setAddressReuse(bool) setsockopt"));
+        void setSocketOption(NetworkSocketOption OptionType, int OptionValue) {
+            if (::setsockopt((SocketHandleType) SocketDescriptor, SOL_SOCKET, (int) OptionType, (char*) &OptionValue, sizeof(int)))
+                throw NetworkException(String(u"StreamSocketServer::setSocketOption(NetworkSocketOption, int) setsockopt"));
         }
     };
 
-    class SocketInputStream : public IO::InputStream {
+    class SocketInputStream final : public IO::InputStream {
     private:
-        SocketHandleType SocketHandle;
+        const NetworkSocketDescriptor *SocketDescriptor;
 
-        SocketInputStream(const StreamSocket &SocketSource) noexcept : SocketHandle(SocketSource.getSocketHandle()) {}
+        SocketInputStream(const StreamSocket &SocketSource) noexcept : SocketDescriptor(&SocketSource.SocketDescriptor) {}
+
+        doDisableCopyAssignConstruct(SocketInputStream)
     public:
         void doClose() override {
-            if (isAvailable()) SocketHandle = (SocketHandleType) -1;
+            SocketDescriptor = nullptr;
         }
 
         int doRead() override {
             if (!isAvailable()) throw NetworkException(String(u"SocketInputStream::doRead() isAvailable"));
             char SocketCharacter;
-            recv(SocketHandle, &SocketCharacter, 1, 0);
+            recv((SocketHandleType) SocketDescriptor, &SocketCharacter, 1, 0);
             return SocketCharacter;
         }
 
-        int doRead(byte *SocketBuffer, int SocketOffset, int SocketSize) override {
-            if (!isAvailable()) throw NetworkException(String(u"SocketInputStream::doRead(byte*, int, int) isAvailable"));
+        uint32_t doRead(uint8_t *SocketBuffer, uint32_t SocketOffset, uint32_t SocketSize) override {
+            if (!isAvailable()) throw NetworkException(String(u"SocketInputStream::doRead(uint8_t*, uint32_t, uint32_t) isAvailable"));
             int SocketSizeReceived;
-            if ((SocketSizeReceived = recv(SocketHandle, (char*) SocketBuffer + SocketOffset, SocketSize, 0)) < 0)
-                throw NetworkException(String(u"SocketInputStream::doRead(byte*, int, int) recv"));
+            if ((SocketSizeReceived = recv((SocketHandleType) SocketDescriptor, (char*) SocketBuffer + SocketOffset, SocketSize, 0)) < 0)
+                throw NetworkException(String(u"SocketInputStream::doRead(uint8_t*, int, int) recv"));
             return SocketSizeReceived;
         }
 
@@ -498,38 +454,42 @@ namespace eLibrary::Network {
         }
 
         bool isAvailable() const noexcept override {
-            return SocketHandle != (SocketHandleType) -1;
+            return SocketDescriptor && SocketDescriptor->isAvailable();
         }
     };
 
-    class SocketOutputStream : public IO::OutputStream {
+    class SocketOutputStream final : public IO::OutputStream {
     private:
-        SocketHandleType SocketHandle;
+        const NetworkSocketDescriptor *SocketDescriptor;
 
-        SocketOutputStream(const StreamSocket &SocketSource) noexcept : SocketHandle(SocketSource.getSocketHandle()) {}
+        SocketOutputStream(const StreamSocket &SocketSource) noexcept : SocketDescriptor(&SocketSource.SocketDescriptor) {}
+
+        doDisableCopyAssignConstruct(SocketOutputStream);
     public:
-        void doClose() override {
-            if (isAvailable()) SocketHandle = (SocketHandleType) -1;
+        void doClose() noexcept override {
+            SocketDescriptor = nullptr;
         }
 
         void doWrite(int SocketCharacter) override {
             if (!isAvailable()) throw NetworkException(String(u"SocketOutputStream::doRead() isAvailable"));
-            send(SocketHandle, (char*) &SocketCharacter, 1, 0);
+            if (send((SocketHandleType) SocketDescriptor, (char*) &SocketCharacter, 1, 0) < 0)
+                throw NetworkException(String(u"SocketOutputStream::doWrite(int) send"));
         }
 
-        void doWrite(byte *SocketBuffer, int SocketOffset, int SocketSize) override {
-            if (!isAvailable()) throw NetworkException(String(u"SocketOutputStream::doWrite(byte*, int, int) isAvailable"));
-            if (send(SocketHandle, (char*) SocketBuffer + SocketOffset, SocketSize, 0) < 0)
-                throw NetworkException(String(u"SocketOutputStream::doWrite(byte*, int, int) send"));
+        void doWrite(uint8_t *SocketBuffer, uint32_t SocketOffset, uint32_t SocketSize) override {
+            if (!isAvailable()) throw NetworkException(String(u"SocketOutputStream::doWrite(uint8_t*, uint32_t, uint32_t) isAvailable"));
+            if (send((SocketHandleType) SocketDescriptor, (char*) SocketBuffer + SocketOffset, SocketSize, 0) < 0)
+                throw NetworkException(String(u"SocketOutputStream::doWrite(uint8_t*, uint32_t, uint32_t) send"));
         }
 
         static SocketOutputStream getInstance(const StreamSocket &SocketSource) {
-            if (!SocketSource.isConnected()) throw NetworkException(String(u"SocketOutputStream::getInstance(const StreamSocket&) SocketSource.isConnected"));
+            if (!SocketSource.isConnected()) throw NetworkException(String(u"SocketOutputStream::getInstance(const StreamSocket&) SocketSource::isConnected"));
             return {SocketSource};
         }
 
-        bool isAvailable() const noexcept {
-            return SocketHandle != (SocketHandleType) -1;
+        bool isAvailable() const noexcept override {
+            return SocketDescriptor && SocketDescriptor->isAvailable();
         }
     };
 }
+#endif

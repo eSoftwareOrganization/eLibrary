@@ -58,17 +58,62 @@ namespace eLibrary::Core {
         }
 
         template<std::integral T>
-        static void getAndSetNumber(volatile T *ValueAddress, T ValueTarget) noexcept {
+        static T getAndAndNumber(volatile T *ValueAddress, T ValueSource) noexcept {
+            T ValueExpected;
+            do {
+                ValueExpected = *ValueAddress;
+            } while (ConcurrentUtility::doCompareAndExchange(ValueAddress, ValueExpected, ValueExpected & ValueSource) != ValueExpected);
+            return ValueExpected;
+        }
+
+        template<std::integral T>
+        static T getAndOrNumber(volatile T *ValueAddress, T ValueSource) noexcept {
+            T ValueExpected;
+            do {
+                ValueExpected = *ValueAddress;
+            } while (ConcurrentUtility::doCompareAndExchange(ValueAddress, ValueExpected, ValueExpected | ValueSource) != ValueExpected);
+            return ValueExpected;
+        }
+
+        template<std::integral T>
+        static T getAndSetNumber(volatile T *ValueAddress, T ValueTarget) noexcept {
             T ValueExpected;
             do {
                 ValueExpected = *ValueAddress;
             } while (ConcurrentUtility::doCompareAndExchange(ValueAddress, ValueExpected, ValueTarget) != ValueExpected);
+            return ValueExpected;
+        }
+
+        template<typename T>
+        static T *getAndSetReference(volatile T **ValueAddress, T *ValueTarget) noexcept {
+            T *ValueExpected;
+            do {
+                ValueExpected = *ValueAddress;
+            } while (ConcurrentUtility::doCompareAndExchangeReference(ValueAddress, ValueExpected, ValueTarget) != ValueExpected);
+            return ValueExpected;
+        }
+
+        template<std::integral T>
+        static T getAndXorNumber(volatile T *ValueAddress, T ValueSource) noexcept {
+            T ValueExpected;
+            do {
+                ValueExpected = *ValueAddress;
+            } while (ConcurrentUtility::doCompareAndExchange(ValueAddress, ValueExpected, ValueExpected ^ ValueSource) != ValueExpected);
+            return ValueExpected;
         }
     };
 
+    /**
+     * A framework for implementing blocking locks and related synchronizers that rely on first-in-first-out (FIFO) wait queues
+     */
     class AbstractQueuedSynchronizer : public Object {
-    private:
+    protected:
+        enum AbstractQueuedNodeStatus {
+            StatusCancelled = 0, StatusCondition, StatusPropagate, StatusSingal
+        };
+
         struct AbstractQueuedNode {
+            volatile int8_t NodeStatus;
             volatile AbstractQueuedNode *NodeNext = nullptr;
             volatile AbstractQueuedNode *NodePrevious = nullptr;
 
@@ -79,9 +124,21 @@ namespace eLibrary::Core {
             bool setNodePreviousCAS(AbstractQueuedNode *NodeExpected, AbstractQueuedNode *NodeTarget) noexcept {
                 return ConcurrentUtility::doCompareAndSetReference(&NodePrevious, NodeExpected, NodeTarget);
             }
+
+            bool setNodeStatusCAS(int8_t NodeStatusExpected, int8_t NodeStatusTarget) noexcept {
+                return ConcurrentUtility::doCompareAndSet(&NodeStatus, NodeStatusExpected, NodeStatusTarget);
+            }
         };
         volatile AbstractQueuedNode *NodeHead = nullptr, *NodeTail = nullptr;
     public:
+        ~AbstractQueuedSynchronizer() noexcept {
+            NodeTail = nullptr;
+            if (NodeHead) {
+                delete NodeHead;
+                NodeHead = nullptr;
+            }
+        }
+
         virtual bool tryAcquireExclusive(int) noexcept = 0;
 
         virtual bool tryAcquireShared(int) noexcept = 0;
@@ -91,13 +148,22 @@ namespace eLibrary::Core {
         virtual bool tryReleaseShared(int) noexcept = 0;
     };
 
-    template<std::integral T>
+    /**
+     * Support for safely operating integers in concurrent environments
+     */
+    template<Arithmetic T>
     class AtomicNumber final : public Object {
     private:
         volatile T NumberValue;
     public:
+        explicit constexpr AtomicNumber(T NumberSource) noexcept : NumberValue(NumberSource) {}
+
         T addAndGet(T NumberDelta) noexcept {
             return ConcurrentUtility::getAndAddNumber(&NumberValue, NumberDelta) + NumberDelta;
+        }
+
+        T andAndGet(T NumberSource) noexcept {
+            return ConcurrentUtility::getAndAddNumber(&NumberValue, NumberSource) & NumberSource;
         }
 
         bool compareAndSet(T ValueExpected, T ValueTarget) noexcept {
@@ -105,23 +171,35 @@ namespace eLibrary::Core {
         }
 
         T decrementAndGet() noexcept {
-            return ConcurrentUtility::getAndAddNumber(&NumberValue, -1) - 1;
+            return getAndDecrement() - 1;
         }
 
         T getAndAdd(T NumberDelta) noexcept {
             return ConcurrentUtility::getAndAddNumber(&NumberValue, NumberDelta);
         }
 
+        T getAndAnd(T NumberSource) noexcept {
+            return ConcurrentUtility::getAndAndNumber(&NumberValue, NumberSource);
+        }
+
         T getAndDecrement() noexcept {
-            return ConcurrentUtility::getAndAddNumber(&NumberValue, -1);
+            return ConcurrentUtility::getAndAddNumber(&NumberValue, (T) -1);
         }
 
         T getAndIncrement() noexcept {
-            return ConcurrentUtility::getAndAddNumber(&NumberValue, 1);
+            return ConcurrentUtility::getAndAddNumber(&NumberValue, (T) 1);
+        }
+
+        T getAndOr(T NumberSource) noexcept {
+            return ConcurrentUtility::getAndOrNumber(&NumberValue, NumberSource);
         }
 
         T getAndSet(T ValueTarget) noexcept {
             return ConcurrentUtility::getAndSetNumber(&NumberValue, ValueTarget);
+        }
+
+        T getAndXor(T NumberSource) noexcept {
+            return ConcurrentUtility::getAndXorNumber(&NumberValue, NumberSource);
         }
 
         T getValue() const noexcept {
@@ -129,11 +207,41 @@ namespace eLibrary::Core {
         }
 
         T incrementAndGet() noexcept {
-            return ConcurrentUtility::getAndAddNumber(&NumberValue, 1) + 1;
+            return getAndIncrement() + 1;
+        }
+
+        T orAndGet(T NumberSource) noexcept {
+            return ConcurrentUtility::getAndOrNumber(&NumberValue, NumberSource) | NumberSource;
+        }
+
+        T xorAndGet(T NumberSource) noexcept {
+            return ConcurrentUtility::getAndXorNumber(&NumberValue, NumberSource) ^ NumberSource;
         }
 
         String toString() const noexcept override {
-            return Integer(NumberValue).toString();
+            return {std::to_string(NumberValue)};
+        }
+    };
+
+    template<typename T>
+    class AtomicReference final : public Object {
+    private:
+        volatile T *ObjectValue;
+    public:
+        bool doCompareAndSet(const T &ObjectExpected, const T &ObjectTarget) noexcept {
+            return ConcurrentUtility::doCompareAndSetReference(&ObjectValue, &ObjectExpected, &ObjectTarget);
+        }
+
+        T *getAndSet(const T &ObjectTarget) noexcept {
+            return ConcurrentUtility::getAndSetReference(&ObjectValue, &ObjectTarget);
+        }
+
+        T *getValue() const noexcept {
+            return ObjectValue;
+        }
+
+        String toString() const noexcept override {
+            return String::valueOf(*ObjectValue);
         }
     };
 }

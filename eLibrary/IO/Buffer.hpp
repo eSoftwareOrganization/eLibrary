@@ -1,14 +1,16 @@
 #pragma once
 
+#if eLibraryFeature(IO)
+
 #include <IO/Exception.hpp>
 
 namespace eLibrary::IO {
     class Buffer : public Object {
     protected:
-        unsigned BufferCapacity;
-        unsigned BufferLimit;
+        uintmax_t BufferCapacity;
+        uintmax_t BufferLimit;
         intmax_t BufferMark;
-        unsigned BufferPosition;
+        mutable uintmax_t BufferPosition;
     public:
         void doClear() noexcept {
             BufferLimit = BufferCapacity;
@@ -40,11 +42,11 @@ namespace eLibrary::IO {
             BufferPosition = 0;
         }
 
-        unsigned getBufferCapacity() const noexcept {
+        uintmax_t getBufferCapacity() const noexcept {
             return BufferCapacity;
         }
 
-        unsigned getBufferLimit() const noexcept {
+        uintmax_t getBufferLimit() const noexcept {
             return BufferLimit;
         }
 
@@ -52,11 +54,11 @@ namespace eLibrary::IO {
             return BufferMark;
         }
 
-        unsigned getBufferPosition() const noexcept {
+        uintmax_t getBufferPosition() const noexcept {
             return BufferPosition;
         }
 
-        unsigned getRemaining() const noexcept {
+        uintmax_t getRemaining() const noexcept {
             return hasRemaining() ? BufferLimit - BufferPosition : 0;
         }
 
@@ -64,16 +66,48 @@ namespace eLibrary::IO {
             return BufferPosition < BufferLimit;
         }
 
-        void setBufferLimit(unsigned BufferLimitSource) {
+        void setBufferLimit(uintmax_t BufferLimitSource) {
             if (BufferLimitSource > BufferCapacity)
-                throw IOException(String(u"Buffer::setBufferLimit(unsigned) BufferLimitSource"));
+                throw IOException(String(u"Buffer::setBufferLimit(uintmax_t) BufferLimitSource"));
             BufferLimit = BufferLimitSource;
         }
 
-        void setBufferPosition(unsigned BufferPositionSource) {
+        void setBufferPosition(uintmax_t BufferPositionSource) {
             if (BufferPositionSource > BufferLimit)
-                throw IOException(String(u"Buffer::setBufferPosition(unsigned) BufferPositionSource"));
+                throw IOException(String(u"Buffer::setBufferPosition(uintmax_t) BufferPositionSource"));
             BufferPosition = BufferPositionSource;
         }
     };
+
+    class ByteBuffer : public Buffer {
+    protected:
+        ByteBuffer(uint8_t*, uintmax_t) {}
+
+        uint8_t *BufferContainer;
+    public:
+        static ByteBuffer doAllocate(uintmax_t BufferCapacitySource) {
+            return {new uint8_t[BufferCapacitySource], BufferCapacitySource};
+        }
+
+        uint8_t getValue() const {
+            if (BufferPosition >= BufferLimit) throw IOException(String(u"ByteBuffer::setValue(uint8_t) BufferPosition"));
+            return BufferContainer[++BufferPosition];
+        }
+
+        uint8_t getValue(uintmax_t ValueIndex) const {
+            if (ValueIndex >= BufferLimit) throw IOException(String(u"ByteBuffer::getValue(uintmax_t) ValueIndex"));
+            return BufferContainer[ValueIndex];
+        }
+
+        void setValue(uint8_t ValueSource) {
+            if (BufferPosition >= BufferLimit) throw IOException(String(u"ByteBuffer::setValue(uint8_t) BufferPosition"));
+            BufferContainer[++BufferPosition] = ValueSource;
+        }
+
+        void setValue(uint8_t ValueSource, uintmax_t ValueIndex) {
+            if (ValueIndex >= BufferLimit) throw IOException(String(u"ByteBuffer::setValue(uint8_t, uintmax_t)"));
+            BufferContainer[ValueIndex] = ValueSource;
+        }
+    };
 }
+#endif

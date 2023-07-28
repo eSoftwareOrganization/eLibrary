@@ -8,7 +8,7 @@ namespace eLibrary::Core {
     String Object::toString() const noexcept {
         StringStream ObjectStream;
         ObjectStream.addString({
-#ifdef __GNUC__
+#ifdef eLibraryCompilerGNU
             abi::__cxa_demangle(typeid(*this).name(), nullptr, nullptr, nullptr)
 #else
             typeid(*this).name()

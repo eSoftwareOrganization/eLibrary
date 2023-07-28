@@ -1,5 +1,7 @@
 #pragma once
 
+#if eLibraryFeature(IO)
+
 #include <Core/Exception.hpp>
 
 using namespace eLibrary::Core;
@@ -10,3 +12,4 @@ namespace eLibrary::IO {
         explicit IOException(const String &ExceptionMessage) noexcept : Exception(ExceptionMessage) {}
     };
 }
+#endif

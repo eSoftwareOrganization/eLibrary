@@ -1,124 +1,120 @@
 #pragma once
 
-#include <IO/Exception.hpp>
-#include <IO/Stream.hpp>
+#if eLibraryFeature(IO)
 
-#include <cstdio>
-#include <unistd.h>
+#include <IO/File.hpp>
+#include <IO/Stream.hpp>
 
 namespace eLibrary::IO {
     /**
-     * The FileInputStream class provides support for operating files
+     * The FileInputStream class provides support for reading files
      */
     class FileInputStream final : public InputStream {
     private:
-        FILE *FileOperator;
+        FileDescriptor StreamDescriptor;
+
+        doDisableCopyAssignConstruct(FileInputStream)
     public:
-        explicit FileInputStream(const String &FilePath) {
-            FileOperator = fopen64(FilePath.toU8String().c_str(), "rb");
-            if (!FileOperator) throw IOException(String(u"FileInputStream::FileInputStream() fopen"));
+        constexpr FileInputStream() noexcept = default;
+
+        explicit FileInputStream(const String &StreamPath) {
+            doOpen(StreamPath);
         }
 
-        ~FileInputStream() noexcept {
-            doClose();
+        void doClose() override {
+            StreamDescriptor.doClose();
         }
 
-        void doClose() noexcept override {
-            if (FileOperator) {
-                fclose(FileOperator);
-                FileOperator = nullptr;
-            }
+        void doOpen(const String &StreamPath) {
+            StreamDescriptor.doOpen(StreamPath, String(u"rb"));
         }
 
         int doRead() override {
-            if (!FileOperator) throw IOException(String(u"FileInputStream::doRead() FileOperator"));
-            return feof(FileOperator) ? -1 : fgetc(FileOperator);
+            if (!isAvailable()) throw IOException(String(u"FileInputStream::doRead() isAvailable"));
+            return fgetc((FILE*) StreamDescriptor);
         }
 
-        int doRead(byte *FileBuffer, int FileBufferOffset, int FileBufferSize) override {
-            if (!FileOperator) throw IOException(String(u"FileInputStream::doRead(byte*, int, int) FileOperator"));
-            fread(FileBuffer + FileBufferOffset, FileBufferSize, 1, FileOperator);
+        uint32_t doRead(uint8_t *StreamBuffer, uint32_t StreamBufferOffset, uint32_t StreamBufferSize) override {
+            if (!isAvailable()) throw IOException(String(u"FileInputStream::doRead(uint8_t*, uint32_t, uint32_t) isAvailable"));
+            return ::fread(StreamBuffer + StreamBufferOffset, 1, StreamBufferSize, (FILE*) StreamDescriptor);
         }
 
-        void doSeek(off64_t FileOffset, int FileOrigin) {
-            if (!FileOperator) throw IOException(String(u"FileInputStream::doSeek(off64_t, int) FileOperator"));
-            fseeko64(FileOperator, FileOffset, FileOrigin);
+        void doSeek(off64_t FileOffset, int FileOrigin) const {
+            if (!isAvailable()) throw IOException(String(u"FileInputStream::doSeek(off64_t, int) isAvailable"));
+            ::fseeko64((FILE*) StreamDescriptor, FileOffset, FileOrigin);
+        }
+
+        auto getFileLength() const {
+            if (!isAvailable()) throw IOException(String(u"FileInputStream::getFileLength() isAvailable"));
+            return ::filelength(fileno((FILE*) StreamDescriptor));
+        }
+
+        auto getFilePosition() const {
+            if (!isAvailable()) throw IOException(String(u"FileInputStream::getFilePosition() isAvailable"));
+            return ::ftello64((FILE*) StreamDescriptor);
         }
 
         bool isAvailable() const noexcept override {
-            return FileOperator;
+            return StreamDescriptor.isAvailable();
         }
-
-        off64_t getFileLength() const {
-            if (!FileOperator) throw IOException(String(u"FileInputStream::getFileLength() FileOperator"));
-            off64_t FilePosition = ftello64(FileOperator);
-            fseeko64(FileOperator, 0, SEEK_END);
-            off64_t FileLength = ftello64(FileOperator);
-            fseeko64(FileOperator, FilePosition, SEEK_SET);
-            return FileLength;
-        }
-
-        off64_t getFilePosition() const {
-            if (!FileOperator) throw IOException(String(u"FileInputStream::getFilePosition() FileOperator"));
-            return ftello64(FileOperator);
-        }
-
-        FileInputStream &operator=(const FileInputStream&) noexcept = delete;
     };
 
     /**
-     * The FileOutputStream class provides support for operating files
+     * The FileOutputStream class provides support for writing files
      */
     class FileOutputStream final : public OutputStream {
     private:
-        FILE *FileOperator;
+        FileDescriptor StreamDescriptor;
+
+        doDisableCopyAssignConstruct(FileOutputStream)
     public:
-        FileOutputStream(const String &FilePath, bool FileAppend) {
-            FileOperator = fopen64(FilePath.toU8String().c_str(), FileAppend ? "ab" : "wb");
-            if (!FileOperator) throw IOException(String(u"FileOutputStream::FileOutputStream() fopen"));
+        constexpr FileOutputStream() noexcept = default;
+
+        FileOutputStream(const String &StreamPath, bool FileAppend = false) {
+            doOpen(StreamPath, FileAppend);
         }
 
-        ~FileOutputStream() noexcept {
-            doClose();
-        }
-
-        void doClose() noexcept override {
-            if (FileOperator) {
-                fclose(FileOperator);
-                FileOperator = nullptr;
-            }
+        void doClose() override {
+            StreamDescriptor.doClose();
         }
 
         void doFlush() override {
-            if (!FileOperator) throw IOException(String(u"FileOutputStream::doFlush() FileOperator"));
-            fflush(FileOperator);
+            if (!isAvailable()) throw IOException(String(u"FileOutputStream::doFlush() isAvailable"));
+            ::fflush((FILE*) StreamDescriptor);
+        }
+
+        void doOpen(const String &StreamPath, bool FileAppend = false) {
+            StreamDescriptor.doOpen(StreamPath, FileAppend ? String(u"ab") : String(u"wb"));
         }
 
         void doSeek(off64_t FileOffset, int FileOrigin) {
-            if (!FileOperator) throw IOException(String(u"FileOutputStream::doSeek(off64_t, int) FileOperator"));
-            fseeko64(FileOperator, FileOffset, FileOrigin);
+            if (!isAvailable()) throw IOException(String(u"FileOutputStream::doSeek(off64_t, int) isAvailable"));
+            ::fseeko64((FILE*) StreamDescriptor, FileOffset, FileOrigin);
         }
 
         void doTruncate(off64_t FileOffset) {
-            if (!FileOperator) throw IOException(String(u"FileOutputStream::doTruncate(off64_t) FileOperator"));
-            ftruncate64(fileno(FileOperator), FileOffset);
+            if (!isAvailable()) throw IOException(String(u"FileOutputStream::doTruncate(off64_t) isAvailable"));
+            ::ftruncate64(fileno((FILE*) StreamDescriptor), FileOffset);
         }
 
         void doWrite(int FileCharacter) override {
-            if (!FileOperator) throw IOException(String(u"FileOutputStream::doFlush() FileOperator"));
-            fputc(FileCharacter, FileOperator);
+            if (!isAvailable()) throw IOException(String(u"FileOutputStream::doFlush() isAvailable"));
+            ::fputc(FileCharacter, (FILE*) StreamDescriptor);
         }
 
-        void doWrite(byte *FileBuffer, int FileBufferOffset, int FileBufferSize) override {
-            if (!FileOperator) throw IOException(String(u"FileOutputStream::doWrite(byte*, int, int) FileOperator"));
-            fwrite(FileBuffer + FileBufferOffset, FileBufferSize, 1, FileOperator);
+        void doWrite(uint8_t *FileBuffer, uint32_t FileBufferOffset, uint32_t FileBufferSize) override {
+            if (!isAvailable()) throw IOException(String(u"FileOutputStream::doWrite(uint8_t*, int, int) isAvailable"));
+            ::fwrite(FileBuffer + FileBufferOffset, 1, FileBufferSize, (FILE*) StreamDescriptor);
         }
 
-        off64_t getFilePosition() const {
-            if (!FileOperator) throw IOException(String(u"FileOutputStream::getFilePosition() FileOperator"));
-            return ftello64(FileOperator);
+        auto getFilePosition() const {
+            if (!isAvailable()) throw IOException(String(u"FileOutputStream::getFilePosition() isAvailable"));
+            return ::ftello64((FILE*) StreamDescriptor);
         }
 
-        FileOutputStream &operator=(const FileOutputStream&) noexcept = delete;
+        bool isAvailable() const noexcept override {
+            return StreamDescriptor.isAvailable();
+        }
     };
 }
+#endif

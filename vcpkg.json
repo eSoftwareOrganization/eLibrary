@@ -3,10 +3,6 @@
   "description": "An all-in-one cpp library",
   "license": "Apache-2.0",
   "dependencies": [
-    "doctest",
-    "ffmpeg",
-    "nanobench",
-    "openal-soft",
     {
       "name": "vcpkg-cmake",
       "host": true
@@ -15,5 +11,25 @@
       "name": "vcpkg-cmake-config",
       "host": true
     }
-  ]
+  ],
+  "version-string": "2023.10",
+  "default-features": ["module-io", "module-multimedia", "module-network"],
+  "features": {
+    "application-test": {
+      "description": "Build eLibrary::eLibraryTest",
+      "dependencies": ["doctest", "nanobench"]
+    },
+    "module-io": {
+      "description": "Build eLibrary::IO",
+      "dependencies": ["libarchive"]
+    },
+    "module-multimedia": {
+      "description": "Build eLibrary::Multimedia",
+      "dependencies": ["ffmpeg", "openal-soft"]
+    },
+    "module-network": {
+      "description": "Build eLibrary::Network",
+      "dependencies": ["openssl"]
+    }
+  }
 }

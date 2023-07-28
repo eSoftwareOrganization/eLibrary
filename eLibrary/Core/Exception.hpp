@@ -9,6 +9,9 @@
 #include <sstream>
 
 namespace eLibrary::Core {
+    /**
+     * Support for handling exceptions
+     */
     class Exception : public Object, public std::exception {
     private:
         std::string ExceptionDetail;
@@ -40,5 +43,15 @@ namespace eLibrary::Core {
     class ArithmeticException final : public Exception {
     public:
         explicit ArithmeticException(const String &ExceptionMessage) noexcept : Exception(ExceptionMessage) {};
+    };
+
+    class InterruptedException final : public Exception {
+    public:
+        explicit InterruptedException(const String &ExceptionMessage) noexcept : Exception(ExceptionMessage) {}
+    };
+
+    class RuntimeException final : public Exception {
+    public:
+        explicit RuntimeException(const String &ExceptionMessage) noexcept : Exception(ExceptionMessage) {}
     };
 }
