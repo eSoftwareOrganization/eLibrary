@@ -37,7 +37,7 @@ jobs:
 
       - name: CMake Build
         run: |
-          cmake -DCMAKE_TOOLCHAIN_FILE="${VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake" .
+          cmake -DCMAKE_TOOLCHAIN_FILE=./../vcpkg/scripts/buildsystems/vcpkg.cmake --build .
 
       - name: Codecov Uploading
         uses: codecov/codecov-action@v3
