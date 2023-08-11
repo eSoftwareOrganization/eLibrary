@@ -37,7 +37,7 @@ jobs:
 
       - name: CMake Build
         run: |
-          cmake -DCMAKE_TOOLCHAIN_FILE=${VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake -DCMAKE_CXX_FLAGS=--coverage .
+          cmake -DCMAKE_TOOLCHAIN_FILE="${VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake" .
 
       - name: Codecov Uploading
         uses: codecov/codecov-action@v3
