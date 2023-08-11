@@ -32,11 +32,6 @@ jobs:
         with:
           vcpkgGitCommitId: b73601a4616c21923cfb6f3a5263a9788165efbd
 
-      - name: eLibrary Setup
-        run: |
-          cd ..
-          git clone https://github.com/eSoftwareOrganization/eLibrary.git
-
       - name: CMake Build
         run: |
           cd eLibrary
