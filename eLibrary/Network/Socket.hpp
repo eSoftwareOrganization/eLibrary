@@ -6,9 +6,8 @@
 #include <IO/Stream.hpp>
 #include <Network/NetworkUtility.hpp>
 
-#include <algorithm>
-#include <any>
 #include <array>
+#include <utility>
 
 namespace eLibrary::Network {
     class NetworkAddress final : public Object {
@@ -17,71 +16,25 @@ namespace eLibrary::Network {
             ProtocolIPv4, ProtocolIPv6, ProtocolUnknown
         };
     protected:
-        NetworkAddressProtocol AddressProtocol;
-        uint8_t *AddressFieldList;
+        NetworkAddressProtocol AddressProtocol = NetworkAddressProtocol::ProtocolUnknown;
+        Array<uint8_t> AddressFieldList;
     public:
-        explicit NetworkAddress(const std::array<uint8_t, 4> &AddressSource) noexcept : AddressProtocol(NetworkAddressProtocol::ProtocolIPv4) {
-            AddressFieldList = new uint8_t[4];
-            std::copy(AddressSource.begin(), AddressSource.end(), AddressFieldList);
-        }
-
-        explicit NetworkAddress(const std::array<uint8_t, 16> &AddressSource) noexcept : AddressProtocol(NetworkAddressProtocol::ProtocolIPv6) {
-            AddressFieldList = new uint8_t[16];
-            std::copy(AddressSource.begin(), AddressSource.end(), AddressFieldList);
-        }
-
-        NetworkAddress(const std::initializer_list<uint8_t> &AddressSource) noexcept {
-            if (AddressSource.size() == 4) {
-                AddressFieldList = new uint8_t[4];
-                std::copy(AddressSource.begin(), AddressSource.end(), AddressFieldList);
+        NetworkAddress(const Array<uint8_t> &AddressSource) {
+            AddressFieldList.doAssign(AddressSource);
+            if (AddressFieldList.getElementSize() == 4)
                 AddressProtocol = NetworkAddressProtocol::ProtocolIPv4;
-            } else if (AddressSource.size() == 16) {
-                AddressFieldList = new uint8_t[16];
-                std::copy(AddressSource.begin(), AddressSource.end(), AddressFieldList);
+            else if (AddressFieldList.getElementSize() == 16)
                 AddressProtocol = NetworkAddressProtocol::ProtocolIPv6;
-            } else {
-                AddressFieldList = nullptr;
-                AddressProtocol = NetworkAddressProtocol::ProtocolUnknown;
-            }
+            else AddressProtocol = NetworkAddressProtocol::ProtocolUnknown;
         }
 
-        explicit NetworkAddress(const in_addr &AddressSource) noexcept : AddressProtocol(NetworkAddressProtocol::ProtocolIPv4) {
-            AddressFieldList = new uint8_t[4];
-            AddressFieldList[0] = AddressSource.s_addr & 0xFF;
-            AddressFieldList[1] = AddressSource.s_addr >> 8 & 0xFF;
-            AddressFieldList[2] = AddressSource.s_addr >> 16 & 0xFF;
-            AddressFieldList[3] = AddressSource.s_addr >> 24 & 0xFF;
+        explicit NetworkAddress(const in_addr &AddressSource) : AddressProtocol(NetworkAddressProtocol::ProtocolIPv4) {
+            AddressFieldList.doAssign({uint8_t(AddressSource.s_addr & 0xFF), uint8_t(AddressSource.s_addr >> 8 & 0xFF), uint8_t(AddressSource.s_addr >> 16 & 0xFF), uint8_t(AddressSource.s_addr >> 24 & 0xFF)});
         }
 
-        explicit NetworkAddress(const in6_addr &AddressSource) noexcept : AddressProtocol(NetworkAddressProtocol::ProtocolIPv6) {
-            AddressFieldList = new uint8_t[16];
-            memcpy(AddressFieldList, AddressSource.s6_addr, sizeof(uint8_t) * 16);
-        }
-
-        NetworkAddress(const NetworkAddress &AddressSource) noexcept {
-            doAssign(AddressSource);
-        }
-
-        ~NetworkAddress() noexcept {
-            if (AddressFieldList) {
-                delete[] AddressFieldList;
-                AddressFieldList = nullptr;
-            }
-        }
-
-        void doAssign(const NetworkAddress &AddressSource) noexcept {
-            AddressProtocol = AddressSource.AddressProtocol;
-            delete[] AddressFieldList;
-            if (AddressProtocol == NetworkAddressProtocol::ProtocolIPv4) {
-                AddressFieldList = new uint8_t[4];
-                memcpy(AddressFieldList, AddressSource.AddressFieldList, sizeof(uint8_t) * 4);
-            } else if (AddressProtocol == NetworkAddressProtocol::ProtocolIPv6) {
-                AddressFieldList = new uint8_t[16];
-                memcpy(AddressFieldList, AddressSource.AddressFieldList, sizeof(uint8_t) * 16);
-            } else {
-                AddressFieldList = nullptr;
-                AddressProtocol = NetworkAddressProtocol::ProtocolUnknown;
-            }
+        explicit NetworkAddress(const in6_addr &AddressSource) : AddressProtocol(NetworkAddressProtocol::ProtocolIPv6) {
+            AddressFieldList.doAssign(Array<uint8_t>::doAllocate(16));
+            Arrays::doCopy(AddressSource.s6_addr, 16, AddressFieldList.begin());
         }
 
         NetworkAddressProtocol getAddressProtocol() const noexcept {
@@ -89,67 +42,57 @@ namespace eLibrary::Network {
         }
 
         bool isAnyLocalAddress() const noexcept {
-            if (AddressProtocol == NetworkAddressProtocol::ProtocolIPv4)
-                return AddressFieldList[0] == 0 && AddressFieldList[1] == 0 && AddressFieldList[2] == 0 && AddressFieldList[3] == 0;
-            if (AddressProtocol == NetworkAddressProtocol::ProtocolIPv6)
-                return AddressFieldList[0] == 0 && AddressFieldList[1] == 0 && AddressFieldList[2] == 0 &&
-                    AddressFieldList[3] == 0 && AddressFieldList[4] == 0 && AddressFieldList[5] == 0 &&
-                    AddressFieldList[6] == 0 && AddressFieldList[7] == 0 && AddressFieldList[8] == 0 &&
-                    AddressFieldList[9] == 0 && AddressFieldList[10] == 0 && AddressFieldList[11] == 0 &&
-                    AddressFieldList[12] == 0 && AddressFieldList[13] == 0 && AddressFieldList[14] == 0 && AddressFieldList[15] == 0;
-            return false;
+            uint8_t AddressFieldResult = 0;
+            if (AddressProtocol != NetworkAddressProtocol::ProtocolUnknown)
+                for (uint8_t AddressField : AddressFieldList) AddressFieldResult |= AddressField;
+            return AddressFieldResult == 0;
         }
 
         bool isLinkLocalAddress() const noexcept {
             if (AddressProtocol == NetworkAddressProtocol::ProtocolIPv4)
-                return AddressFieldList[0] == 169 && AddressFieldList[1] == 254;
+                return AddressFieldList.getElement(0) == 169 && AddressFieldList.getElement(1) == 254;
             if (AddressProtocol == NetworkAddressProtocol::ProtocolIPv6)
-                return AddressFieldList[0] == 0xFE && AddressFieldList[1] == 0x80;
+                return AddressFieldList.getElement(0) == 0xFE && AddressFieldList.getElement(1) == 0x80;
             return false;
         }
 
         bool isLoopbackAddress() const noexcept {
             if (AddressProtocol == NetworkAddressProtocol::ProtocolIPv4)
-                return AddressFieldList[0] == 127;
+                return AddressFieldList.getElement(0) == 127 && AddressFieldList.getElement(1) == 0 && AddressFieldList.getElement(2) == 0 && AddressFieldList.getElement(3) == 1;
             if (AddressProtocol == NetworkAddressProtocol::ProtocolIPv6)
-                return AddressFieldList[0] == 0 && AddressFieldList[1] == 0 && AddressFieldList[2] == 0 &&
-                       AddressFieldList[3] == 0 && AddressFieldList[4] == 0 && AddressFieldList[5] == 0 &&
-                       AddressFieldList[6] == 0 && AddressFieldList[7] == 0 && AddressFieldList[8] == 0 &&
-                       AddressFieldList[9] == 0 && AddressFieldList[10] == 0 && AddressFieldList[11] == 0 &&
-                       AddressFieldList[12] == 0 && AddressFieldList[13] == 0 && AddressFieldList[14] == 0 && AddressFieldList[15] == 0x01;
+                return AddressFieldList.getElement(0) == 0 && AddressFieldList.getElement(1) == 0 && AddressFieldList.getElement(2) == 0 &&
+                       AddressFieldList.getElement(3) == 0 && AddressFieldList.getElement(4) == 0 && AddressFieldList.getElement(5) == 0 &&
+                       AddressFieldList.getElement(6) == 0 && AddressFieldList.getElement(7) == 0 && AddressFieldList.getElement(8) == 0 &&
+                       AddressFieldList.getElement(9) == 0 && AddressFieldList.getElement(10) == 0 && AddressFieldList.getElement(11) == 0 &&
+                       AddressFieldList.getElement(12) == 0 && AddressFieldList.getElement(13) == 0 && AddressFieldList.getElement(14) == 0 && AddressFieldList.getElement(15) == 0x01;
             return false;
         }
 
         bool isMulticastAddress() const noexcept {
             if (AddressProtocol == NetworkAddressProtocol::ProtocolIPv4)
-                return AddressFieldList[0] >= 224 && AddressFieldList[0] <= 239;
+                return AddressFieldList.getElement(0) >= 224 && AddressFieldList.getElement(0) <= 239;
             if (AddressProtocol == NetworkAddressProtocol::ProtocolIPv6)
-                return AddressFieldList[0] == 0xFF;
+                return AddressFieldList.getElement(0) == 0xFF;
             return false;
         }
 
         bool isSiteLocalAddress() const noexcept {
             if (AddressProtocol == NetworkAddressProtocol::ProtocolIPv4)
-                return (AddressFieldList[0] == 192 && AddressFieldList[1] == 168) || AddressFieldList[0] == 10 || (AddressFieldList[0] == 172 && (AddressFieldList[1] & 0xF0) == 16);
+                return (AddressFieldList.getElement(0) == 192 && AddressFieldList.getElement(1) == 168) || AddressFieldList.getElement(0) == 10 || (AddressFieldList.getElement(0) == 172 && (AddressFieldList.getElement(1) & 0xF0) == 16);
             if (AddressProtocol == NetworkAddressProtocol::ProtocolIPv6)
-                return AddressFieldList[0] == 0xFE && AddressFieldList[1] == 0xC0;
+                return AddressFieldList.getElement(0) == 0xFE && AddressFieldList.getElement(1) == 0xC0;
             return false;
-        }
-
-        NetworkAddress &operator=(const NetworkAddress &AddressSource) noexcept {
-            doAssign(AddressSource);
-            return *this;
         }
 
         Any toAddressIn() const {
             if (AddressProtocol == NetworkAddressProtocol::ProtocolIPv4) {
                 in_addr AddressResult;
-                AddressResult.s_addr = htonl((AddressFieldList[0] << 24) | (AddressFieldList[1] << 16) | (AddressFieldList[2] << 8) | AddressFieldList[3]);
+                AddressResult.s_addr = htonl((AddressFieldList.getElement(0) << 24) | (AddressFieldList.getElement(1) << 16) | (AddressFieldList.getElement(2) << 8) | AddressFieldList.getElement(3));
                 return {AddressResult};
             }
             if (AddressProtocol == NetworkAddressProtocol::ProtocolIPv6) {
                 in6_addr AddressResult;
-                memcpy(AddressResult.s6_addr, AddressFieldList, sizeof(uint8_t) * 16);
+                Arrays::doCopy(AddressFieldList.begin(), 16, AddressResult.s6_addr);
                 return {AddressResult};
             }
             throw NetworkException(String(u"NetworkAddress::toAddressIn() AddressProtocol"));
@@ -158,17 +101,17 @@ namespace eLibrary::Network {
         String toString() const noexcept override {
             StringStream CharacterStream;
             if (AddressProtocol == NetworkAddressProtocol::ProtocolIPv4) {
-                CharacterStream.addString(std::to_string(AddressFieldList[0]));
+                CharacterStream.addString(std::to_string(AddressFieldList.getElement(0)));
                 CharacterStream.addCharacter(u'.');
-                CharacterStream.addString(std::to_string(AddressFieldList[1]));
+                CharacterStream.addString(std::to_string(AddressFieldList.getElement(1)));
                 CharacterStream.addCharacter(u'.');
-                CharacterStream.addString(std::to_string(AddressFieldList[2]));
+                CharacterStream.addString(std::to_string(AddressFieldList.getElement(2)));
                 CharacterStream.addCharacter(u'.');
-                CharacterStream.addString(std::to_string(AddressFieldList[3]));
+                CharacterStream.addString(std::to_string(AddressFieldList.getElement(3)));
             }
             if (AddressProtocol == NetworkAddressProtocol::ProtocolIPv6) {
                 for (int AddressPartition = 0; AddressPartition < 8; ++AddressPartition) {
-                    CharacterStream.addString(Integer((AddressFieldList[AddressPartition << 1] << 8) | AddressFieldList[AddressPartition << 1 | 1]).toString(16));
+                    CharacterStream.addString(Integer((AddressFieldList.getElement(AddressPartition << 1) << 8) | AddressFieldList.getElement(AddressPartition << 1 | 1)).toString(16));
                     if (AddressPartition < 7) CharacterStream.addCharacter(u':');
                 }
             }
@@ -182,7 +125,7 @@ namespace eLibrary::Network {
         NetworkAddress SocketAddress;
         unsigned short SocketPort;
     public:
-        NetworkSocketAddress(const NetworkAddress &AddressSource, unsigned short AddressPort) noexcept : SocketAddress(AddressSource), SocketPort(AddressPort) {}
+        NetworkSocketAddress(NetworkAddress AddressSource, unsigned short AddressPort) noexcept : SocketAddress(Objects::doMove(AddressSource)), SocketPort(AddressPort) {}
 
         NetworkAddress getSocketAddress() const noexcept {
             return SocketAddress;
@@ -221,15 +164,11 @@ namespace eLibrary::Network {
 
         doDisableCopyAssignConstruct(DatagramSocket)
     public:
-        DatagramSocket(const NetworkSocketAddress &AddressSource) : SocketAddress(AddressSource) {
+        explicit DatagramSocket(const NetworkSocketAddress &AddressSource) : SocketAddress(AddressSource) {
             if (AddressSource.getSocketAddress().getAddressProtocol() == NetworkAddress::NetworkAddressProtocol::ProtocolUnknown)
                 throw NetworkException(String(u"DatagramSocket::DatagramSocket(const NetworkSocketAddress&) AddressSource"));
             SocketDescriptor.doAssign(socket(AddressSource.getSocketAddress().getAddressProtocol() == NetworkAddress::NetworkAddressProtocol::ProtocolIPv4 ? AF_INET : AF_INET6, SOCK_DGRAM, 0));
             if (!SocketDescriptor.isAvailable()) throw NetworkException(String(u"DatagramSocket::DatagramSocket(const NetworkSocketAddress&) isAvailable"));
-        }
-
-        ~DatagramSocket() noexcept {
-            if (isAvailable()) doClose();
         }
 
         void doClose() {
@@ -273,7 +212,7 @@ namespace eLibrary::Network {
 
         void setSocketOption(NetworkSocketOption OptionType, int OptionValue) {
             if (::setsockopt((SocketHandleType) SocketDescriptor, SOL_SOCKET, (int) OptionType, (char*) &OptionValue, sizeof(int)))
-                throw NetworkException(String(u"DatagramSocket::setSendTimeout(NetworkSocketOption, int) setsockopt"));
+                throw NetworkException(String(u"DatagramSocket::setSocketOption(NetworkSocketOption, int) setsockopt"));
         }
     };
 
@@ -283,7 +222,7 @@ namespace eLibrary::Network {
         NetworkSocketDescriptor SocketDescriptor;
         NetworkSocketAddress SocketAddress;
 
-        StreamSocket(NetworkSocketDescriptor SocketDescriptorSource, const NetworkSocketAddress &AddressSource) noexcept : SocketDescriptor(std::move(SocketDescriptorSource)), SocketAddress(AddressSource) {}
+        StreamSocket(NetworkSocketDescriptor SocketDescriptorSource, NetworkSocketAddress AddressSource) noexcept : SocketDescriptor(Objects::doMove(SocketDescriptorSource)), SocketAddress(Objects::doMove(AddressSource)) {}
 
         doDisableCopyAssignConstruct(StreamSocket)
 
@@ -296,10 +235,6 @@ namespace eLibrary::Network {
                 throw NetworkException(String(u"StreamSocket::StreamSocket(const NetworkSocketAddress&) AddressSource"));
             SocketDescriptor.doAssign(socket(AddressSource.getSocketAddress().getAddressProtocol() == NetworkAddress::NetworkAddressProtocol::ProtocolIPv4 ? AF_INET : AF_INET6, SOCK_STREAM, 0));
             if (!SocketDescriptor.isAvailable()) throw NetworkException(String(u"StreamSocket::StreamSocket(const NetworkSocketAddress&) SocketDescriptor::isAvailable"));
-        }
-
-        ~StreamSocket() noexcept {
-            if (isAvailable()) doClose();
         }
 
         void doClose() {
@@ -445,7 +380,7 @@ namespace eLibrary::Network {
             int SocketSizeReceived;
             if ((SocketSizeReceived = recv((SocketHandleType) SocketDescriptor, (char*) SocketBuffer + SocketOffset, SocketSize, 0)) < 0)
                 throw NetworkException(String(u"SocketInputStream::doRead(uint8_t*, int, int) recv"));
-            return SocketSizeReceived;
+            return (uint32_t) SocketSizeReceived;
         }
 
         static SocketInputStream getInstance(const StreamSocket &SocketSource) {
@@ -470,10 +405,10 @@ namespace eLibrary::Network {
             SocketDescriptor = nullptr;
         }
 
-        void doWrite(int SocketCharacter) override {
-            if (!isAvailable()) throw NetworkException(String(u"SocketOutputStream::doRead() isAvailable"));
+        void doWrite(uint8_t SocketCharacter) override {
+            if (!isAvailable()) throw NetworkException(String(u"SocketOutputStream::doWrite(uint8_t) isAvailable"));
             if (send((SocketHandleType) SocketDescriptor, (char*) &SocketCharacter, 1, 0) < 0)
-                throw NetworkException(String(u"SocketOutputStream::doWrite(int) send"));
+                throw NetworkException(String(u"SocketOutputStream::doWrite(uint8_t) send"));
         }
 
         void doWrite(uint8_t *SocketBuffer, uint32_t SocketOffset, uint32_t SocketSize) override {

@@ -19,10 +19,13 @@ namespace eLibrary::Core {
     };
 
 #define doDisableCopyAssignConstruct(ClassName) constexpr ClassName(const ClassName&) noexcept = delete;ClassName &operator=(const ClassName&) noexcept = delete;
-#define doEnableCopyAssignConstruct(ClassName) constexpr ClassName(const ClassName &ObjectSource) {doAssign(ObjectSource);}ClassName &operator=(const ClassName &ObjectSource) {doAssign(ObjectSource);return *this;}
-#define doEnableMoveAssignConstruct(ClassName) constexpr ClassName(ClassName &&ObjectSource) noexcept {doAssign(std::forward<ClassName>(ObjectSource));}ClassName &operator=(ClassName &&ObjectSource) noexcept {doAssign(std::forward<ClassName>(ObjectSource));return *this;}
+#define doEnableCopyAssignConstruct(ClassName) ClassName(const ClassName &ObjectSource) {doAssign(ObjectSource);}ClassName &operator=(const ClassName &ObjectSource) {doAssign(ObjectSource);return *this;}
+#define doEnableMoveAssignConstruct(ClassName) ClassName(ClassName &&ObjectSource) noexcept {doAssign(std::forward<ClassName>(ObjectSource));}ClassName &operator=(ClassName &&ObjectSource) noexcept {doAssign(std::forward<ClassName>(ObjectSource));return *this;}
+#define eLibraryCompiler(CompilerName) eLibraryCompiler_##CompilerName
 #define eLibraryFeature(FeatureName) eLibraryFeature_##FeatureName
 #define eLibrarySystem(SystemName) eLibrarySystem_##SystemName
+
+#define eLibraryAPI
 }
 
 template<eLibrary::Core::Comparable T>

@@ -27,24 +27,22 @@ jobs:
     steps:
       - uses: actions/checkout@v3
 
-      - name: CMake Setup
-        uses: lukka/get-cmake@latest
-
       - name: VCPKG Setup
-        run: |
-          git clone git://github.com/Microsoft/vcpkg.git
-          cd vcpkg
-          bootstrap-vcpkg
+        uses: lukka/run-vcpkg@v11
+        with:
+          vcpkgGitCommitId: b73601a4616c21923cfb6f3a5263a9788165efbd
 
       - name: eLibrary Setup
         run: |
           cd ..
-          git clone git://github.com/eSoftwareOrganization/eLibrary.git
+          git clone https://github.com/eSoftwareOrganization/eLibrary.git
 
       - name: CMake Build
         run: |
           cd eLibrary
-          cmake -DCMAKE_TOOLCHAIN_FILE=./../vcpkg/scripts/buildsystems/vcpkg.cmake .
+          cmake -DCMAKE_TOOLCHAIN_FILE=./../vcpkg/scripts/buildsystems/vcpkg.cmake -DCMAKE_CXX_FLAGS=--coverage .
 
       - name: Codecov Uploading
         uses: codecov/codecov-action@v3
+        env:
+          CODECOV_TOKEN: ${{secrets.CODECOV_TOKEN}}

@@ -25,17 +25,17 @@ endif()
 
 project(eLibrary)
 
+set(CMAKE_CXX_STANDARD 23)
+
 include_directories(eLibrary)
 
-add_compile_options(-Ofast -Wall)
+add_compile_options(-Wall)
 if(${CMAKE_CXX_COMPILER_ID} STREQUAL "GNU")
     add_compile_options(-Wextra)
 endif()
 
 add_compile_definitions(eLibraryCompiler_${CMAKE_CXX_COMPILER_ID}=1)
 add_compile_definitions(eLibrarySystem_${CMAKE_SYSTEM_NAME}=1)
-
-set(CMAKE_CXX_STANDARD 23)
 
 add_library(eLibrary eLibrary/Core/Object.cpp eLibrary/Core/String.cpp)
 

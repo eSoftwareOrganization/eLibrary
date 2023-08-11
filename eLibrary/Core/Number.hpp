@@ -1,11 +1,14 @@
 #pragma once
 
-#include <Core/Collection.hpp>
+#include <Core/Container.hpp>
 
 #include <algorithm>
 #include <limits>
 #include <map>
 #include <vector>
+
+#undef max
+#undef min
 
 namespace eLibrary::Core {
     /**
@@ -72,7 +75,7 @@ namespace eLibrary::Core {
                 else if (!NumberValue.getCharacter(NumberDigit).doCompare(u'+') && NumberDigit == 0 && !NumberSignatureExist)
                     NumberSignatureExist = true;
                 else if ((NumberValue.getCharacter(NumberDigit).isNumber() || NumberValue.getCharacter(NumberDigit).isAlpha()) && NumberDigitMapping[NumberValue.getCharacter(NumberDigit)] < NumberRadix);
-                else throw Exception(String(u"Integer::Integer(const String&, unsigned short) NumberValue"));
+                else throw Exception(String(u"Integer::Integer(const String&, uint8_t) NumberValue"));
             for (NumberDigit = 0; NumberDigit < NumberValue.getCharacterSize(); ++NumberDigit)
                 NumberList = doMultiplication(IntegerRadix).doAddition(NumberDigitMapping[NumberValue.getCharacter(NumberDigit)]).NumberList;
             if (NumberList.empty()) NumberList.push_back(0);
@@ -84,6 +87,7 @@ namespace eLibrary::Core {
             if (!NumberSignature && NumberOther.NumberSignature) return NumberOther.doSubtraction(getAbsolute());
             if (!NumberSignature && !NumberOther.NumberSignature) return getAbsolute().doAddition(NumberOther.getAbsolute()).getOpposite();
             std::vector<uintmax_t> NumberResult;
+            NumberResult.reserve(Objects::getMaximum(NumberList.size(), NumberOther.NumberList.size()));
             intmax_t NumberCarry = 0;
             for (size_t NumberPart = 0;; ++NumberPart) {
                 if (!NumberCarry && NumberPart >= NumberList.size() && NumberPart >= NumberOther.NumberList.size())
@@ -111,8 +115,8 @@ namespace eLibrary::Core {
 
         Integer doDivision(const Integer &NumberOther) const {
             if (!NumberOther.doCompare(0)) throw ArithmeticException(String(u"Integer::doDivision(const Integer&) Divide By 0"));
-            Integer NumberRemainder, NumberResult(*this);
-            NumberResult.NumberSignature = !(NumberSignature ^ NumberOther.NumberSignature);
+            Integer NumberRemainder;
+            std::vector<uintmax_t> NumberResult(NumberList);
             for (auto NumberPart = (intmax_t) (NumberList.size() - 1); NumberPart >= 0; --NumberPart) {
                 NumberRemainder.NumberList = NumberRemainder.doMultiplication(10000000).doAddition(NumberList[NumberPart]).NumberList;
                 uintmax_t NumberMiddle, NumberStart = 0, NumberStop = 10000000 - 1;
@@ -123,12 +127,12 @@ namespace eLibrary::Core {
                         else NumberStart = NumberMiddle;
                     else NumberStop = NumberMiddle;
                 }
-                NumberResult.NumberList[NumberPart] = NumberMiddle;
-                NumberRemainder = NumberRemainder.doSubtraction(NumberOther.getAbsolute().doMultiplication(NumberResult.NumberList[NumberPart]));
+                NumberResult[NumberPart] = NumberMiddle;
+                NumberRemainder.NumberList = NumberRemainder.doSubtraction(NumberOther.getAbsolute().doMultiplication(NumberResult[NumberPart])).NumberList;
             }
-            while (!NumberResult.NumberList.back() && NumberResult.NumberList.size() > 1)
-                NumberResult.NumberList.pop_back();
-            return NumberResult;
+            while (!NumberResult.back() && NumberResult.size() > 1)
+                NumberResult.pop_back();
+            return {NumberResult, !(NumberSignature ^ NumberOther.NumberSignature)};
         }
 
         Integer doFactorial(const Integer &NumberStep = {1}) const {
@@ -145,7 +149,8 @@ namespace eLibrary::Core {
 
         Integer doModulo(const Integer &NumberOther) const {
             if (!NumberOther.doCompare(0)) throw ArithmeticException(String(u"Integer::doModulo(const Integer&) Modulo By 0"));
-            Integer NumberRemainder, NumberResult(*this);
+            Integer NumberRemainder;
+            std::vector<uintmax_t> NumberResult(NumberList);
             for (auto NumberPart = (intmax_t) (NumberList.size() - 1); NumberPart >= 0; --NumberPart) {
                 NumberRemainder.NumberList = NumberRemainder.doMultiplication(10000000).doAddition(NumberList[NumberPart]).NumberList;
                 uintmax_t NumberMiddle, NumberStart = 0, NumberStop = 10000000 - 1;
@@ -156,8 +161,8 @@ namespace eLibrary::Core {
                         else NumberStart = NumberMiddle;
                     else NumberStop = NumberMiddle;
                 }
-                NumberResult.NumberList[NumberPart] = NumberMiddle;
-                NumberRemainder = NumberRemainder.doSubtraction(NumberOther.getAbsolute().doMultiplication(NumberResult.NumberList[NumberPart]));
+                NumberResult[NumberPart] = NumberMiddle;
+                NumberRemainder.NumberList = NumberRemainder.doSubtraction(NumberOther.getAbsolute().doMultiplication(NumberResult[NumberPart])).NumberList;
             }
             NumberRemainder.NumberSignature = NumberSignature;
             return NumberRemainder;
@@ -165,11 +170,12 @@ namespace eLibrary::Core {
 
         Integer doMultiplication(const Integer &NumberOther) const {
             auto *NumberProduct = MemoryAllocator::newArray<uintmax_t>(NumberList.size() + NumberOther.NumberList.size());
-            memset(NumberProduct, 0, sizeof(uintmax_t) * (NumberList.size() + NumberOther.NumberList.size()));
+            ::memset(NumberProduct, 0, sizeof(uintmax_t) * (NumberList.size() + NumberOther.NumberList.size()));
             for (size_t NumberDigit1 = 0; NumberDigit1 < NumberList.size(); ++NumberDigit1)
                 for (size_t NumberDigit2 = 0; NumberDigit2 < NumberOther.NumberList.size(); ++NumberDigit2)
                     NumberProduct[NumberDigit1 + NumberDigit2] += NumberList[NumberDigit1] * NumberOther.NumberList[NumberDigit2];
             std::vector<uintmax_t> NumberResult;
+            NumberResult.reserve(NumberList.size() + NumberOther.NumberList.size());
             uintmax_t NumberCarry = 0;
             for (uintmax_t NumberPart = 0;; ++NumberPart) {
                 if (!NumberCarry && NumberPart >= NumberList.size() + NumberOther.NumberList.size()) break;
@@ -183,7 +189,7 @@ namespace eLibrary::Core {
         }
 
         Integer doPower(const Integer &NumberExponentSource) const {
-            if (!doCompare(0) && !NumberExponentSource.doCompare(0)) throw ArithmeticException({u"Integer::doPower(const Integer&, const Integer&) 0⁰"});
+            if (!doCompare(0) && !NumberExponentSource.doCompare(0)) throw ArithmeticException({u"Integer::doPower(const Integer&, const Integer&) 0 to the power of 0"});
             if (NumberExponentSource.isNegative()) throw ArithmeticException(String(u"Integer::doPower(const Integer&) NumberExponentSource"));
             Integer NumberBase(*this), NumberExponent(NumberExponentSource), NumberResult(1);
             while (NumberExponent.doCompare(0)) {
@@ -195,7 +201,7 @@ namespace eLibrary::Core {
         }
 
         Integer doPower(const Integer &NumberExponentSource, const Integer &NumberModulo) const {
-            if (!doCompare(0) && !NumberExponentSource.doCompare(0)) throw ArithmeticException({u"Integer::doPower(const Integer&, const Integer&) 0⁰"});
+            if (!doCompare(0) && !NumberExponentSource.doCompare(0)) throw ArithmeticException({u"Integer::doPower(const Integer&, const Integer&) 0 to the power of 0"});
             if (NumberExponentSource.isNegative()) throw ArithmeticException(String(u"Integer::doPower(const Integer&, const Integer&) NumberExponentSource"));
             Integer NumberBase(*this), NumberExponent(NumberExponentSource), NumberResult(1);
             while (NumberExponent.doCompare(0)) {
@@ -210,6 +216,7 @@ namespace eLibrary::Core {
             if (NumberOther.isNegative()) return doAddition(NumberOther.getAbsolute());
             if (doCompare(NumberOther) < 0) return NumberOther.doSubtraction(*this).getOpposite();
             std::vector<uintmax_t> NumberResult;
+            NumberResult.reserve(Objects::getMaximum(NumberList.size(), NumberOther.NumberList.size()));
             bool NumberBorrow = false;
             for (uintmax_t NumberPart = 0;; ++NumberPart) {
                 if (!NumberBorrow && NumberPart >= NumberList.size() && NumberPart >= NumberOther.NumberList.size())

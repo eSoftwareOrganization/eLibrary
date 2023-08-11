@@ -14,27 +14,19 @@ Project Code Style and Conventions:
 Project Credits:
 
 This repository draws from some preexisting work. Credits to their authors.
-+ [audioop(Python)](https://docs.python.org/3/library/audioop.html)
-
-This project implements the audio processing api
-
-+ [pillow(Python)](https://github.com/python-pillow/Pillow)
-
-This project implements the image processing api
-
 + [pydub(Python)](https://github.com/jiaaro/pydub)
 
-This project implements the audio processing api
+Multimedia::AudioSegment
 
 + [sympy(Python)](https://github.com/sympy/sympy)
 
-This project implements the Baillie-PSW Primality Test Algorithm
+Mathematics::isPrime
 + [\<Unnamed>](https://blog.csdn.net/code4101/article/details/38705155)
 
-This project implements the large integer structure
+Core::Integer
 + [\<Unnamed>](https://www.cnblogs.com/CocoonFan/p/3164221.html)
 
-This project implements parts of the mathematical algorithms
+Core::Mathematics
 
 Project Dependencies:
 + [doctest](https://github.com/doctest/doctest)
@@ -47,6 +39,40 @@ Project Dependencies:
 Project Repository: [GitHub](https://github.com/eSoftwareOrganization/eLibrary)
 
 Project Update Log:
+> eLibrary V2023.11
+- Core::Array Constructor<Es...>(Es...) / begin / doAllocate / end / setElement(New) Constructor(intmax_t)(Remove)
+- Core::ArrayList addElement / doReverse / removeIndex(Arrays::doMove Implementation) Constructor(Array<E>)(New) Constructor<size_t>(std::array) / toSTLArray(Remove)
+- Core::ArraySet addElement / removeElement(Arrays::doMove Implementation)
+- Core::Arrays / doCopy / doCopyBackward / doCopyReverse / doMove / doMoveBackward / doMoveReverse(New)
+- Core::Collection / isEmpty(New)
+- Core::DoubleLinkedIterator(New)
+- Core::DoubleLinkedList toArrayList(Remove)
+- Core::IndexException(New)
+- Core::List(New)
+- Core::Map / isContainsKey / isContainsValue(New)
+- Core::Mathematics doCeil2(getNearestPower2Upper) doFloor2(getNearestPower2Lower)
+- Core::NtModule(Remove)
+- Core::NtProcess doCreate(Remove)
+- Core::Objects doCall / doForward / doMatchExecute / doMatchValue / doMove / doSwap(New)
+- Core::Queue(New)
+- Core::Set(New)
+- Core::SingleLinkedIterator(New)
+- Core::SingleLinkedList begin / end(New)
+- Core::SingleLinkedQueue / addBack / addFront / doAssign / doClear / getBack / getFront / isEmpty / removeBack / removeFront / toString(New)
+- Core::SingleLinkedSet begin / end(New)
+- Core::Stack(New)
+- Core::TypeException(New)
+- Core::WindowsException(New)
+- IO::Buffer doDiscardMark / doMark / doReset / getBufferMark(Remove)
+- IO::ByteBuffer doCompact / doCompare(New)
+- IO::FileDescriptor doOpen(Remove)
+- IO::FileInputStream Constructor(const String&)(Remove) doOpen<Os...>(const String&, Os...)(doOpen(const String&)) doSeek(long, int)(doSeek(off64_t, int))
+- IO::FileOption(New)
+- IO::FileOutputStream Constructor(const String&, bool=false)(Remove) doFlush(...) doOpen<Os...>(const String&, Os...)(doOpen(const String&, bool)) doSeek(long, int)(doSeek(off64_t, int)) doTruncate(Remove)
+- IO::Library / doOpen / getSymbol(New)
+- IO::OutputStream doWrite(uint8_t)(doWrite(int))
+- Network::NetworkAddress Constructor(Array<uint8_t>)(New) Constructor(std::array<uint8_t, 4>) / Constructor(std::array<uint8_t, 16>) / Constructor(std::initializer_list<uint8_t>)(Remove) isLoopbackAddress(...)
+- Network::NetworkSSLDescriptor doRead(void*, int)(doRead(void*, uint8_t)) doWrite(void*, int)(doWrite(void*, uint8_t))
 > eLibrary V2023.10
 - Core::Any / doAssign / doReset / getValue / getValueType / hasValue(New)
 - Core::Arithmetic(New)

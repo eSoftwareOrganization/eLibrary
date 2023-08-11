@@ -50,7 +50,7 @@ namespace eLibrary::IO {
         }
 
         bool isAvailable() const noexcept {
-            return DescriptorHandle;
+            return DescriptorHandle != nullptr;
         }
 
         explicit operator archive*() const noexcept {
@@ -89,7 +89,7 @@ namespace eLibrary::IO {
 
         uint32_t doRead(uint8_t *StreamBuffer, uint32_t StreamBufferOffset, uint32_t StreamBufferSize) override {
             if (!isAvailable()) throw IOException(String(u"ArchiveInputStream::doRead(uint8_t, uint32_t, uint32_t) isAvailable"));
-            return ::archive_read_data((archive*) StreamDescriptor, StreamBuffer + StreamBufferOffset, StreamBufferSize);
+            return (uint32_t) ::archive_read_data((archive*) StreamDescriptor, StreamBuffer + StreamBufferOffset, StreamBufferSize);
         }
 
         archive_entry *doReadNextHeader() const {
@@ -152,7 +152,7 @@ namespace eLibrary::IO {
         }
 
         bool isAvailable() const noexcept {
-            return EntryHandle;
+            return EntryHandle != nullptr;
         }
     };
 }

@@ -443,7 +443,7 @@ namespace eLibrary::Multimedia {
         }
 
         void setSourceBuffer(const MediaBuffer &SourceBufferSource) const noexcept {
-            alSourcei(SourceIndex, AL_BUFFER, SourceBufferSource.BufferIndex);
+            alSourcei(SourceIndex, AL_BUFFER, (ALint) SourceBufferSource.BufferIndex);
         }
 
         void setSourceDirection(float DirectionX, float DirectionY, float DirectionZ) const noexcept {

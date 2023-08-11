@@ -15,9 +15,7 @@ namespace eLibrary::Core {
     private:
         char16_t CharacterValue;
     public:
-        constexpr Character() noexcept : CharacterValue(char16_t()) {}
-
-        constexpr Character(char16_t CharacterSource) noexcept : CharacterValue(CharacterSource) {}
+        constexpr Character(char16_t CharacterSource=char16_t()) noexcept : CharacterValue(CharacterSource) {}
 
         intmax_t doCompare(const Character &CharacterSource) const noexcept {
             return CharacterValue - CharacterSource.CharacterValue;
@@ -72,13 +70,13 @@ namespace eLibrary::Core {
 
         explicit String(const Character&);
 
-        String(const std::string&);
+        eLibraryAPI String(const std::string&);
 
-        String(const std::u16string&);
+        eLibraryAPI String(const std::u16string&);
 
-        String(const std::u32string&);
+        eLibraryAPI String(const std::u32string&);
 
-        String(const std::wstring&);
+        eLibraryAPI String(const std::wstring&);
 
         ~String() noexcept {
             if (CharacterContainer && CharacterSize) {
@@ -88,7 +86,7 @@ namespace eLibrary::Core {
             }
         }
 
-        void doAssign(const String&);
+        eLibraryAPI void doAssign(const String&);
 
         intmax_t doCompare(const String &StringOther) const noexcept {
             if (CharacterSize != StringOther.CharacterSize) return CharacterSize - StringOther.CharacterSize;
@@ -98,9 +96,9 @@ namespace eLibrary::Core {
             return 0;
         }
 
-        String doConcat(const Character &CharacterSource) const noexcept;
+        eLibraryAPI String doConcat(const Character &CharacterSource) const noexcept;
 
-        String doConcat(const String &StringOther) const noexcept;
+        eLibraryAPI String doConcat(const String &StringOther) const noexcept;
 
         intmax_t doFind(const Character &CharacterSource) const noexcept {
             for (intmax_t CharacterIndex = 0;CharacterIndex < CharacterSize;++CharacterIndex)
@@ -117,17 +115,17 @@ namespace eLibrary::Core {
             return -1;
         }
 
-        String doReplace(const String &StringTarget, const String &StringSource) const noexcept;
+        eLibraryAPI String doReplace(const String &StringTarget, const String &StringSource) const noexcept;
 
-        String doReverse() const noexcept;
+        eLibraryAPI String doReverse() const noexcept;
 
-        String doStrip(const Character &CharacterSource) const noexcept;
+        eLibraryAPI String doStrip(const Character &CharacterSource) const noexcept;
 
-        String doStrip(const String &StringTarget) noexcept;
+        eLibraryAPI String doStrip(const String &StringTarget) noexcept;
 
-        String doTruncate(intmax_t CharacterStart, intmax_t CharacterStop) const;
+        eLibraryAPI String doTruncate(intmax_t CharacterStart, intmax_t CharacterStop) const;
 
-        Character getCharacter(intmax_t CharacterIndex) const;
+        eLibraryAPI Character getCharacter(intmax_t CharacterIndex) const;
 
         intmax_t getCharacterSize() const noexcept {
             return CharacterSize;
@@ -171,44 +169,25 @@ namespace eLibrary::Core {
             return true;
         }
 
-        String toLowerCase() const noexcept;
+        eLibraryAPI String toLowerCase() const noexcept;
 
-        String toUpperCase() const noexcept;
+        eLibraryAPI String toUpperCase() const noexcept;
 
         String toString() const noexcept override {
             return *this;
         }
 
-        std::string toU8String() const noexcept {
-            static std::wstring_convert<std::codecvt_utf8_utf16<char16_t>, char16_t> StringConverter;
-            char16_t CharacterBuffer[CharacterSize + 1];
-            for (intmax_t CharacterIndex = 0;CharacterIndex < CharacterSize;++CharacterIndex)
-                CharacterBuffer[CharacterIndex] = (char16_t) CharacterContainer[CharacterIndex];
-            CharacterBuffer[CharacterSize] = char();
-            return StringConverter.to_bytes(CharacterBuffer, CharacterBuffer + CharacterSize);
-        }
+        eLibraryAPI std::string toU8String() const noexcept;
 
-        std::u16string toU16String() const noexcept {
-            char16_t CharacterBuffer[CharacterSize + 1];
-            for (intmax_t CharacterIndex = 0;CharacterIndex < CharacterSize;++CharacterIndex)
-                CharacterBuffer[CharacterIndex] = (char16_t) CharacterContainer[CharacterIndex];
-            CharacterBuffer[CharacterSize] = char16_t();
-            return {CharacterBuffer, (size_t) CharacterSize};
-        }
+        eLibraryAPI std::u16string toU16String() const noexcept;
 
         std::u32string toU32String() const noexcept {
             static std::wstring_convert<std::codecvt_utf16<char32_t>, char32_t> StringConverter;
             std::u16string StringSource(toU16String());
-            return StringConverter.from_bytes((const char*) StringSource.begin().base(), (const char*) StringSource.end().base());
+            return StringConverter.from_bytes((const char*) &*StringSource.begin(), (const char*) &*StringSource.end());
         }
 
-        std::wstring toWString() const noexcept {
-            wchar_t CharacterBuffer[CharacterSize + 1];
-            for (intmax_t CharacterIndex = 0;CharacterIndex < CharacterSize;++CharacterIndex)
-                CharacterBuffer[CharacterIndex] = (wchar_t) (char16_t) CharacterContainer[CharacterIndex];
-            CharacterBuffer[CharacterSize] = wchar_t();
-            return {CharacterBuffer, (size_t) CharacterSize};
-        }
+        eLibraryAPI std::wstring toWString() const noexcept;
 
         template<Arithmetic T>
         static String valueOf(T ObjectSource) noexcept {
@@ -235,12 +214,9 @@ namespace eLibrary::Core {
             doClear();
         }
 
-        void addCharacter(const Character&);
+        eLibraryAPI void addCharacter(const Character&);
 
-        void addString(const String &StringSource) noexcept {
-            for (intmax_t CharacterIndex = 0;CharacterIndex < StringSource.CharacterSize;++CharacterIndex)
-                addCharacter(StringSource.CharacterContainer[CharacterIndex]);
-        }
+        eLibraryAPI void addString(const String &StringSource);
 
         void doClear() noexcept {
             CharacterCapacity = 0;
@@ -249,12 +225,6 @@ namespace eLibrary::Core {
             CharacterContainer = nullptr;
         }
 
-        String toString() const noexcept override {
-            char16_t CharacterBuffer[CharacterSize + 1];
-            for (intmax_t CharacterIndex = 0;CharacterIndex < CharacterSize;++CharacterIndex)
-                CharacterBuffer[CharacterIndex] = (char16_t) CharacterContainer[CharacterIndex];
-            CharacterBuffer[CharacterSize] = char16_t();
-            return {{CharacterBuffer, (size_t) CharacterSize}};
-        }
+        eLibraryAPI String toString() const noexcept override;
     };
 }

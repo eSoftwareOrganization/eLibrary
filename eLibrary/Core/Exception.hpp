@@ -31,6 +31,8 @@ namespace eLibrary::Core {
             ExceptionDetail = ObjectStream.str();
         }
 
+        Exception(const Exception&) noexcept = default;
+
         String toString() const noexcept override {
             return {ExceptionDetail};
         }
@@ -45,6 +47,11 @@ namespace eLibrary::Core {
         explicit ArithmeticException(const String &ExceptionMessage) noexcept : Exception(ExceptionMessage) {};
     };
 
+    class IndexException final : public Exception {
+    public:
+        explicit IndexException(const String &ExceptionMessage) noexcept : Exception(ExceptionMessage) {};
+    };
+
     class InterruptedException final : public Exception {
     public:
         explicit InterruptedException(const String &ExceptionMessage) noexcept : Exception(ExceptionMessage) {}
@@ -53,5 +60,10 @@ namespace eLibrary::Core {
     class RuntimeException final : public Exception {
     public:
         explicit RuntimeException(const String &ExceptionMessage) noexcept : Exception(ExceptionMessage) {}
+    };
+
+    class TypeException final : public Exception {
+    public:
+        explicit TypeException(const String &ExceptionMessage) noexcept : Exception(ExceptionMessage) {}
     };
 }

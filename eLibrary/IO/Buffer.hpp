@@ -9,36 +9,19 @@ namespace eLibrary::IO {
     protected:
         uintmax_t BufferCapacity;
         uintmax_t BufferLimit;
-        intmax_t BufferMark;
         mutable uintmax_t BufferPosition;
     public:
         void doClear() noexcept {
             BufferLimit = BufferCapacity;
-            BufferMark = -1;
             BufferPosition = 0;
-        }
-
-        void doDiscardMark() noexcept {
-            BufferMark = -1;
         }
 
         void doFlip() noexcept {
             BufferLimit = BufferPosition;
-            BufferMark = -1;
             BufferPosition = 0;
         }
 
-        void doMark() noexcept {
-            BufferMark = BufferPosition;
-        }
-
-        void doReset() {
-            if (BufferMark < 0) throw IOException(String(u"Buffer::doReset() BufferMark"));
-            BufferPosition = BufferMark;
-        }
-
         void doRewind() {
-            BufferMark = -1;
             BufferPosition = 0;
         }
 
@@ -48,10 +31,6 @@ namespace eLibrary::IO {
 
         uintmax_t getBufferLimit() const noexcept {
             return BufferLimit;
-        }
-
-        intmax_t getBufferMark() const noexcept {
-            return BufferMark;
         }
 
         uintmax_t getBufferPosition() const noexcept {
@@ -81,12 +60,33 @@ namespace eLibrary::IO {
 
     class ByteBuffer : public Buffer {
     protected:
-        ByteBuffer(uint8_t*, uintmax_t) {}
-
         uint8_t *BufferContainer;
+
+        ByteBuffer(uint8_t *BufferContainerSource, uintmax_t BufferCapacitySource) noexcept : BufferContainer(BufferContainerSource) {
+            BufferCapacity = BufferCapacitySource;
+        }
     public:
+        ~ByteBuffer() noexcept {
+            BufferCapacity = 0;
+            BufferLimit = 0;
+            BufferPosition = 0;
+            delete[] BufferContainer;
+            BufferContainer = nullptr;
+        }
+
         static ByteBuffer doAllocate(uintmax_t BufferCapacitySource) {
-            return {new uint8_t[BufferCapacitySource], BufferCapacitySource};
+            return {MemoryAllocator::newArray<uint8_t>(BufferCapacitySource), BufferCapacitySource};
+        }
+
+        void doCompact() noexcept {
+            ::memmove(BufferContainer, BufferContainer + BufferPosition, sizeof(uint8_t) * (BufferLimit - BufferPosition));
+            BufferPosition = BufferLimit - BufferPosition;
+            BufferLimit = BufferCapacity;
+        }
+
+        intmax_t doCompare(const ByteBuffer &BufferSource) {
+            if (BufferCapacity != BufferSource.BufferCapacity) return (intmax_t) BufferCapacity - BufferSource.BufferCapacity;
+            return ::memcmp(BufferContainer, BufferSource.BufferContainer, sizeof(uint8_t) * BufferCapacity);
         }
 
         uint8_t getValue() const {

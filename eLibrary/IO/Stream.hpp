@@ -35,7 +35,7 @@ namespace eLibrary::IO {
 
         virtual void doFlush() {}
 
-        virtual void doWrite(int) = 0;
+        virtual void doWrite(uint8_t) = 0;
 
         virtual void doWrite(uint8_t *StreamBuffer, uint32_t StreamOffset, uint32_t StreamSize) {
             if (!isAvailable()) throw IOException(String(u"OutputStream::doWrite(uint8_t*, uint32_t, uint32_t) isAvailable"));

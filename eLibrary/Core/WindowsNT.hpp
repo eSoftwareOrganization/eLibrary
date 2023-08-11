@@ -4,9 +4,8 @@
 
 #include <Core/Exception.hpp>
 
-#include <libloaderapi.h>
+#include <Windows.h>
 #include <map>
-#include <ntstatus.h>
 #include <set>
 #include <shlwapi.h>
 #include <string>
@@ -14,62 +13,34 @@
 #include <winternl.h>
 
 extern "C" {
-NTAPI NTSTATUS NtCreateKey(OUT HANDLE *KeyHandle, IN ACCESS_MASK DesiredAccess, IN OBJECT_ATTRIBUTES *ObjectAttributes, unsigned long TitleIndex, IN OPTIONAL UNICODE_STRING *Class, IN unsigned long CreateOptions, OUT OPTIONAL unsigned long *Disposition);
-NTAPI NTSTATUS NtCreateProcess(OUT HANDLE *ProcessHandle, IN ACCESS_MASK DesiredAccess, IN OBJECT_ATTRIBUTES *ObjectAttributes, IN HANDLE InheritFromProcessHandle, IN BOOLEAN InheritHandles, IN HANDLE OPTIONAL SectionHandle, IN OPTIONAL HANDLE DebugPort, IN OPTIONAL HANDLE ExceptionPort);
-NTAPI NTSTATUS NtLoadDriver(IN UNICODE_STRING *DriverServiceName);
-NTAPI NTSTATUS NtOpenProcess(OUT HANDLE *ProcessHandle, IN ACCESS_MASK DesiredAccess, IN OBJECT_ATTRIBUTES *ObjectAttributes, IN CLIENT_ID *ClientId);
-NTAPI NTSTATUS NtReadFile(IN HANDLE FileHandle, IN OPTIONAL HANDLE Event, IN OPTIONAL PIO_APC_ROUTINE ApcRoutine, IN OPTIONAL void *ApcContext, OUT IO_STATUS_BLOCK *IoStatusBlock, OUT void *Buffer, IN unsigned long Length, IN OPTIONAL LARGE_INTEGER *ByteOffset, IN OPTIONAL unsigned long *Key);
-NTAPI NTSTATUS NtResumeProcess(IN HANDLE Process);
-NTAPI NTSTATUS NtSetValueKey(IN HANDLE KeyHandle, IN UNICODE_STRING *ValueName, IN OPTIONAL unsigned long TitleIndex, IN unsigned long Type, IN OPTIONAL void *Data, IN unsigned long DataSize);
-NTAPI NTSTATUS NtSuspendProcess(IN HANDLE Process);
-NTAPI NTSTATUS NtTerminateProcess(IN OPTIONAL HANDLE ProcessHandle, IN NTSTATUS ExitStatus);
-NTAPI NTSTATUS NtUnloadDriver(IN UNICODE_STRING *DriverServiceName);
-NTAPI NTSTATUS NtWriteFile(IN HANDLE FileHandle, IN OPTIONAL HANDLE Event, IN OPTIONAL PIO_APC_ROUTINE ApcRoutine, IN OPTIONAL void *ApcContext, OUT IO_STATUS_BLOCK *IoStatusBlock, IN void *Buffer, IN unsigned long Length, IN OPTIONAL LARGE_INTEGER *ByteOffset, IN OPTIONAL unsigned long *Key);
-NTAPI NTSTATUS RtlAdjustPrivilege(IN unsigned long Privilege, IN BOOLEAN Enable, IN BOOLEAN CurrentThread, OUT OPTIONAL BOOLEAN *Enabled);
+NTAPI NTSYSAPI NTSTATUS NtCreateKey(OUT HANDLE *KeyHandle, IN ACCESS_MASK DesiredAccess, IN OBJECT_ATTRIBUTES *ObjectAttributes, unsigned long TitleIndex, IN OPTIONAL UNICODE_STRING *Class, IN unsigned long CreateOptions, OUT OPTIONAL unsigned long *Disposition);
+NTAPI NTSYSAPI NTSTATUS NtLoadDriver(IN UNICODE_STRING *DriverServiceName);
+NTAPI NTSYSAPI NTSTATUS NtOpenProcess(OUT HANDLE *ProcessHandle, IN ACCESS_MASK DesiredAccess, IN OBJECT_ATTRIBUTES *ObjectAttributes, IN CLIENT_ID *ClientId);
+NTAPI NTSYSAPI NTSTATUS NtReadFile(IN HANDLE FileHandle, IN OPTIONAL HANDLE Event, IN OPTIONAL PIO_APC_ROUTINE ApcRoutine, IN OPTIONAL void *ApcContext, OUT IO_STATUS_BLOCK *IoStatusBlock, OUT void *Buffer, IN unsigned long Length, IN OPTIONAL LARGE_INTEGER *ByteOffset, IN OPTIONAL unsigned long *Key);
+NTAPI NTSYSAPI NTSTATUS NtResumeProcess(IN HANDLE Process);
+NTAPI NTSYSAPI NTSTATUS NtSetValueKey(IN HANDLE KeyHandle, IN UNICODE_STRING *ValueName, IN OPTIONAL unsigned long TitleIndex, IN unsigned long Type, IN OPTIONAL void *Data, IN unsigned long DataSize);
+NTAPI NTSYSAPI NTSTATUS NtSuspendProcess(IN HANDLE Process);
+NTAPI NTSYSAPI NTSTATUS NtTerminateProcess(IN OPTIONAL HANDLE ProcessHandle, IN NTSTATUS ExitStatus);
+NTAPI NTSYSAPI NTSTATUS NtUnloadDriver(IN UNICODE_STRING *DriverServiceName);
+NTAPI NTSYSAPI NTSTATUS NtWriteFile(IN HANDLE FileHandle, IN OPTIONAL HANDLE Event, IN OPTIONAL PIO_APC_ROUTINE ApcRoutine, IN OPTIONAL void *ApcContext, OUT IO_STATUS_BLOCK *IoStatusBlock, IN void *Buffer, IN unsigned long Length, IN OPTIONAL LARGE_INTEGER *ByteOffset, IN OPTIONAL unsigned long *Key);
+NTAPI NTSYSAPI NTSTATUS RtlAdjustPrivilege(IN unsigned long Privilege, IN BOOLEAN Enable, IN BOOLEAN CurrentThread, OUT OPTIONAL BOOLEAN *Enabled);
 }
 
 namespace eLibrary::Core {
     #define SeLoadDriverPrivilege 0xa
 
-    class NtModule final : public Object {
-    private:
-        mutable std::map<String, FARPROC> ModuleFunctionMapping;
-        HMODULE ModuleHandle;
-
-        NtModule(HMODULE ModuleHandleSource) : ModuleHandle(ModuleHandleSource) {}
-
-        doDisableCopyAssignConstruct(NtModule);
+    class WindowsException final : public Exception {
     public:
-        ~NtModule() noexcept {
-            if (ModuleHandle) {
-                FreeLibrary(ModuleHandle);
-                ModuleHandle = nullptr;
-            }
-        }
-
-        static NtModule doLoad(const String &ModulePath) {
-            HMODULE ModuleHandle = LoadLibraryW(ModulePath.toWString().c_str());
-            if (!ModuleHandle) throw Exception(String(u"MtModule::doLoad(const String&)"));
-            return NtModule(ModuleHandle);
-        }
-
-        FARPROC getFunction(const String &FunctionName) const {
-            if (ModuleFunctionMapping.contains(FunctionName)) return ModuleFunctionMapping[FunctionName];
-            FARPROC FunctionObject = GetProcAddress(ModuleHandle, FunctionName.toU8String().c_str());
-            if (!FunctionObject) throw Exception(String(u"NtModule::getFunction() GetProcAddress"));
-            return ModuleFunctionMapping[FunctionName] = FunctionObject;
-        }
+        explicit WindowsException(const String &ExceptionMessage) noexcept : Exception(ExceptionMessage) {}
     };
 
     class NtFile final : public Object {
     private:
         HANDLE FileHandle;
 
-        NtFile(HANDLE FileHandleSource) : FileHandle(FileHandleSource) {
-            if (!FileHandleSource) throw Exception(String(u"NtFile::NtFile(HANDLE) FileHandleSource"));
-        }
+        constexpr NtFile(HANDLE FileHandleSource) noexcept : FileHandle(FileHandleSource) {}
 
-        doDisableCopyAssignConstruct(NtFile);
+        doDisableCopyAssignConstruct(NtFile)
     public:
         enum class NtFileAccess {
             AccessAll = FILE_ALL_ACCESS,
@@ -134,8 +105,8 @@ namespace eLibrary::Core {
             RtlInitUnicodeString(&FilePathString, FilePath.toWString().c_str());
             InitializeObjectAttributes(&FileObjectAttribute, &FilePathString, FilePathCaseSenstive ? 0 : OBJ_CASE_INSENSITIVE, nullptr, nullptr)
             if (!NT_SUCCESS(NtCreateFile(&FileHandle, (ACCESS_MASK) FileAccess, &FileObjectAttribute, &FileStatusBlock, nullptr, (ULONG) FileAttribute, (ULONG) FileShare, (ULONG) FileDisposition, (ULONG) FileOption, nullptr, 0)))
-                throw Exception(String(u"NtFile::doCreate(const String&, bool, const NtFileAccess&, const NtFileAttribute&, const NtFileDisposition&, const NtFileOption&, const NtFileShare&) NtCreateFile"));
-            return NtFile(FileHandle);
+                throw WindowsException(String(u"NtFile::doCreate(const String&, bool, const NtFileAccess&, const NtFileAttribute&, const NtFileDisposition&, const NtFileOption&, const NtFileShare&) NtCreateFile"));
+            return {FileHandle};
         }
 
         static NtFile doOpen(const String &FilePath, bool FilePathCaseSenstive, const NtFileAccess &FileAccess, const NtFileOption &FileOption, const NtFileShare &FileShare) {
@@ -146,20 +117,20 @@ namespace eLibrary::Core {
             RtlInitUnicodeString(&FilePathString, FilePath.toWString().c_str());
             InitializeObjectAttributes(&FileObjectAttribute, &FilePathString, FilePathCaseSenstive ? 0 : OBJ_CASE_INSENSITIVE, nullptr, nullptr)
             if (!NT_SUCCESS(NtOpenFile(&FileHandle, (ACCESS_MASK) FileAccess, &FileObjectAttribute, &FileStatusBlock, (ULONG) FileShare, (ULONG) FileOption)))
-                throw Exception(String(u"NtFile::doOpen(const String&, bool, const NtFileAccess&, const NtFileOption&, const NtFileShare&) NtOpenFile"));
-            return NtFile(FileHandle);
+                throw WindowsException(String(u"NtFile::doOpen(const String&, bool, const NtFileAccess&, const NtFileOption&, const NtFileShare&) NtOpenFile"));
+            return {FileHandle};
         }
 
         void doRead(void *FileBuffer, unsigned long FileBufferSize) const {
             IO_STATUS_BLOCK FileStatusBlock;
             if (!NT_SUCCESS(NtReadFile(FileHandle, nullptr, nullptr, nullptr, &FileStatusBlock, FileBuffer, FileBufferSize, nullptr, nullptr)))
-                throw Exception(String(u"NtFile::doRead(void*, unsigned long) NtReadFile"));
+                throw WindowsException(String(u"NtFile::doRead(void*, unsigned long) NtReadFile"));
         }
 
         void doWrite(void *FileBuffer, unsigned long FileBufferSize) const {
             IO_STATUS_BLOCK FileStatusBlock;
             if (!NT_SUCCESS(NtWriteFile(FileHandle, nullptr, nullptr, nullptr, &FileStatusBlock, FileBuffer, FileBufferSize, nullptr, nullptr)))
-                throw Exception(String(u"NtFile::doWrite(void*, unsigned long) NtWriteFile"));
+                throw WindowsException(String(u"NtFile::doWrite(void*, unsigned long) NtWriteFile"));
         }
     };
 
@@ -168,10 +139,10 @@ namespace eLibrary::Core {
         HANDLE ProcessHandle;
 
         NtProcess(HANDLE ProcessHandleSource) : ProcessHandle(ProcessHandleSource) {
-            if (!ProcessHandleSource) throw Exception(String(u"NtProcess::NtProcess(HANDLE) ProcessHandleSource"));
+            if (!ProcessHandleSource) throw WindowsException(String(u"NtProcess::NtProcess(HANDLE) ProcessHandleSource"));
         }
 
-        doDisableCopyAssignConstruct(NtProcess);
+        doDisableCopyAssignConstruct(NtProcess)
     public:
         ~NtProcess() noexcept {
             if (ProcessHandle) {
@@ -180,33 +151,25 @@ namespace eLibrary::Core {
             }
         }
 
-        static NtProcess doCreate(HANDLE ProcessInheritHandle, BOOLEAN ProcessInheritHandleStatus, HANDLE ProcessSectionHandle, HANDLE ProcessDebugPortHandle, HANDLE ProcessExceptionPortHandle) {
-            HANDLE ProcessHandle;
-            OBJECT_ATTRIBUTES ProcessObjectAttribute;
-            InitializeObjectAttributes(&ProcessObjectAttribute, nullptr, 0, nullptr, nullptr)
-            if (!NT_SUCCESS(NtCreateProcess(&ProcessHandle, PROCESS_ALL_ACCESS, &ProcessObjectAttribute, ProcessInheritHandle, ProcessInheritHandleStatus, ProcessSectionHandle, ProcessDebugPortHandle, ProcessExceptionPortHandle))) throw Exception(String(u"NtProcess::doCreate(HANDLE, BOOLEAN, HANDLE, HANDLE, HANDLE) NtCreateProcess"));
-            return NtProcess(ProcessHandle);
-        }
-
         static NtProcess doOpen(DWORD ProcessID) {
             CLIENT_ID ProcessClientID{ULongToHandle(ProcessID), nullptr};
             HANDLE ProcessHandle;
             OBJECT_ATTRIBUTES ProcessObjectAttribute;
             InitializeObjectAttributes(&ProcessObjectAttribute, nullptr, 0, nullptr, nullptr)
-            if (!NT_SUCCESS(NtOpenProcess(&ProcessHandle, PROCESS_ALL_ACCESS, &ProcessObjectAttribute, &ProcessClientID))) throw Exception(String(u"NtProcess::doOpen(DWORD) NtOpenProcess"));
-            return NtProcess(ProcessHandle);
+            if (!NT_SUCCESS(NtOpenProcess(&ProcessHandle, PROCESS_ALL_ACCESS, &ProcessObjectAttribute, &ProcessClientID))) throw WindowsException(String(u"NtProcess::doOpen(DWORD) NtOpenProcess"));
+            return {ProcessHandle};
         }
 
         void doResume() {
-            if (!NT_SUCCESS(NtResumeProcess(ProcessHandle))) throw Exception(String(u"NtProcess::doResume() NtResumeProcess"));
+            if (!NT_SUCCESS(NtResumeProcess(ProcessHandle))) throw WindowsException(String(u"NtProcess::doResume() NtResumeProcess"));
         }
 
         void doSuspend() {
-            if (!NT_SUCCESS(NtSuspendProcess(ProcessHandle))) throw Exception(String(u"NtProcess::doSuspend() NtSuspendProcess"));
+            if (!NT_SUCCESS(NtSuspendProcess(ProcessHandle))) throw WindowsException(String(u"NtProcess::doSuspend() NtSuspendProcess"));
         }
 
         void doTerminate(NTSTATUS ProcessStatus) const {
-            if (!NT_SUCCESS(NtTerminateProcess(ProcessHandle, ProcessStatus))) throw Exception(String(u"NtProcess::doTerminate(NTSTATUS) NtTerminateProcess"));
+            if (!NT_SUCCESS(NtTerminateProcess(ProcessHandle, ProcessStatus))) throw WindowsException(String(u"NtProcess::doTerminate(NTSTATUS) NtTerminateProcess"));
         }
     };
 
@@ -215,13 +178,13 @@ namespace eLibrary::Core {
         uintmax_t BufferSize;
         uint8_t *BufferContainer;
 
-        doDisableCopyAssignConstruct(NtSecurityBuffer);
+        doDisableCopyAssignConstruct(NtSecurityBuffer)
     public:
         NtSecurityBuffer(uintmax_t BufferSizeSource) : BufferSize(BufferSizeSource) {
             BufferContainer = (uint8_t*) VirtualAlloc(0, BufferSize, MEM_COMMIT | MEM_RESERVE, PAGE_READWRITE);
             if (!VirtualLock(BufferContainer, BufferSize)) {
                 VirtualFree(BufferContainer, 0, MEM_RELEASE);
-                throw Exception(String(u"NtSecurityBuffer::NtSecurityBuffer(uintmax_t) VirtualLock"));
+                throw WindowsException(String(u"NtSecurityBuffer::NtSecurityBuffer(uintmax_t) VirtualLock"));
             }
         }
 
@@ -273,12 +236,14 @@ namespace eLibrary::Core {
         NtServiceType ServiceType;
         std::set<String> ServiceDependencySet;
 
-        doDisableCopyAssignConstruct(NtService);
-    public:
+        doDisableCopyAssignConstruct(NtService)
+
         NtService(SC_HANDLE ServiceHandleSource, const String &ServiceNameSource, const String &ServicePathSource, const NtServiceErrorControl &ServiceErrorControlSource, const NtServiceStartType &ServiceStartTypeSource, const NtServiceType &ServiceTypeSource) : ServiceHandle(ServiceHandleSource), ServiceName(ServiceNameSource), ServicePath(ServicePathSource), ServiceErrorControl(ServiceErrorControlSource), ServiceStartType(ServiceStartTypeSource), ServiceType(ServiceTypeSource) {
-            if (!ServiceHandleSource) throw Exception(String(u"NtService::NtService(SC_HANDLE, const String&, const String&, const String&, const NtServiceErrorControl&, const NtServiceStartType&, const NtServiceType&) ServiceHandleSource"));
+            if (!ServiceHandleSource) throw WindowsException(String(u"NtService::NtService(SC_HANDLE, const String&, const String&, const String&, const NtServiceErrorControl&, const NtServiceStartType&, const NtServiceType&) ServiceHandleSource"));
         }
 
+        friend class NtServiceManager;
+    public:
         ~NtService() noexcept {
             if (ServiceHandle) {
                 CloseServiceHandle(ServiceHandle);
@@ -292,17 +257,17 @@ namespace eLibrary::Core {
 
         void doControl(DWORD ServiceControl) const {
             if (!ControlService(ServiceHandle, ServiceControl, nullptr))
-                throw Exception(String(u"NtService::doControl(DWORD) ControlService"));
+                throw WindowsException(String(u"NtService::doControl(DWORD) ControlService"));
         }
 
         void doDelete() const {
             if (!DeleteService(ServiceHandle))
-                throw Exception(String(u"NtService::doDelete() DeleteService"));
+                throw WindowsException(String(u"NtService::doDelete() DeleteService"));
         }
 
         void doStart(DWORD ServiceArgumentCount, void **ServiceArgumentList) const {
             if (!StartServiceW(ServiceHandle, ServiceArgumentCount, (const wchar_t**) ServiceArgumentList))
-                throw Exception(String(u"NtService::doStart(DWORD, void**) StartServiceW"));
+                throw WindowsException(String(u"NtService::doStart(DWORD, void**) StartServiceW"));
         }
 
         NtServiceErrorControl getServiceErrorControl() const noexcept {
@@ -328,13 +293,13 @@ namespace eLibrary::Core {
         DWORD getServiceState() const {
             SERVICE_STATUS ServiceStatus;
             if (!QueryServiceStatus(ServiceHandle, &ServiceStatus))
-                throw Exception(String(u"NtService::getServiceState() QueryServiceStatus"));
+                throw WindowsException(String(u"NtService::getServiceState() QueryServiceStatus"));
             return ServiceStatus.dwCurrentState;
         }
 
         void removeDependency(const NtService &ServiceDependency) {
             if (!ServiceDependencySet.contains(ServiceDependency.ServiceName))
-                throw Exception(String(u"NtService::removeDependency(const NtService&) ServiceDependency"));
+                throw WindowsException(String(u"NtService::removeDependency(const NtService&) ServiceDependency"));
             ServiceDependencySet.erase(ServiceDependency.ServiceName);
         }
 
@@ -364,7 +329,7 @@ namespace eLibrary::Core {
                 ServiceDependencyStream << ServiceDependency.toWString() << L'\0';
             ServiceDependencyStream << L'\0';
             if (!ChangeServiceConfigW(ServiceHandle, (DWORD) ServiceType, (DWORD) ServiceStartType, (DWORD) ServiceErrorControl, ServicePath.toWString().c_str(), nullptr, nullptr, ServiceDependencyStream.str().c_str(), nullptr, nullptr, ServiceName.toWString().c_str()))
-                throw Exception(String(u"NtServcie::updateServiceConfiguration() ChangeServiceConfigW"));
+                throw WindowsException(String(u"NtServcie::updateServiceConfiguration() ChangeServiceConfigW"));
         }
     };
 
@@ -372,11 +337,11 @@ namespace eLibrary::Core {
     private:
         SC_HANDLE ManagerHandle;
 
-        doDisableCopyAssignConstruct(NtServiceManager);
+        doDisableCopyAssignConstruct(NtServiceManager)
     public:
         NtServiceManager(const String &ManagerMachineName, const String &ManagerDatabaseName) {
             if (!(ManagerHandle = OpenSCManagerW(ManagerMachineName.isNull() ? nullptr : ManagerMachineName.toWString().c_str(), ManagerDatabaseName.isNull() ? nullptr : ManagerDatabaseName.toWString().c_str(), SC_MANAGER_ALL_ACCESS)))
-                throw Exception(String(u"NtServiceManager::NtServiceManager(const String&, const String&) OpenSCManagerW"));
+                throw WindowsException(String(u"NtServiceManager::NtServiceManager(const String&, const String&) OpenSCManagerW"));
         }
 
         ~NtServiceManager() noexcept {
@@ -388,17 +353,17 @@ namespace eLibrary::Core {
 
         NtService doCreateService(const String &ServiceName, const String &ServicePath, const NtService::NtServiceType &ServiceType, const NtService::NtServiceStartType &ServiceStartType, const NtService::NtServiceErrorControl &ServiceErrorControl) const {
             SC_HANDLE ServiceHandle = CreateServiceW(ManagerHandle, ServiceName.toWString().c_str(), ServiceName.toWString().c_str(), SERVICE_ALL_ACCESS, (DWORD) ServiceType, (DWORD) ServiceStartType, (DWORD) ServiceErrorControl, ServicePath.toWString().c_str(), nullptr, nullptr, nullptr, nullptr, nullptr);
-            if (!ServiceHandle) throw Exception(String(u"NtServiceManager::doCreateService(const String&, const String&, const NtService::NtServiceType&, const NtService::NtServiceStartType&, const NtService::NtServiceErrorControl&) CreateServiceW"));
-            return NtService(ServiceHandle, ServiceName, ServicePath, ServiceErrorControl, ServiceStartType, ServiceType);
+            if (!ServiceHandle) throw WindowsException(String(u"NtServiceManager::doCreateService(const String&, const String&, const NtService::NtServiceType&, const NtService::NtServiceStartType&, const NtService::NtServiceErrorControl&) CreateServiceW"));
+            return {ServiceHandle, ServiceName, ServicePath, ServiceErrorControl, ServiceStartType, ServiceType};
         }
 
         NtService doOpenService(const String &ServiceName) const {
             SC_HANDLE ServiceHandle = OpenServiceW(ManagerHandle, ServiceName.toWString().c_str(), SERVICE_ALL_ACCESS);
-            if (!ServiceHandle) throw Exception(String(u"NtServiceManager::doOpenService(const String&) OpenServiceW"));
+            if (!ServiceHandle) throw WindowsException(String(u"NtServiceManager::doOpenService(const String&) OpenServiceW"));
             QUERY_SERVICE_CONFIGW ServiceConfiguration;
             if (!QueryServiceConfigW(ServiceHandle, &ServiceConfiguration, sizeof(QUERY_SERVICE_CONFIGW), nullptr))
-                throw Exception(String(u"NtServiceManager::doOpenService(const String&) QueryServiceConfigW"));
-            return NtService(ServiceHandle, ServiceName, String(ServiceConfiguration.lpBinaryPathName), (NtService::NtServiceErrorControl) ServiceConfiguration.dwErrorControl, (NtService::NtServiceStartType) ServiceConfiguration.dwStartType, (NtService::NtServiceType) ServiceConfiguration.dwServiceType);
+                throw WindowsException(String(u"NtServiceManager::doOpenService(const String&) QueryServiceConfigW"));
+            return {ServiceHandle, ServiceName, String(ServiceConfiguration.lpBinaryPathName), (NtService::NtServiceErrorControl) ServiceConfiguration.dwErrorControl, (NtService::NtServiceStartType) ServiceConfiguration.dwStartType, (NtService::NtServiceType) ServiceConfiguration.dwServiceType};
         }
     };
 
@@ -429,7 +394,7 @@ namespace eLibrary::Core {
 
             HANDLE DriverRegistrationHandle;
             if (!NT_SUCCESS(NtCreateKey(&DriverRegistrationHandle, KEY_ALL_ACCESS, &DriverRegistrationAttribute, 0, nullptr, 0, nullptr)))
-                throw Exception(String(u"NtDriver::doLoadNt(const String&, const String&, DWORD, DWORD) NtCreateKey"));
+                throw WindowsException(String(u"NtDriver::doLoadNt(const String&, const String&, DWORD, DWORD) NtCreateKey"));
             NtSetValueKey(DriverRegistrationHandle, &DriverErrorControlString, 0, REG_DWORD, &DriverErrorControl, sizeof(DWORD));
             NtSetValueKey(DriverRegistrationHandle, &DriverImagePathString, 0, REG_EXPAND_SZ, (void*) DriverImagePathStream.str().c_str(), sizeof(wchar_t) * (DriverImagePathStream.str().size() + 1));
             NtSetValueKey(DriverRegistrationHandle, &DriverStartTypeString, 0, REG_DWORD, &DriverStartType, sizeof(DWORD));
@@ -439,7 +404,7 @@ namespace eLibrary::Core {
             RtlAdjustPrivilege(SeLoadDriverPrivilege, TRUE, FALSE, nullptr);
 
             if (!NT_SUCCESS(NtLoadDriver(&DriverRegistrationPath)))
-                throw Exception(String(u"NtDriver::doLoadNt(const String&, const String&, DWORD, DWORD) NtLoadDriver"));
+                throw WindowsException(String(u"NtDriver::doLoadNt(const String&, const String&, DWORD, DWORD) NtLoadDriver"));
         }
 
         void doUnloadNt(const String &DriverServiceName) const {
@@ -452,9 +417,9 @@ namespace eLibrary::Core {
             RtlAdjustPrivilege(SeLoadDriverPrivilege, TRUE, FALSE, nullptr);
 
             if (!NT_SUCCESS(NtUnloadDriver(&DriverRegistrationPath)))
-                throw Exception(String(u"NtDriver::doUnloadNt(const String&) NtUnloadDriver"));
+                throw WindowsException(String(u"NtDriver::doUnloadNt(const String&) NtUnloadDriver"));
             if (!NT_SUCCESS(SHDeleteKeyW(HKEY_LOCAL_MACHINE, L"System\\CurrentControlSet\\Services\\eLibraryDriver")))
-                throw Exception(String(u"NtDriver::doUnloadNt(const String&) SHDeleteKeyW"));
+                throw WindowsException(String(u"NtDriver::doUnloadNt(const String&) SHDeleteKeyW"));
         }
     };
 }

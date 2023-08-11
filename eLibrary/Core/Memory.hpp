@@ -1,6 +1,7 @@
 #pragma once
 
 #include <Core/Exception.hpp>
+#include <new>
 
 namespace eLibrary::Core {
     class MemoryAllocator final : public Object {
@@ -9,12 +10,12 @@ namespace eLibrary::Core {
 
         template<typename T>
         static T *newArray(uintmax_t ArraySize) {
-            return new T[ArraySize];
+            return new (std::nothrow) T[ArraySize];
         }
 
         template<typename T, typename ...As>
         static T *newObject(As&&... ArgumentList) noexcept(std::is_nothrow_constructible<T, As...>::value) {
-            return new T(std::forward<As>(ArgumentList)...);
+            return new (std::nothrow) T(Objects::doForward<As>(ArgumentList)...);
         }
     };
 }

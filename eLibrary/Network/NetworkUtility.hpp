@@ -121,7 +121,7 @@ namespace eLibrary::Network {
 
         doDisableCopyAssignConstruct(NetworkSSLDescriptor)
     public:
-        NetworkSSLDescriptor(const NetworkSSLContext &DescriptorContext) {
+        explicit NetworkSSLDescriptor(const NetworkSSLContext &DescriptorContext) {
             DescriptorObject = SSL_new((SSL_CTX*) DescriptorContext);
             if (!DescriptorObject) throw NetworkException(String(u"NetworkSSLDescriptor::NetworkSSLDescriptor(const NetworkSSLContext&) SSL_new"));
         }
@@ -138,7 +138,7 @@ namespace eLibrary::Network {
                 throw NetworkException(String(u"NetworkSSLDescriptor::doConnect() SSL_connect"));
         }
 
-        int doRead(void *DescriptorBuffer, uint8_t DescriptorBufferSize) {
+        int doRead(void *DescriptorBuffer, int DescriptorBufferSize) {
             return SSL_read(DescriptorObject, DescriptorBuffer, DescriptorBufferSize);
         }
 
@@ -146,7 +146,7 @@ namespace eLibrary::Network {
             SSL_shutdown(DescriptorObject);
         }
 
-        void doWrite(void *DescriptorBuffer, uint8_t DescriptorBufferSize) {
+        void doWrite(void *DescriptorBuffer, int DescriptorBufferSize) {
             SSL_write(DescriptorObject, DescriptorBuffer, DescriptorBufferSize);
         }
 

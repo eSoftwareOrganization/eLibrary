@@ -125,6 +125,17 @@ namespace eLibrary::Core {
 
         constexpr Mathematics() noexcept = delete;
 
+        template<std::unsigned_integral T>
+        static T doCeil2(T NumberSource) noexcept {
+            NumberSource -= 1;
+            NumberSource |= NumberSource >> 1;
+            NumberSource |= NumberSource >> 2;
+            NumberSource |= NumberSource >> 4;
+            NumberSource |= NumberSource >> 8;
+            NumberSource |= NumberSource >> 16;
+            return (NumberSource < 0) ? 1 : NumberSource + 1;
+        }
+
         static Integer doCombinator(const Integer &NumberM, const Integer &NumberN) {
             if (NumberN.doCompare(NumberM) < 0) throw ArithmeticException(String(u"Mathematics::doCombinator(const Integer&, const Integer&) NumberM NumberN"));
             return NumberN.doFactorial().doDivision(NumberM.doFactorial().doMultiplication(NumberN.doSubtraction(NumberM).doFactorial()));
@@ -204,6 +215,15 @@ namespace eLibrary::Core {
                 NumberTerminate = NumberNumerator.doDivision(NumberDenominator);
             }
             return NumberResult;
+        }
+
+        template<std::unsigned_integral T>
+        static T doFloor2(T NumberSource) noexcept {
+            NumberSource |= NumberSource >> 1;
+            NumberSource |= NumberSource >> 2;
+            NumberSource |= NumberSource >> 4;
+            NumberSource |= NumberSource >> 8;
+            return (NumberSource + 1) >> 1;
         }
 
         template<Arithmetic T>
@@ -313,7 +333,7 @@ namespace eLibrary::Core {
         }
 
         static Fraction doSineFraction(const Fraction &NumberSourceSource) noexcept {
-            Fraction NumberSource(NumberSourceSource.doSubtraction(NumberSourceSource.doDivision(NumberPi.doAddition(NumberPi)).getAbsolute().doMultiplication(2).doMultiplication(NumberPi)));
+            Fraction NumberSource(NumberSourceSource.doSubtraction(NumberSourceSource.doDivision(NumberPi.doAddition(NumberPi)).doMultiplication(2).doMultiplication(NumberPi)));
             Fraction NumberDenominator(1), NumberNumerator(NumberSource), NumberResult(0), NumberSignature(1), NumberTerminate(NumberSource);
             unsigned short NumberDigit = 1;
             while (NumberTerminate.getAbsolute().doCompare({1, MathematicsContext::getFunctionPrecision()}) > 0) {
@@ -372,26 +392,6 @@ namespace eLibrary::Core {
         }
 
         template<std::unsigned_integral T>
-        static T getNearestPower2Lower(T NumberSource) noexcept {
-            NumberSource |= NumberSource >> 1;
-            NumberSource |= NumberSource >> 2;
-            NumberSource |= NumberSource >> 4;
-            NumberSource |= NumberSource >> 8;
-            return (NumberSource + 1) >> 1;
-        }
-
-        template<std::unsigned_integral T>
-        static T getNearestPower2Upper(T NumberSource) noexcept {
-            NumberSource -= 1;
-            NumberSource |= NumberSource >> 1;
-            NumberSource |= NumberSource >> 2;
-            NumberSource |= NumberSource >> 4;
-            NumberSource |= NumberSource >> 8;
-            NumberSource |= NumberSource >> 16;
-            return (NumberSource < 0) ? 1 : NumberSource + 1;
-        }
-
-        template<std::unsigned_integral T>
         static T getTrailingZeroCount(T NumberSource) noexcept {
             constexpr int ConvertTable[64] = {
                 0, 1, 2, 53, 3, 7, 54, 27, 4, 38, 41, 8, 34, 55, 48, 28,
@@ -422,7 +422,7 @@ namespace eLibrary::Core {
                 return false;
             if (NumberSource.doCompare(2809) < 0) return true;
             if (NumberSource.doCompare(23001) <= 0)
-                return Integer(2).doPower(NumberSource, NumberSource).doCompare(2) == 0 && NumberSource.doCompare(7957) && NumberSource.doCompare(8321) && NumberSource.doCompare(13747) && NumberSource.doCompare(18721) && NumberSource.doCompare(19951);
+                return !Integer(2).doPower(NumberSource, NumberSource).doCompare(2) && NumberSource.doCompare(7957) && NumberSource.doCompare(8321) && NumberSource.doCompare(13747) && NumberSource.doCompare(18721) && NumberSource.doCompare(19951);
             if (NumberSource.doCompare(341531) < 0) return isPrimeRabinMiller(NumberSource, {{{u"9345883071009581737"}}});
             if (NumberSource.doCompare(885594169) < 0) return isPrimeRabinMiller(NumberSource, {725270293939359937, 3569819667048198375});
             if (NumberSource.doCompare(350269456337) < 0) return isPrimeRabinMiller(NumberSource, {4230279247111683200, {{u"14694767155120705706"}}, {{u"16641139526367750375"}}});

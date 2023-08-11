@@ -7,13 +7,22 @@
 // Code compiles cleanly at warning level all (/Wall) on 64-bit builds.
 
 #include <Core/Global.hpp>
-#include <Core/Collection.hpp>
-#include <Core/Concurrent.hpp>
+
+#if eLibrarySystem(Windows)
+#include <ws2tcpip.h>
+#include <Windows.h>
+#endif
+#if eLibraryCompiler(MSVC)
+#pragma warning(disable:4146)
+#endif
+
+#include <Core/Container.hpp>
 #include <Core/Mathematics.hpp>
 #include <Core/Thread.hpp>
-#include <IO/ArchiveUtility.hpp>
+#include <IO/ArchiveStream.hpp>
 #include <IO/Buffer.hpp>
 #include <IO/FileStream.hpp>
+#include <IO/Library.hpp>
 #include <Multimedia/AudioSegment.hpp>
 #include <Network/Socket.hpp>
 #include <Core/WindowsNT.hpp>
