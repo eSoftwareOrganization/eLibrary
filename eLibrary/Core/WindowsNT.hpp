@@ -1,11 +1,10 @@
 #pragma once
 
-#if eLibrarySystem(Windows)
+#if eLibrarySystem(Windows) && !eLibraryCompiler(MSVC)
 
 #include <Core/Exception.hpp>
 
 #include <Windows.h>
-#include <map>
 #include <set>
 #include <shlwapi.h>
 #include <string>

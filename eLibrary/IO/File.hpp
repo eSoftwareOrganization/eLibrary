@@ -3,17 +3,22 @@
 #if eLibraryFeature(IO)
 
 #include <IO/Exception.hpp>
-
 #include <fcntl.h>
+#include <io.h>
 
 namespace eLibrary::IO {
-    class FileDescriptor final : public Object {
-    private:
+    class FileDescriptor : public Object {
+    protected:
         int DescriptorHandle;
 
         doDisableCopyAssignConstruct(FileDescriptor)
     public:
         constexpr FileDescriptor() noexcept : DescriptorHandle(-1) {}
+
+        constexpr FileDescriptor(FileDescriptor &&DescriptorSource) noexcept {
+            DescriptorHandle = DescriptorSource.DescriptorHandle;
+            DescriptorSource.DescriptorHandle = -1;
+        }
 
         ~FileDescriptor() noexcept {
             if (isAvailable()) doClose();
@@ -24,9 +29,9 @@ namespace eLibrary::IO {
             DescriptorHandle = DescriptorHandleSource;
         }
 
-        void doClose() {
+        virtual void doClose() {
             if (!isAvailable()) throw IOException(String(u"FileDescriptor::doClose() isAvailable"));
-            close(DescriptorHandle);
+            _close(DescriptorHandle);
             DescriptorHandle = -1;
         }
 
@@ -40,7 +45,7 @@ namespace eLibrary::IO {
     };
 
     enum class FileOption : int {
-        OptionAppend = O_APPEND, OptionBinary = O_BINARY, OptionText = O_TEXT, OptionTrucate = O_TRUNC
+        OptionAppend = O_APPEND, OptionBinary = O_BINARY, OptionCreate = O_CREAT, OptionText = O_TEXT, OptionTruncate = O_TRUNC
     };
 }
 #endif

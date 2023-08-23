@@ -7,9 +7,11 @@
 namespace eLibrary::IO {
     class Buffer : public Object {
     protected:
-        uintmax_t BufferCapacity;
-        uintmax_t BufferLimit;
-        mutable uintmax_t BufferPosition;
+        uintmax_t BufferCapacity = 0;
+        uintmax_t BufferLimit = 0;
+        mutable uintmax_t BufferPosition = 0;
+
+        constexpr Buffer() noexcept = default;
     public:
         void doClear() noexcept {
             BufferLimit = BufferCapacity;
@@ -51,7 +53,7 @@ namespace eLibrary::IO {
             BufferLimit = BufferLimitSource;
         }
 
-        void setBufferPosition(uintmax_t BufferPositionSource) {
+        void setBufferPosition(uintmax_t BufferPositionSource) const {
             if (BufferPositionSource > BufferLimit)
                 throw IOException(String(u"Buffer::setBufferPosition(uintmax_t) BufferPositionSource"));
             BufferPosition = BufferPositionSource;
@@ -60,12 +62,18 @@ namespace eLibrary::IO {
 
     class ByteBuffer : public Buffer {
     protected:
-        uint8_t *BufferContainer;
+        uint8_t *BufferContainer = nullptr;
 
-        ByteBuffer(uint8_t *BufferContainerSource, uintmax_t BufferCapacitySource) noexcept : BufferContainer(BufferContainerSource) {
-            BufferCapacity = BufferCapacitySource;
+        constexpr ByteBuffer(uint8_t *BufferContainerSource, uintmax_t BufferCapacitySource) noexcept : BufferContainer(BufferContainerSource) {
+            BufferCapacity = BufferLimit = BufferCapacitySource;
         }
+
+        friend class FileOutputStream;
     public:
+        doEnableCopyAssignConstruct(ByteBuffer)
+
+        constexpr ByteBuffer() noexcept = default;
+
         ~ByteBuffer() noexcept {
             BufferCapacity = 0;
             BufferLimit = 0;
@@ -74,8 +82,16 @@ namespace eLibrary::IO {
             BufferContainer = nullptr;
         }
 
-        static ByteBuffer doAllocate(uintmax_t BufferCapacitySource) {
+        static ByteBuffer doAllocate(uintmax_t BufferCapacitySource) noexcept {
             return {MemoryAllocator::newArray<uint8_t>(BufferCapacitySource), BufferCapacitySource};
+        }
+
+        void doAssign(const ByteBuffer &BufferSource) noexcept {
+            if (Objects::getAddress(BufferSource) == this) return;
+            BufferPosition = BufferSource.BufferPosition;
+            delete[] BufferContainer;
+            BufferContainer = MemoryAllocator::newArray<uint8_t>(BufferCapacity = BufferSource.BufferCapacity);
+            Arrays::doCopy(BufferSource.BufferContainer, BufferLimit = BufferSource.BufferLimit, BufferContainer);
         }
 
         void doCompact() noexcept {
@@ -84,14 +100,18 @@ namespace eLibrary::IO {
             BufferLimit = BufferCapacity;
         }
 
-        intmax_t doCompare(const ByteBuffer &BufferSource) {
-            if (BufferCapacity != BufferSource.BufferCapacity) return (intmax_t) BufferCapacity - BufferSource.BufferCapacity;
+        intmax_t doCompare(const ByteBuffer &BufferSource) const noexcept {
+            if (BufferCapacity != BufferSource.BufferCapacity) return Numbers::doCompare(BufferCapacity, BufferSource.BufferCapacity);
             return ::memcmp(BufferContainer, BufferSource.BufferContainer, sizeof(uint8_t) * BufferCapacity);
+        }
+
+        uint8_t *getBufferContainer() const noexcept {
+            return BufferContainer;
         }
 
         uint8_t getValue() const {
             if (BufferPosition >= BufferLimit) throw IOException(String(u"ByteBuffer::setValue(uint8_t) BufferPosition"));
-            return BufferContainer[++BufferPosition];
+            return BufferContainer[BufferPosition++];
         }
 
         uint8_t getValue(uintmax_t ValueIndex) const {
@@ -101,7 +121,7 @@ namespace eLibrary::IO {
 
         void setValue(uint8_t ValueSource) {
             if (BufferPosition >= BufferLimit) throw IOException(String(u"ByteBuffer::setValue(uint8_t) BufferPosition"));
-            BufferContainer[++BufferPosition] = ValueSource;
+            BufferContainer[BufferPosition++] = ValueSource;
         }
 
         void setValue(uint8_t ValueSource, uintmax_t ValueIndex) {

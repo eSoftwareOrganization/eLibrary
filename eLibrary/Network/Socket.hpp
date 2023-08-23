@@ -6,9 +6,6 @@
 #include <IO/Stream.hpp>
 #include <Network/NetworkUtility.hpp>
 
-#include <array>
-#include <utility>
-
 namespace eLibrary::Network {
     class NetworkAddress final : public Object {
     public:
@@ -101,13 +98,13 @@ namespace eLibrary::Network {
         String toString() const noexcept override {
             StringStream CharacterStream;
             if (AddressProtocol == NetworkAddressProtocol::ProtocolIPv4) {
-                CharacterStream.addString(std::to_string(AddressFieldList.getElement(0)));
+                CharacterStream.addString(String::valueOf(AddressFieldList.getElement(0)));
                 CharacterStream.addCharacter(u'.');
-                CharacterStream.addString(std::to_string(AddressFieldList.getElement(1)));
+                CharacterStream.addString(String::valueOf(AddressFieldList.getElement(1)));
                 CharacterStream.addCharacter(u'.');
-                CharacterStream.addString(std::to_string(AddressFieldList.getElement(2)));
+                CharacterStream.addString(String::valueOf(AddressFieldList.getElement(2)));
                 CharacterStream.addCharacter(u'.');
-                CharacterStream.addString(std::to_string(AddressFieldList.getElement(3)));
+                CharacterStream.addString(String::valueOf(AddressFieldList.getElement(3)));
             }
             if (AddressProtocol == NetworkAddressProtocol::ProtocolIPv6) {
                 for (int AddressPartition = 0; AddressPartition < 8; ++AddressPartition) {
@@ -140,7 +137,7 @@ namespace eLibrary::Network {
             CharacterStream.addString({u"NetworkSocketAddress[SocketAddress="});
             CharacterStream.addString(SocketAddress.toString());
             CharacterStream.addString({u", SocketPort="});
-            CharacterStream.addString(std::to_string(SocketPort));
+            CharacterStream.addString(String::valueOf(SocketPort));
             CharacterStream.addCharacter(u']');
             return CharacterStream.toString();
         }
@@ -179,11 +176,11 @@ namespace eLibrary::Network {
             int SocketSize;
             if (SocketAddress.getSocketAddress().getAddressProtocol() == NetworkAddress::NetworkAddressProtocol::ProtocolIPv4) {
                 sockaddr_in SocketAddressIn = {AF_INET, htons(SocketAddress.getSocketPort()), SocketAddress.getSocketAddress().toAddressIn().getValue<in_addr>(), {}};
-                if ((SocketSize = recvfrom((SocketHandleType) SocketDescriptor, SocketBuffer, SocketBufferSize, 0, (sockaddr*) &SocketAddressIn, nullptr)) < 0)
+                if ((SocketSize = recvfrom((int) SocketDescriptor, SocketBuffer, SocketBufferSize, 0, (sockaddr*) &SocketAddressIn, nullptr)) < 0)
                     throw NetworkException(String(u"DatagramSocket::doReceive(char*, int) recvfrom"));
             } else {
                 sockaddr_in6 SocketAddressIn = {AF_INET6, htons(SocketAddress.getSocketPort()), 0, SocketAddress.getSocketAddress().toAddressIn().getValue<in6_addr>(), {}};
-                if ((SocketSize = recvfrom((SocketHandleType) SocketDescriptor, SocketBuffer, SocketBufferSize, 0, (sockaddr*) &SocketAddressIn, nullptr)) < 0)
+                if ((SocketSize = recvfrom((int) SocketDescriptor, SocketBuffer, SocketBufferSize, 0, (sockaddr*) &SocketAddressIn, nullptr)) < 0)
                     throw NetworkException(String(u"DatagramSocket::doReceive(char*, int) recvfrom"));
             }
             return SocketSize;
@@ -196,11 +193,11 @@ namespace eLibrary::Network {
                 SocketAddressIn.sin_addr = SocketAddress.getSocketAddress().toAddressIn().getValue<in_addr>();
                 SocketAddressIn.sin_family = AF_INET;
                 SocketAddressIn.sin_port = htons(SocketAddress.getSocketPort());
-                if ((SocketSize = sendto((SocketHandleType) SocketDescriptor, SocketBuffer, SocketBufferSize, 0, (sockaddr*) &SocketAddressIn, sizeof(sockaddr_in))) < 0)
+                if ((SocketSize = sendto((int) SocketDescriptor, SocketBuffer, SocketBufferSize, 0, (sockaddr*) &SocketAddressIn, sizeof(sockaddr_in))) < 0)
                     throw NetworkException(String(u"DatagramSocket::doSend(char*, int) sendto"));
             } else {
                 sockaddr_in6 SocketAddressIn = {AF_INET6, htons(SocketAddress.getSocketPort()), 0, SocketAddress.getSocketAddress().toAddressIn().getValue<in6_addr>(), {}};
-                if ((SocketSize = sendto((SocketHandleType) SocketDescriptor, SocketBuffer, SocketBufferSize, 0, (sockaddr*) &SocketAddressIn, sizeof(sockaddr_in6))) < 0)
+                if ((SocketSize = sendto((int) SocketDescriptor, SocketBuffer, SocketBufferSize, 0, (sockaddr*) &SocketAddressIn, sizeof(sockaddr_in6))) < 0)
                     throw NetworkException(String(u"DatagramSocket::doSend(char*, int) sendto"));
             }
             return SocketSize;
@@ -211,7 +208,7 @@ namespace eLibrary::Network {
         }
 
         void setSocketOption(NetworkSocketOption OptionType, int OptionValue) {
-            if (::setsockopt((SocketHandleType) SocketDescriptor, SOL_SOCKET, (int) OptionType, (char*) &OptionValue, sizeof(int)))
+            if (::setsockopt((int) SocketDescriptor, SOL_SOCKET, (int) OptionType, (char*) &OptionValue, sizeof(int)))
                 throw NetworkException(String(u"DatagramSocket::setSocketOption(NetworkSocketOption, int) setsockopt"));
         }
     };
@@ -245,11 +242,11 @@ namespace eLibrary::Network {
             if (isConnected()) throw NetworkException(String(u"StreamSocket::doConnect() isConnected"));
             if (SocketAddress.getSocketAddress().getAddressProtocol() == NetworkAddress::NetworkAddressProtocol::ProtocolIPv4) {
                 sockaddr_in SocketAddress4 = {AF_INET, htons(SocketAddress.getSocketPort()), SocketAddress.getSocketAddress().toAddressIn().getValue<in_addr>(), {}};
-                if (connect((SocketHandleType) SocketDescriptor, (sockaddr*) &SocketAddress4, sizeof(sockaddr_in)) != 0)
+                if (connect((int) SocketDescriptor, (sockaddr*) &SocketAddress4, sizeof(sockaddr_in)) != 0)
                     throw NetworkException(String(u"StreamSocket::doConnect() connect"));
             } else {
                 sockaddr_in6 SocketAddress6 = {AF_INET6, htons(SocketAddress.getSocketPort()), 0, SocketAddress.getSocketAddress().toAddressIn().getValue<in6_addr>(), {}};
-                if (connect((SocketHandleType) SocketDescriptor, (sockaddr*) &SocketAddress6, sizeof(sockaddr_in6)) != 0)
+                if (connect((int) SocketDescriptor, (sockaddr*) &SocketAddress6, sizeof(sockaddr_in6)) != 0)
                     throw NetworkException(String(u"StreamSocket::doConnect() connect"));
             }
             SocketConnected = true;
@@ -268,12 +265,12 @@ namespace eLibrary::Network {
         }
 
         void setSocketOption(NetworkSocketOption OptionType, int OptionValue) {
-            if (::setsockopt((SocketHandleType) SocketDescriptor, SOL_SOCKET, (int) OptionType, (char*) &OptionValue, sizeof(int)))
+            if (::setsockopt((int) SocketDescriptor, SOL_SOCKET, (int) OptionType, (char*) &OptionValue, sizeof(int)))
                 throw NetworkException(String(u"StreamSocket::setSocketOption(NetworkSocketOption, int) setsockopt"));
         }
 
         void setTCPNoDelay(bool OptionValue) const {
-            if (::setsockopt((SocketHandleType) SocketDescriptor, IPPROTO_TCP, TCP_NODELAY, (char*) &OptionValue, sizeof(bool)) != 0)
+            if (::setsockopt((int) SocketDescriptor, IPPROTO_TCP, TCP_NODELAY, (char*) &OptionValue, sizeof(bool)) != 0)
                 throw NetworkException(String(u"StreamSocket::setTCPNoDelay(bool) setsockopt"));
         }
 
@@ -308,9 +305,10 @@ namespace eLibrary::Network {
         StreamSocket doAccept() const {
             if (!isAvailable()) throw NetworkException(String(u"StreamSocketServer::doAccept() isAvailable"));
             if (!isBound()) throw NetworkException(String(u"StreamSocketServer::doAccept() isBound"));
-            SocketHandleType SocketTarget = accept((SocketHandleType) SocketDescriptor, nullptr, nullptr);
+            int SocketTarget = accept((int) SocketDescriptor, nullptr, nullptr);
             sockaddr SocketTargetAddress;
-            getpeername(SocketTarget, &SocketTargetAddress, nullptr);
+            if (getpeername(SocketTarget, &SocketTargetAddress, nullptr))
+                throw NetworkException(String(u"StreamSocketServer::doAccept() getpeername"));
             if (SocketTargetAddress.sa_family == AF_INET) return {SocketTarget, NetworkSocketAddress(NetworkAddress(((sockaddr_in*) &SocketTargetAddress)->sin_addr), ntohs(((sockaddr_in*) &SocketTargetAddress)->sin_port))};
             else if (SocketTargetAddress.sa_family == AF_INET6) return {SocketTarget, NetworkSocketAddress(NetworkAddress(((sockaddr_in6*) &SocketTargetAddress)->sin6_addr), ntohs(((sockaddr_in6*) &SocketTargetAddress)->sin6_port))};
             else throw NetworkException(String(u"StreamSocketServer::doAccept() SocketTargetAddress.sa_family"));
@@ -321,11 +319,11 @@ namespace eLibrary::Network {
             if (isBound()) throw NetworkException(String(u"StreamSocketServer::doBind() isBound"));
             if (SocketAddress.getSocketAddress().getAddressProtocol() == NetworkAddress::NetworkAddressProtocol::ProtocolIPv4) {
                 sockaddr_in SocketAddress4 = {AF_INET, htons(SocketAddress.getSocketPort()), SocketAddress.getSocketAddress().toAddressIn().getValue<in_addr>(), {}};
-                if (bind((SocketHandleType) SocketDescriptor, (sockaddr*) &SocketAddress4, sizeof(sockaddr_in)))
+                if (bind((int) SocketDescriptor, (sockaddr*) &SocketAddress4, sizeof(sockaddr_in)))
                     throw NetworkException(String(u"StreamSocketServer::doBind() bind"));
             } else {
                 sockaddr_in6 SocketAddress6 = {AF_INET6, htons(SocketAddress.getSocketPort()), 0, SocketAddress.getSocketAddress().toAddressIn().getValue<in6_addr>(), {}};
-                if (bind((SocketHandleType) SocketDescriptor, (sockaddr*) &SocketAddress6, sizeof(sockaddr_in6)))
+                if (bind((int) SocketDescriptor, (sockaddr*) &SocketAddress6, sizeof(sockaddr_in6)))
                     throw NetworkException(String(u"StreamSocketServer::doBind() bind"));
             }
             SocketBound = true;
@@ -338,7 +336,7 @@ namespace eLibrary::Network {
         void doListen(int SocketBacklog = 0) const {
             if (!isAvailable()) throw NetworkException(String(u"StreamSocketServer::doListen(int=0) isAvailable()"));
             if (!isBound()) throw NetworkException(String(u"StreamSocketServer::doListen(int=0) isBound()"));
-            if (listen((SocketHandleType) SocketDescriptor, SocketBacklog))
+            if (listen((int) SocketDescriptor, SocketBacklog))
                 throw NetworkException(String(u"StreamSocketServer::doListen(int=0) listen"));
         }
 
@@ -351,7 +349,7 @@ namespace eLibrary::Network {
         }
 
         void setSocketOption(NetworkSocketOption OptionType, int OptionValue) {
-            if (::setsockopt((SocketHandleType) SocketDescriptor, SOL_SOCKET, (int) OptionType, (char*) &OptionValue, sizeof(int)))
+            if (::setsockopt((int) SocketDescriptor, SOL_SOCKET, (int) OptionType, (char*) &OptionValue, sizeof(int)))
                 throw NetworkException(String(u"StreamSocketServer::setSocketOption(NetworkSocketOption, int) setsockopt"));
         }
     };
@@ -375,12 +373,12 @@ namespace eLibrary::Network {
             return SocketCharacter;
         }
 
-        uint32_t doRead(uint8_t *SocketBuffer, uint32_t SocketOffset, uint32_t SocketSize) override {
-            if (!isAvailable()) throw NetworkException(String(u"SocketInputStream::doRead(uint8_t*, uint32_t, uint32_t) isAvailable"));
+        void doRead(IO::ByteBuffer &SocketBuffer) override {
+            if (!isAvailable()) throw NetworkException(String(u"SocketInputStream::doRead(ByteBuffer&) isAvailable"));
             int SocketSizeReceived;
-            if ((SocketSizeReceived = recv((SocketHandleType) SocketDescriptor, (char*) SocketBuffer + SocketOffset, SocketSize, 0)) < 0)
-                throw NetworkException(String(u"SocketInputStream::doRead(uint8_t*, int, int) recv"));
-            return (uint32_t) SocketSizeReceived;
+            if ((SocketSizeReceived = recv((SocketHandleType) SocketDescriptor, (char*) SocketBuffer.getBufferContainer() + SocketBuffer.getBufferPosition(), SocketBuffer.getRemaining(), 0)) < 0)
+                throw NetworkException(String(u"SocketInputStream::doRead(ByteBuffer&) recv"));
+            SocketBuffer.setBufferPosition(SocketBuffer.getBufferPosition() + SocketSizeReceived);
         }
 
         static SocketInputStream getInstance(const StreamSocket &SocketSource) {
@@ -399,7 +397,7 @@ namespace eLibrary::Network {
 
         SocketOutputStream(const StreamSocket &SocketSource) noexcept : SocketDescriptor(&SocketSource.SocketDescriptor) {}
 
-        doDisableCopyAssignConstruct(SocketOutputStream);
+        doDisableCopyAssignConstruct(SocketOutputStream)
     public:
         void doClose() noexcept override {
             SocketDescriptor = nullptr;
@@ -411,10 +409,10 @@ namespace eLibrary::Network {
                 throw NetworkException(String(u"SocketOutputStream::doWrite(uint8_t) send"));
         }
 
-        void doWrite(uint8_t *SocketBuffer, uint32_t SocketOffset, uint32_t SocketSize) override {
-            if (!isAvailable()) throw NetworkException(String(u"SocketOutputStream::doWrite(uint8_t*, uint32_t, uint32_t) isAvailable"));
-            if (send((SocketHandleType) SocketDescriptor, (char*) SocketBuffer + SocketOffset, SocketSize, 0) < 0)
-                throw NetworkException(String(u"SocketOutputStream::doWrite(uint8_t*, uint32_t, uint32_t) send"));
+        void doWrite(const IO::ByteBuffer &SocketBuffer) override {
+            if (!isAvailable()) throw NetworkException(String(u"SocketOutputStream::doWrite(const ByteBuffer&) isAvailable"));
+            if (send((SocketHandleType) SocketDescriptor, (char*) SocketBuffer.getBufferContainer() + SocketBuffer.getBufferPosition(), SocketBuffer.getRemaining(), 0) < 0)
+                throw NetworkException(String(u"SocketOutputStream::doWrite(const ByteBuffer&) send"));
         }
 
         static SocketOutputStream getInstance(const StreamSocket &SocketSource) {

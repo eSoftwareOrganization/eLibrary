@@ -1,5 +1,4 @@
 #include <Core/Number.hpp>
-
 #include <typeinfo>
 
 #if __has_include(<cxxabi.h>)

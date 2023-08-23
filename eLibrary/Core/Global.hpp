@@ -1,85 +1,31 @@
 #pragma once
 
+#include <concepts>
 #include <cstdint>
-#include <functional>
-#include <utility>
+#include <type_traits>
 
 namespace eLibrary::Core {
     template<typename T>
-    concept Arithmetic = std::is_arithmetic<T>::value;
+    concept Arithmetic = std::is_arithmetic_v<T>;
 
     template<typename T>
     concept Comparable = requires (const T &ObjectSource) {
-        (intmax_t) ObjectSource.doCompare(ObjectSource);
+        {ObjectSource.doCompare(ObjectSource)} -> std::same_as<intmax_t>;
     };
 
     template<typename T>
     concept Hashable = requires (const T &ObjectSource) {
-        (uintmax_t) ObjectSource.hashCode();
+        {ObjectSource.hashCode()} -> std::same_as<uintmax_t>;
     };
 
 #define doDisableCopyAssignConstruct(ClassName) constexpr ClassName(const ClassName&) noexcept = delete;ClassName &operator=(const ClassName&) noexcept = delete;
 #define doEnableCopyAssignConstruct(ClassName) ClassName(const ClassName &ObjectSource) {doAssign(ObjectSource);}ClassName &operator=(const ClassName &ObjectSource) {doAssign(ObjectSource);return *this;}
-#define doEnableMoveAssignConstruct(ClassName) ClassName(ClassName &&ObjectSource) noexcept {doAssign(std::forward<ClassName>(ObjectSource));}ClassName &operator=(ClassName &&ObjectSource) noexcept {doAssign(std::forward<ClassName>(ObjectSource));return *this;}
+#define doEnableCopyAssignParameterConstruct(ClassName, ParameterName) ClassName(const ParameterName &ObjectSource) {doAssign(ObjectSource);}ClassName &operator=(const ParameterName &ObjectSource) {doAssign(ObjectSource);return *this;}
+#define doEnableMoveAssignConstruct(ClassName) ClassName(ClassName &&ObjectSource) noexcept {doAssign(Objects::doMove(ObjectSource));}ClassName &operator=(ClassName &&ObjectSource) noexcept {doAssign(Objects::doMove(ObjectSource));return *this;}
+#define doEnableMoveAssignParameterConstruct(ClassName, ParameterName) ClassName(ParameterName &&ObjectSource) noexcept {doAssign(Objects::doMove(ObjectSource));}ClassName &operator=(ParameterName &&ObjectSource) noexcept {doAssign(Objects::doMove(ObjectSource));return *this;}
 #define eLibraryCompiler(CompilerName) eLibraryCompiler_##CompilerName
 #define eLibraryFeature(FeatureName) eLibraryFeature_##FeatureName
 #define eLibrarySystem(SystemName) eLibrarySystem_##SystemName
 
 #define eLibraryAPI
 }
-
-template<eLibrary::Core::Comparable T>
-struct std::equal_to<T> {
-public:
-    bool operator()(const T &Object1, const T &Object2) const noexcept {
-        return !Object1.doCompare(Object2);
-    }
-};
-
-template<eLibrary::Core::Comparable T>
-struct std::greater<T> {
-public:
-    bool operator()(const T &Object1, const T &Object2) const noexcept {
-        return Object1.doCompare(Object2) > 0;
-    }
-};
-
-template<eLibrary::Core::Comparable T>
-struct std::greater_equal<T> {
-public:
-    bool operator()(const T &Object1, const T &Object2) const noexcept {
-        return Object1.doCompare(Object2) >= 0;
-    }
-};
-
-template<eLibrary::Core::Hashable T>
-struct std::hash<T> {
-public:
-    auto operator()(const T &ObjectSource) const noexcept {
-        return ObjectSource.hashCode();
-    }
-};
-
-template<eLibrary::Core::Comparable T>
-struct std::less<T> {
-public:
-    bool operator()(const T &Object1, const T &Object2) const noexcept {
-        return Object1.doCompare(Object2) < 0;
-    }
-};
-
-template<eLibrary::Core::Comparable T>
-struct std::less_equal<T> {
-public:
-    bool operator()(const T &Object1, const T &Object2) const noexcept {
-        return Object1.doCompare(Object2) <= 0;
-    }
-};
-
-template<eLibrary::Core::Comparable T>
-struct std::not_equal_to<T> {
-public:
-    bool operator()(const T &Object1, const T &Object2) const noexcept {
-        return Object1.doCompare(Object2);
-    }
-};

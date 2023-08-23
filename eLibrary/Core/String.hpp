@@ -1,11 +1,8 @@
 #pragma once
 
-#include <algorithm>
-#include <codecvt>
-#include <cstring>
-#include <string>
-
 #include <Core/Object.hpp>
+#include <format>
+#include <string>
 
 namespace eLibrary::Core {
     /**
@@ -18,27 +15,31 @@ namespace eLibrary::Core {
         constexpr Character(char16_t CharacterSource=char16_t()) noexcept : CharacterValue(CharacterSource) {}
 
         intmax_t doCompare(const Character &CharacterSource) const noexcept {
-            return CharacterValue - CharacterSource.CharacterValue;
+            return (intmax_t) CharacterValue - CharacterSource.CharacterValue;
+        }
+
+        uintmax_t hashCode() const noexcept override {
+            return CharacterValue;
         }
 
         bool isAlpha() const noexcept {
-            return iswalpha(CharacterValue);
+            return iswalpha(CharacterValue) != 0;
+        }
+
+        bool isDigit() const noexcept {
+            return iswdigit(CharacterValue) != 0;
         }
 
         bool isLowerCase() const noexcept {
-            return iswlower(CharacterValue);
+            return iswlower(CharacterValue) != 0;
         }
 
         bool isNull() const noexcept {
             return CharacterValue == char16_t();
         }
 
-        bool isNumber() const noexcept {
-            return CharacterValue >= u'0' && CharacterValue <= u'9';
-        }
-
         bool isUpperCase() const noexcept {
-            return iswupper(CharacterValue);
+            return iswupper(CharacterValue) != 0;
         }
 
         explicit operator char16_t() const noexcept {
@@ -49,9 +50,15 @@ namespace eLibrary::Core {
             return {towlower(CharacterValue)};
         }
 
+        eLibraryAPI uint8_t toNumber(uint8_t) const;
+
+        eLibraryAPI String toString() const noexcept override;
+
         Character toUpperCase() const noexcept {
             return {towupper(CharacterValue)};
         }
+
+        eLibraryAPI static Character valueOf(uint8_t, uint8_t);
     };
 
     /**
@@ -65,18 +72,19 @@ namespace eLibrary::Core {
         friend class StringStream;
     public:
         doEnableCopyAssignConstruct(String)
+        doEnableMoveAssignConstruct(String)
 
         constexpr String() noexcept = default;
 
-        explicit String(const Character&);
+        eLibraryAPI String(const Character&) noexcept;
 
-        eLibraryAPI String(const std::string&);
+        eLibraryAPI String(const std::string&) noexcept;
 
-        eLibraryAPI String(const std::u16string&);
+        eLibraryAPI String(const std::u16string&) noexcept;
 
-        eLibraryAPI String(const std::u32string&);
+        eLibraryAPI String(const std::u32string&) noexcept;
 
-        eLibraryAPI String(const std::wstring&);
+        eLibraryAPI String(const std::wstring&) noexcept;
 
         ~String() noexcept {
             if (CharacterContainer && CharacterSize) {
@@ -86,7 +94,9 @@ namespace eLibrary::Core {
             }
         }
 
-        eLibraryAPI void doAssign(const String&);
+        eLibraryAPI void doAssign(const String&) noexcept;
+
+        eLibraryAPI void doAssign(String&&) noexcept;
 
         intmax_t doCompare(const String &StringOther) const noexcept {
             if (CharacterSize != StringOther.CharacterSize) return CharacterSize - StringOther.CharacterSize;
@@ -181,11 +191,7 @@ namespace eLibrary::Core {
 
         eLibraryAPI std::u16string toU16String() const noexcept;
 
-        std::u32string toU32String() const noexcept {
-            static std::wstring_convert<std::codecvt_utf16<char32_t>, char32_t> StringConverter;
-            std::u16string StringSource(toU16String());
-            return StringConverter.from_bytes((const char*) &*StringSource.begin(), (const char*) &*StringSource.end());
-        }
+        eLibraryAPI std::u32string toU32String() const noexcept;
 
         eLibraryAPI std::wstring toWString() const noexcept;
 
@@ -202,13 +208,15 @@ namespace eLibrary::Core {
 
     class StringStream final : public Object {
     private:
-        intmax_t CharacterCapacity = 0;
-        intmax_t CharacterSize = 0;
+        uintmax_t CharacterCapacity = 0;
+        uintmax_t CharacterSize = 0;
         Character *CharacterContainer = nullptr;
 
         doDisableCopyAssignConstruct(StringStream)
     public:
         constexpr StringStream() noexcept = default;
+
+        eLibraryAPI explicit StringStream(uintmax_t CharacterCapacitySource);
 
         ~StringStream() noexcept {
             doClear();
@@ -228,3 +236,12 @@ namespace eLibrary::Core {
         eLibraryAPI String toString() const noexcept override;
     };
 }
+
+template<eLibrary::Core::ObjectDerived ObjectT, typename CharacterT>
+struct std::formatter<ObjectT, CharacterT> : public std::formatter<std::string, CharacterT> {
+public:
+    template<typename ContextT>
+    auto format(const ObjectT &ObjectSource, ContextT &ObjectContext) const {
+        return std::formatter<std::string, CharacterT>::format(ObjectSource.toString().toU8String(), ObjectContext);
+    }
+};

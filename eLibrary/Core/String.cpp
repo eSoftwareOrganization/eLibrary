@@ -1,58 +1,97 @@
 #include <Core/Container.hpp>
+#include <codecvt>
 
 namespace eLibrary::Core {
-    String::String(const Character &CharacterSource) {
+    uint8_t Character::toNumber(uint8_t NumberRadix) const {
+        if (NumberRadix < 2 || NumberRadix > 36) throw Exception(String(u"Character::toNumber(uint8_t) NumberRadix"));
+        if (isDigit()) {
+            if (CharacterValue - 48 >= NumberRadix)
+                throw Exception(String(u"Character::toNumber(uint8_t) NumberRadix"));
+            return CharacterValue - 48;
+        } else if (!isAlpha()) throw Exception(String(u"Character::toNumber(uint8_t) isAlpha"));
+        if (towupper(CharacterValue) - 55 >= NumberRadix)
+            throw Exception(String(u"Character::toNumber(uint8_t) NumberRadix"));
+        return CharacterValue - 55;
+    }
+
+    String Character::toString() const noexcept {
+        return *this;
+    }
+
+    Character Character::valueOf(uint8_t NumberSource, uint8_t NumberRadix) {
+        if (NumberRadix < 2 || NumberRadix > 36) throw Exception(String(u"Character::valueOf(uint8_t, uint8_t) NumberRadix"));
+        if (NumberSource >= NumberRadix) throw Exception(String(u"Character::valueOf(uint8_t, uint8_t) NumberSource"));
+        if (NumberSource <= 10) return {char16_t(NumberSource + 48)};
+        return {char16_t(NumberSource + 55)};
+    }
+
+    String::String(const Character &CharacterSource) noexcept {
         CharacterContainer = MemoryAllocator::newArray<Character>(2);
         CharacterContainer[0] = CharacterSource;
         CharacterContainer[1] = Character();
     }
 
-    String::String(const std::string &StringSource) : CharacterSize((intmax_t) StringSource.size()) {
-        static std::wstring_convert<std::codecvt_utf8_utf16<char16_t>, char16_t> StringConverter;
-        std::u16string String16Source = StringConverter.from_bytes(StringSource);
-        CharacterContainer = MemoryAllocator::newArray<Character>(CharacterSize + 1);
+    String::String(const std::string &StringSource) noexcept {
+        std::u16string String16Source = std::wstring_convert<std::codecvt_utf8_utf16<char16_t>, char16_t>().from_bytes(StringSource);
+        CharacterContainer = MemoryAllocator::newArray<Character>((CharacterSize = (intmax_t) String16Source.size()) + 1);
         Arrays::doCopy(String16Source.begin(), String16Source.end(), CharacterContainer);
         CharacterContainer[CharacterSize] = Character();
     }
 
-    String::String(const std::u16string &StringSource) : CharacterSize((intmax_t) StringSource.size()) {
+    String::String(const std::u16string &StringSource) noexcept : CharacterSize((intmax_t) StringSource.size()) {
         CharacterContainer = MemoryAllocator::newArray<Character>(StringSource.size() + 1);
         Arrays::doCopy(StringSource.begin(), StringSource.end(), CharacterContainer);
         CharacterContainer[CharacterSize] = Character();
     }
 
-    String::String(const std::u32string &StringSource) : CharacterSize((intmax_t) StringSource.size()) {
-        static std::wstring_convert<std::codecvt_utf16<char32_t>, char32_t> StringConverter;
-        std::string String8Source = StringConverter.to_bytes(StringSource);
+    String::String(const std::u32string &StringSource) noexcept {
+        std::string String8Source(std::wstring_convert<std::codecvt_utf16<char32_t>, char32_t>().to_bytes(StringSource));
         std::u16string String16Source(reinterpret_cast<const char16_t*>(String8Source.c_str()), String8Source.size() / sizeof(char16_t));
-        CharacterContainer = MemoryAllocator::newArray<Character>(String16Source.size() + 1);
+        CharacterContainer = MemoryAllocator::newArray<Character>((CharacterSize = (intmax_t) String16Source.size()) + 1);
         Arrays::doCopy(String16Source.begin(), String16Source.end(), CharacterContainer);
         CharacterContainer[CharacterSize] = Character();
     }
 
-    String::String(const std::wstring &StringSource) : CharacterSize((intmax_t) StringSource.size()) {
-        CharacterContainer = MemoryAllocator::newArray<Character>(CharacterSize + 1);
-        Arrays::doCopy(StringSource.begin(), StringSource.end(), CharacterContainer);
-        CharacterContainer[CharacterSize] = Character();
+    String::String(const std::wstring &StringSource) noexcept {
+        if constexpr (sizeof(std::wstring::value_type) == sizeof(char16_t)) {
+            CharacterContainer = MemoryAllocator::newArray<Character>((CharacterSize = (intmax_t) StringSource.size()) + 1);
+            Arrays::doCopy(StringSource.begin(), StringSource.end(), CharacterContainer);
+            CharacterContainer[CharacterSize] = Character();
+        } else if constexpr (sizeof(std::wstring::value_type) == sizeof(char32_t)) {
+            std::string String8Source(std::wstring_convert<std::codecvt_utf16<char32_t>, char32_t>().to_bytes({StringSource.begin(), StringSource.end()}));
+            std::u16string String16Source(reinterpret_cast<const char16_t*>(String8Source.c_str()), String8Source.size() / sizeof(char16_t));
+            CharacterContainer = MemoryAllocator::newArray<Character>((CharacterSize = (intmax_t) String16Source.size()) + 1);
+            Arrays::doCopy(String16Source.begin(), String16Source.end(), CharacterContainer);
+            CharacterContainer[CharacterSize] = Character();
+        } else std::unreachable();
     }
 
-    void String::doAssign(const String &StringSource) {
+    void String::doAssign(const String &StringSource) noexcept {
         if (Objects::getAddress(StringSource) == this) return;
         delete[] CharacterContainer;
-        CharacterContainer = new Character[(CharacterSize = StringSource.CharacterSize) + 1];
+        CharacterContainer = MemoryAllocator::newArray<Character>((CharacterSize = StringSource.CharacterSize) + 1);
         Arrays::doCopy(StringSource.CharacterContainer, CharacterSize, CharacterContainer);
         CharacterContainer[CharacterSize] = Character();
     }
 
+    void String::doAssign(String &&StringSource) noexcept {
+        if (Objects::getAddress(StringSource) == this) return;
+        delete[] CharacterContainer;
+        CharacterContainer = StringSource.CharacterContainer;
+        CharacterSize = StringSource.CharacterSize;
+        StringSource.CharacterContainer = nullptr;
+        StringSource.CharacterSize = 0;
+    }
+
     String String::doConcat(const Character &CharacterSource) const noexcept {
-        StringStream CharacterStream;
+        StringStream CharacterStream(CharacterSize + 1);
         CharacterStream.addString(*this);
         CharacterStream.addCharacter(CharacterSource);
         return CharacterStream.toString();
     }
 
     String String::doConcat(const String &StringOther) const noexcept {
-        StringStream CharacterStream;
+        StringStream CharacterStream(CharacterSize + StringOther.CharacterSize);
         CharacterStream.addString(*this);
         CharacterStream.addString(StringOther);
         return CharacterStream.toString();
@@ -71,7 +110,7 @@ namespace eLibrary::Core {
     }
 
     String String::doReverse() const noexcept {
-        StringStream CharacterStream;
+        StringStream CharacterStream(CharacterSize);
         for (intmax_t CharacterIndex = 0;CharacterIndex < CharacterSize;++CharacterIndex)
             CharacterStream.addCharacter(CharacterContainer[CharacterSize - CharacterIndex - 1]);
         return CharacterStream.toString();
@@ -96,14 +135,13 @@ namespace eLibrary::Core {
 
     String String::doTruncate(intmax_t CharacterStart, intmax_t CharacterStop) const {
         if (CharacterStart < 0) CharacterStart += CharacterSize;
-        if (CharacterStart < 0 || CharacterStart >= CharacterSize)
-            throw IndexException(String(u"String::doTruncate(intmax_t, intmax_t) CharacterStart"));
+        Arrays::doCheckGE(CharacterStart, 0);
+        Arrays::doCheckL(CharacterStart, CharacterSize);
         if (CharacterStop < 0) CharacterStop += CharacterSize + 1;
-        if (CharacterStop < 0 || CharacterStop > CharacterSize)
-            throw IndexException(String(u"String::doTruncate(intmax_t, intmax_t) CharacterStop"));
-        if (CharacterStop < CharacterStart)
-            throw IndexException(String(u"String::doTruncate(intmax_t, intmax_t) CharacterStart CharacterStop"));
-        StringStream CharacterStream;
+        Arrays::doCheckGE(CharacterStop, 0);
+        Arrays::doCheckLE(CharacterStop, CharacterSize);
+        Arrays::doCheckLE(CharacterStart, CharacterStop);
+        StringStream CharacterStream(CharacterStop - CharacterStart);
         for (intmax_t CharacterIndex = CharacterStart;CharacterIndex < CharacterStop;++CharacterIndex)
             CharacterStream.addCharacter(CharacterContainer[CharacterIndex]);
         return CharacterStream.toString();
@@ -111,34 +149,28 @@ namespace eLibrary::Core {
 
     Character String::getCharacter(intmax_t CharacterIndex) const {
         if (CharacterIndex < 0) CharacterIndex += CharacterSize;
-        if (CharacterIndex < 0 || CharacterIndex >= CharacterSize)
-            throw Exception(String(u"String::getCharacter(intmax_t) CharacterIndex"));
+        Arrays::doCheckGE(CharacterIndex, 0);
+        Arrays::doCheckL(CharacterIndex, CharacterSize);
         return CharacterContainer[CharacterIndex];
     }
 
     String String::toLowerCase() const noexcept {
-        StringStream CharacterStream;
+        StringStream CharacterStream(CharacterSize);
         for (intmax_t CharacterIndex = 0;CharacterIndex < CharacterSize;++CharacterIndex)
             CharacterStream.addCharacter(CharacterContainer[CharacterIndex].toLowerCase());
         return CharacterStream.toString();
     }
 
     String String::toUpperCase() const noexcept {
-        StringStream CharacterStream;
+        StringStream CharacterStream(CharacterSize);
         for (intmax_t CharacterIndex = 0;CharacterIndex < CharacterSize;++CharacterIndex)
             CharacterStream.addCharacter(CharacterContainer[CharacterIndex].toUpperCase());
         return CharacterStream.toString();
     }
 
     std::string String::toU8String() const noexcept {
-        static std::wstring_convert<std::codecvt_utf8_utf16<char16_t>, char16_t> StringConverter;
-        auto *CharacterBuffer = MemoryAllocator::newArray<char16_t>(CharacterSize + 1);
-        for (intmax_t CharacterIndex = 0;CharacterIndex < CharacterSize;++CharacterIndex)
-            CharacterBuffer[CharacterIndex] = (char16_t) CharacterContainer[CharacterIndex];
-        CharacterBuffer[CharacterSize] = char16_t();
-        auto CharacterResult = StringConverter.to_bytes(CharacterBuffer, CharacterBuffer + CharacterSize);
-        delete[] CharacterBuffer;
-        return CharacterResult;
+        std::u16string StringSource(toU16String());
+        return std::wstring_convert<std::codecvt_utf8_utf16<char16_t>, char16_t>().to_bytes(StringSource.data(), StringSource.data() + StringSource.size());
     }
 
     std::u16string String::toU16String() const noexcept {
@@ -151,14 +183,23 @@ namespace eLibrary::Core {
         return CharacterResult;
     }
 
+    std::u32string String::toU32String() const noexcept {
+        std::u16string StringSource(toU16String());
+        return std::wstring_convert<std::codecvt_utf16<char32_t>, char32_t>().from_bytes((const char*) StringSource.data(), (const char*) (StringSource.data() + StringSource.size()));
+    }
+
     std::wstring String::toWString() const noexcept {
-        auto *CharacterBuffer = MemoryAllocator::newArray<wchar_t>(CharacterSize + 1);
-        for (intmax_t CharacterIndex = 0;CharacterIndex < CharacterSize;++CharacterIndex)
-            CharacterBuffer[CharacterIndex] = (wchar_t) (char16_t) CharacterContainer[CharacterIndex];
-        CharacterBuffer[CharacterSize] = wchar_t();
-        std::wstring CharacterResult(CharacterBuffer, (size_t) CharacterSize);
-        delete[] CharacterBuffer;
-        return CharacterResult;
+        if constexpr (sizeof(std::wstring::value_type) == sizeof(char16_t)) {
+            std::u16string StringSource(toU16String());
+            return {StringSource.begin(), StringSource.end()};
+        } else if constexpr (sizeof(std::wstring::value_type) == sizeof(char32_t)) {
+            std::u32string StringSource(toU32String());
+            return {StringSource.begin(), StringSource.end()};
+        } else std::unreachable();
+    }
+
+    StringStream::StringStream(uintmax_t CharacterCapacitySource) : CharacterCapacity(CharacterCapacitySource) {
+        CharacterContainer = MemoryAllocator::newArray<Character>(CharacterCapacity);
     }
 
     void StringStream::addCharacter(const Character &CharacterSource) {
@@ -191,7 +232,7 @@ namespace eLibrary::Core {
 
     String StringStream::toString() const noexcept {
         auto *CharacterBuffer = MemoryAllocator::newArray<char16_t>(CharacterSize + 1);
-        for (intmax_t CharacterIndex = 0;CharacterIndex < CharacterSize;++CharacterIndex)
+        for (uintmax_t CharacterIndex = 0;CharacterIndex < CharacterSize;++CharacterIndex)
             CharacterBuffer[CharacterIndex] = (char16_t) CharacterContainer[CharacterIndex];
         CharacterBuffer[CharacterSize] = char16_t();
         std::u16string CharacterResult(CharacterBuffer, (size_t) CharacterSize);

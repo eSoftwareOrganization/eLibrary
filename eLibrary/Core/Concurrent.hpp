@@ -2,11 +2,39 @@
 
 #include <Core/Number.hpp>
 
+#if eLibraryCompiler(MSVC)
+#include <intrin.h>
+#endif
+
+#if eLibrarySystem(Windows)
+#include <Windows.h>
+#else
+#include <pthread.h>
+#include <unistd.h>
+#endif
+
 namespace eLibrary::Core {
     class ConcurrentUtility final : public Object {
     public:
         constexpr ConcurrentUtility() noexcept = delete;
 
+#if eLibraryCompiler(MSVC)
+        static int8_t doCompareAndExchange(volatile int8_t *ValueAddress, int8_t ValueExpected, int8_t ValueTarget) noexcept {
+            std::unreachable();
+        }
+
+        static int16_t doCompareAndExchange(volatile int16_t *ValueAddress, int16_t ValueExpected, int16_t ValueTarget) noexcept {
+            return InterlockedCompareExchange16(ValueAddress, ValueTarget, ValueExpected);
+        }
+
+        static int32_t doCompareAndExchange(volatile int32_t *ValueAddress, int32_t ValueExpected, int32_t ValueTarget) noexcept {
+            return InterlockedCompareExchange((volatile LONG*) ValueAddress, ValueTarget, ValueExpected);
+        }
+
+        static int64_t doCompareAndExchange(volatile int64_t *ValueAddress, int64_t ValueExpected, int64_t ValueTarget) noexcept {
+            return InterlockedCompareExchange64(ValueAddress, ValueTarget, ValueExpected);
+        }
+#else
         static int8_t doCompareAndExchange(volatile int8_t *ValueAddress, int8_t ValueExpected, int8_t ValueTarget) noexcept {
             int8_t ValueResult;
             asm volatile("lock\n\tcmpxchgb %2, (%3)":"=a"(ValueResult):"a"(ValueExpected), "r"(ValueTarget), "r"(ValueAddress):"cc", "memory");
@@ -30,13 +58,14 @@ namespace eLibrary::Core {
             asm volatile("lock\n\tcmpxchgq %2, (%3)":"=a"(ValueResult):"a"(ValueExpected), "r"(ValueTarget), "r"(ValueAddress):"cc", "memory");
             return ValueResult;
         }
+#endif
 
         template<typename T>
         static auto doCompareAndExchangeReference(volatile T **ValueAddress, T *ValueExpected, T *ValueTarget) noexcept {
             return doCompareAndExchange((volatile intmax_t*) ValueAddress, (intmax_t) ValueExpected, (intmax_t) ValueTarget);
         }
 
-        template<typename T>
+        template<Arithmetic T>
         static bool doCompareAndSet(volatile T *ValueAddress, T ValueExpected, T ValueTarget) noexcept {
             doCompareAndExchange(ValueAddress, ValueExpected, ValueTarget);
             return *ValueAddress == ValueTarget;
@@ -48,7 +77,7 @@ namespace eLibrary::Core {
             return *ValueAddress == ValueTarget;
         }
 
-        template<std::integral T>
+        template<Arithmetic T>
         static T getAndAddNumber(volatile T *ValueAddress, T ValueDelta) noexcept {
             T ValueExpected;
             do {
@@ -57,7 +86,7 @@ namespace eLibrary::Core {
             return ValueExpected;
         }
 
-        template<std::integral T>
+        template<Arithmetic T>
         static T getAndAndNumber(volatile T *ValueAddress, T ValueSource) noexcept {
             T ValueExpected;
             do {
@@ -66,7 +95,7 @@ namespace eLibrary::Core {
             return ValueExpected;
         }
 
-        template<std::integral T>
+        template<Arithmetic T>
         static T getAndOrNumber(volatile T *ValueAddress, T ValueSource) noexcept {
             T ValueExpected;
             do {
@@ -75,7 +104,7 @@ namespace eLibrary::Core {
             return ValueExpected;
         }
 
-        template<std::integral T>
+        template<Arithmetic T>
         static T getAndSetNumber(volatile T *ValueAddress, T ValueTarget) noexcept {
             T ValueExpected;
             do {
@@ -93,13 +122,157 @@ namespace eLibrary::Core {
             return ValueExpected;
         }
 
-        template<std::integral T>
+        template<Arithmetic T>
         static T getAndXorNumber(volatile T *ValueAddress, T ValueSource) noexcept {
             T ValueExpected;
             do {
                 ValueExpected = *ValueAddress;
             } while (ConcurrentUtility::doCompareAndExchange(ValueAddress, ValueExpected, ValueExpected ^ ValueSource) != ValueExpected);
             return ValueExpected;
+        }
+    };
+
+#if eLibrarySystem(Windows)
+    typedef HANDLE ThreadHandleType;
+#else
+    typedef pthread_t ThreadHandleType;
+#endif
+
+    /**
+     * Support for multithreading
+     */
+    class Thread : public Object {
+    private:
+        ThreadHandleType ThreadHandle;
+        volatile bool ThreadFinish;
+        volatile bool ThreadInterrupt;
+
+        static void *doExecuteCore(void *ThreadContext) noexcept {
+            ((Thread*) ThreadContext)->ThreadFinish = false;
+            ((Thread*) ThreadContext)->doExecute();
+            ((Thread*) ThreadContext)->ThreadFinish = true;
+            return nullptr;
+        }
+
+        constexpr Thread(ThreadHandleType ThreadHandleSource) noexcept : ThreadHandle(ThreadHandleSource), ThreadFinish(false), ThreadInterrupt(false) {}
+    protected:
+        void doStartCore() noexcept {
+#if eLibrarySystem(Windows)
+            if (ThreadHandle) CloseHandle(ThreadHandle);
+            ThreadHandle = ::CreateThread(nullptr, 0, (LPTHREAD_START_ROUTINE) &Thread::doExecuteCore, this, 0, nullptr);
+#else
+            pthread_attr_t ThreadAttribute;
+            pthread_attr_init(&ThreadAttribute);
+            pthread_attr_setschedpolicy(&ThreadAttribute, SCHED_MAX);
+            pthread_create(&ThreadHandle, &ThreadAttribute, Thread::doExecuteCore, this);
+            pthread_attr_destroy(&ThreadAttribute);
+#endif
+        }
+
+        doDisableCopyAssignConstruct(Thread)
+    public:
+        constexpr Thread() noexcept : ThreadHandle(ThreadHandleType()), ThreadFinish(false), ThreadInterrupt(false) {}
+
+#if eLibrarySystem(Windows)
+        ~Thread() noexcept {
+            if (ThreadHandle) {
+                CloseHandle(ThreadHandle);
+                ThreadHandle = nullptr;
+            }
+        }
+#endif
+
+        virtual void doExecute() noexcept {}
+
+        void doInterrupt() {
+            if (isInterrupted()) throw InterruptedException(String(u"Thread::doInterrupt() isInterrupted"));
+            ThreadInterrupt = true;
+        }
+
+        void doJoin() const {
+#if eLibrarySystem(Windows)
+            while (!ThreadFinish) {
+                if (isInterrupted()) throw InterruptedException(String(u"Thread::doJoin() isInterrupted"));
+                Sleep(10);
+            }
+            WaitForSingleObject(ThreadHandle, INFINITE);
+#else
+            while (!ThreadFinish) {
+                if (isInterrupted()) throw InterruptedException(String(u"Thread::doJoin() isInterrupted"));
+                usleep(10000);
+            }
+            pthread_join(ThreadHandle, nullptr);
+#endif
+        }
+
+        virtual void doStart() {
+            if (ThreadHandle) throw Exception(String(u"Thread::doStart() ThreadHandle"));
+            doStartCore();
+        }
+
+        static void doYield() noexcept {
+#if eLibrarySystem(Windows)
+            SwitchToThread();
+#else
+            sched_yield();
+#endif
+        }
+
+        bool isFinished() const noexcept {
+            return ThreadFinish;
+        }
+
+        bool isInterrupted() const noexcept {
+            return ThreadInterrupt != 0;
+        }
+
+        static Thread getCurrentThread() noexcept {
+#if eLibrarySystem(Windows)
+            return {GetCurrentThread()};
+#else
+            return {pthread_self()};
+#endif
+        }
+    };
+
+    template<typename F, typename ...Ts>
+    class FunctionThread final : public Thread {
+    private:
+        F ThreadFunction;
+        std::tuple<Ts...> ThreadParameter;
+
+        doDisableCopyAssignConstruct(FunctionThread)
+    public:
+        constexpr explicit FunctionThread(F ThreadFunctionSource, Ts ...ThreadParameterSource) noexcept : ThreadFunction(ThreadFunctionSource), ThreadParameter(std::make_tuple(ThreadParameterSource...)) {}
+
+        void doExecute() noexcept override {
+            std::apply(ThreadFunction, ThreadParameter);
+        }
+    };
+
+    class ReentrantThread : public Thread {
+    private:
+        doDisableCopyAssignConstruct(ReentrantThread)
+    public:
+        constexpr ReentrantThread() noexcept = default;
+
+        void doStart() override {
+            doStartCore();
+        }
+    };
+
+    template<typename F, typename ...Ts>
+    class ReentrantFunctionThread final : public ReentrantThread {
+    private:
+        F ThreadFunction;
+        std::tuple<Ts...> ThreadParameter;
+
+        doDisableCopyAssignConstruct(ReentrantFunctionThread)
+    public:
+        constexpr explicit ReentrantFunctionThread(F ThreadFunctionSource, Ts ...ThreadParameterSource) noexcept : ThreadFunction(ThreadFunctionSource), ThreadParameter(std::make_tuple(ThreadParameterSource...)) {}
+
+        void doExecute() noexcept override {
+            std::apply(ThreadFunction, ThreadParameter);
         }
     };
 

@@ -2,11 +2,10 @@
 
 #include <Core/String.hpp>
 
-#ifdef __GNUC__
+#if eLibraryCompiler(GNU)
 #include <cxxabi.h>
 #endif
 #include <exception>
-#include <sstream>
 
 namespace eLibrary::Core {
     /**
@@ -14,30 +13,28 @@ namespace eLibrary::Core {
      */
     class Exception : public Object, public std::exception {
     private:
-        std::string ExceptionDetail;
+        mutable std::string ExceptionDetail;
         String ExceptionMessage;
     public:
-        explicit Exception(const String &ExceptionMessageSource) noexcept : ExceptionMessage(ExceptionMessageSource) {
-            std::stringstream ObjectStream;
-            ObjectStream <<
-#ifdef __GNUC__
-            abi::__cxa_demangle(
-#endif
-            typeid(*this).name()
-#ifdef __GNUC__
-            , nullptr, nullptr, nullptr)
-#endif
-            << ' ' << ExceptionMessageSource.toU8String();
-            ExceptionDetail = ObjectStream.str();
-        }
-
-        Exception(const Exception&) noexcept = default;
+        explicit Exception(const String &ExceptionMessageSource) noexcept : ExceptionMessage(ExceptionMessageSource) {}
 
         String toString() const noexcept override {
+            if (ExceptionDetail.empty()) {
+                ExceptionDetail = String(
+#if eLibraryCompiler(GNU)
+                        abi::__cxa_demangle(
+#endif
+                                typeid(*this).name()
+#if eLibraryCompiler(GNU)
+                                , nullptr, nullptr, nullptr)
+#endif
+                ).doConcat(u' ').doConcat(ExceptionMessage).toU8String();
+            }
             return {ExceptionDetail};
         }
 
         const char *what() const noexcept override {
+            toString();
             return ExceptionDetail.data();
         }
     };

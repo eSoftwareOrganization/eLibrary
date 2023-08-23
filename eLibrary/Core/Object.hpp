@@ -1,9 +1,8 @@
 #pragma once
 
 #include <Core/Global.hpp>
-
-#include <format>
-#include <string>
+#include <functional>
+#include <utility>
 
 namespace eLibrary::Core {
     class String;
@@ -85,23 +84,23 @@ namespace eLibrary::Core {
         }
 
         template<typename T>
-        static constexpr auto doMove(T &&ObjectSource) noexcept {
+        static constexpr typename std::remove_reference<T>::type&& doMove(T &&ObjectSource) noexcept {
             return static_cast<typename std::remove_reference<T>::type&&>(ObjectSource);
         }
 
         template<typename T>
-        static void doSwap(T &Object1, T &Object2) noexcept(std::is_nothrow_move_constructible<T>::value && std::is_nothrow_move_assignable<T>::value) {
+        static void doSwap(T &Object1, T &Object2) noexcept(std::is_nothrow_move_constructible_v<T> && std::is_nothrow_move_assignable_v<T>) {
             T ObjectBuffer = doMove(Object1);
             Object1 = doMove(Object2);
             Object2 = doMove(ObjectBuffer);
         }
 
-        template<typename T> requires std::is_object<T>::value
+        template<typename T> requires std::is_object_v<T>
         static T *getAddress(T &ObjectSource) noexcept {
             return (T*) &((char&) ObjectSource);
         }
 
-        template<typename T> requires (!std::is_object<T>::value)
+        template<typename T> requires (!std::is_object_v<T>)
         static T *getAddress(T &ObjectSource) noexcept {
             return &ObjectSource;
         }
@@ -128,11 +127,58 @@ namespace eLibrary::Core {
     };
 }
 
-template<eLibrary::Core::ObjectDerived ObjectT, typename CharacterT>
-struct std::formatter<ObjectT, CharacterT> : public std::formatter<std::string, CharacterT> {
+template<eLibrary::Core::Comparable T>
+struct std::equal_to<T> {
 public:
-    template<typename ContextT>
-    auto format(const ObjectT &ObjectSource, ContextT &ObjectContext) const {
-        return std::formatter<std::string, CharacterT>::format(ObjectSource.toString().toU8String(), ObjectContext);
+    bool operator()(const T &Object1, const T &Object2) const noexcept {
+        return !Object1.doCompare(Object2);
+    }
+};
+
+template<eLibrary::Core::Comparable T>
+struct std::greater<T> {
+public:
+    bool operator()(const T &Object1, const T &Object2) const noexcept {
+        return Object1.doCompare(Object2) > 0;
+    }
+};
+
+template<eLibrary::Core::Comparable T>
+struct std::greater_equal<T> {
+public:
+    bool operator()(const T &Object1, const T &Object2) const noexcept {
+        return Object1.doCompare(Object2) >= 0;
+    }
+};
+
+template<eLibrary::Core::Hashable T>
+struct std::hash<T> {
+public:
+    auto operator()(const T &ObjectSource) const noexcept {
+        return ObjectSource.hashCode();
+    }
+};
+
+template<eLibrary::Core::Comparable T>
+struct std::less<T> {
+public:
+    bool operator()(const T &Object1, const T &Object2) const noexcept {
+        return Object1.doCompare(Object2) < 0;
+    }
+};
+
+template<eLibrary::Core::Comparable T>
+struct std::less_equal<T> {
+public:
+    bool operator()(const T &Object1, const T &Object2) const noexcept {
+        return Object1.doCompare(Object2) <= 0;
+    }
+};
+
+template<eLibrary::Core::Comparable T>
+struct std::not_equal_to<T> {
+public:
+    bool operator()(const T &Object1, const T &Object2) const noexcept {
+        return Object1.doCompare(Object2);
     }
 };

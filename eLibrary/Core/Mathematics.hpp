@@ -36,7 +36,7 @@ namespace eLibrary::Core {
                 if (NumberD.isPositive()) NumberD = NumberD.getOpposite().doSubtraction(2);
                 else NumberD = NumberD.getOpposite().doAddition(2);
             }
-            if (!NumberD.doCompare(0)) return false;
+            if (NumberD.isZero()) return false;
             Integer NumberIterationCount(0), NumberK(NumberSource.doAddition(1)), NumberP(1), NumberQ(Integer(1).doSubtraction(NumberD).doDivision(4));
             while (NumberK.isEven()) NumberK = NumberK.doDivision(2), NumberIterationCount = NumberIterationCount.doAddition(1);
             Integer NumberBitCount(NumberK.toString(2).getCharacterSize()), NumberQk(NumberQ), NumberU(1), NumberV(NumberP);
@@ -91,16 +91,16 @@ namespace eLibrary::Core {
                 }
             NumberU = NumberU.doModulo(NumberSource);
             NumberV = NumberV.doModulo(NumberSource);
-            if (!NumberU.doCompare(0) || !NumberV.doCompare(0)) return true;
+            if (NumberU.isZero() || NumberV.isZero()) return true;
             for (Integer NumberIteration = 1;NumberIteration.doCompare(NumberIterationCount) < 0;NumberIteration = NumberIteration.doAddition(1)) {
                 NumberV = NumberV.doMultiplication(NumberV).doSubtraction(NumberQk.doAddition(NumberQk)).doModulo(NumberSource);
-                if (!NumberV.doCompare(0)) return true;
+                if (NumberV.isZero()) return true;
                 NumberQk = NumberQk.doPower(2, NumberSource);
             }
             return false;
         }
 
-        static bool isPrimeRabinMiller(const Integer &NumberSource, const std::vector<Integer> &NumberBaseList) noexcept {
+        static bool isPrimeRabinMiller(const Integer &NumberSource, std::initializer_list<Integer> NumberBaseList) noexcept {
             Integer NumberIteration(1), NumberExponent(NumberSource.doSubtraction(1));
             while (NumberExponent.isEven()) NumberExponent = NumberExponent.doDivision(2), NumberIteration = NumberIteration.doAddition(1);
             for (Integer NumberBase : NumberBaseList) {
@@ -141,26 +141,8 @@ namespace eLibrary::Core {
             return NumberN.doFactorial().doDivision(NumberM.doFactorial().doMultiplication(NumberN.doSubtraction(NumberM).doFactorial()));
         }
 
-        template<std::floating_point T>
-        static T doCosecant(T NumberSource) noexcept {
-            return 1 / doSine(NumberSource);
-        }
-
         static Fraction doCosecantFraction(const Fraction &NumberSource) noexcept {
             return Fraction(1).doDivision(doSineFraction(NumberSource));
-        }
-
-        template<Arithmetic T>
-        static T doCosine(T NumberSource) noexcept {
-            NumberSource -= intmax_t(NumberSource / (std::numbers::pi * 2)) * 2 * std::numbers::pi;
-            T NumberResult = 1, NumberTerminate = 1;
-            uintmax_t NumberDigit = 2;
-            while (std::abs(NumberTerminate) >= 1e-10) {
-                NumberTerminate *= -(NumberSource * NumberSource / (NumberDigit * (NumberDigit - 1)));
-                NumberResult += NumberTerminate;
-                NumberDigit += 2;
-            }
-            return NumberResult;
         }
 
         static Fraction doCosineFraction(const Fraction &NumberSource) noexcept {
@@ -174,35 +156,12 @@ namespace eLibrary::Core {
             return NumberResult;
         }
 
-        template<Arithmetic T>
-        static T doCotangent(T NumberSource) noexcept {
-            return doCosine(NumberSource) / doSine(NumberSource);
-        }
-
         static Fraction doCotangentFraction(const Fraction &NumberSource) noexcept {
             return doCosineFraction(NumberSource).doDivision(doSineFraction(NumberSource));
         }
 
-        template<Arithmetic T>
-        static T doEvolution(T NumberBase, T NumberPower) noexcept {
-            return doPower(NumberBase, 1 / NumberPower);
-        }
-
         static Fraction doEvolutionFraction(const Fraction &NumberBase, const Fraction &NumberPower) noexcept {
             return doPowerFraction(NumberBase, Fraction(1, 1).doDivision(NumberPower));
-        }
-
-        template<Arithmetic T>
-        static T doExponent(T NumberSource) noexcept {
-            T NumberDenominator = 1, NumberNumerator = NumberSource, NumberResult = 1, NumberTerminate = NumberSource;
-            unsigned short NumberDigit = 1;
-            while (std::abs(NumberTerminate) >= 1e-10) {
-                NumberResult += NumberTerminate;
-                NumberNumerator *= NumberSource;
-                NumberDenominator *= ++NumberDigit;
-                NumberTerminate = NumberNumerator / NumberDenominator;
-            }
-            return NumberResult;
         }
 
         static Fraction doExponentFraction(const Fraction &NumberSource) noexcept {
@@ -226,44 +185,16 @@ namespace eLibrary::Core {
             return (NumberSource + 1) >> 1;
         }
 
-        template<Arithmetic T>
-        static T doHyperbolicCosine(T NumberSource) noexcept {
-            return (doExponent(NumberSource) + doExponent(-NumberSource)) / 2;
-        }
-
         static Fraction doHyperbolicCosineFraction(const Fraction &NumberSource) noexcept {
             return doExponentFraction(NumberSource).doAddition(doExponentFraction(NumberSource.getOpposite())).doDivision(Integer(2));
-        }
-
-        template<Arithmetic T>
-        static T doHyperbolicSine(T NumberSource) noexcept {
-            return (doExponent(NumberSource) - doExponent(-NumberSource)) / 2;
         }
 
         static Fraction doHyperbolicSineFraction(const Fraction &NumberSource) noexcept {
             return doExponentFraction(NumberSource).doSubtraction(doExponentFraction(NumberSource.getOpposite())).doDivision(Integer(2));
         }
 
-        template<Arithmetic T>
-        static T doHyperbolicTangent(T NumberSource) noexcept {
-            return doHyperbolicSine(NumberSource) / doHyperbolicCosine(NumberSource);
-        }
-
         static Fraction doHyperbolicTangentFraction(const Fraction &NumberSource) noexcept {
             return doHyperbolicSineFraction(NumberSource).doDivision(doHyperbolicCosineFraction(NumberSource));
-        }
-
-        template<Arithmetic T>
-        static T doInverseHyperbolicTangent(T NumberDegree) noexcept {
-            T NumberNumerator = NumberDegree, NumberResult = 0, NumberTerminate = NumberDegree;
-            unsigned short NumberDigit = 1;
-            while (std::abs(NumberTerminate) >= 1e-10) {
-                NumberResult += NumberTerminate;
-                NumberNumerator *= NumberDegree * NumberDegree;
-                NumberDigit += 2;
-                NumberTerminate = NumberNumerator / NumberDigit;
-            }
-            return NumberResult;
         }
 
         static Fraction doInverseHyperbolicTangentFraction(const Fraction &NumberDegree) noexcept {
@@ -278,18 +209,19 @@ namespace eLibrary::Core {
             return NumberResult;
         }
 
-        template<Arithmetic T>
-        static T doLogarithmE(T NumberSource) noexcept {
-            return doInverseHyperbolicTangent((NumberSource - 1) / (NumberSource + 1)) * 2;
-        }
-
         static Fraction doLogarithmEFraction(const Fraction &NumberSource) noexcept {
             return doInverseHyperbolicTangentFraction(NumberSource.doSubtraction(Integer(1)).doDivision(NumberSource.doAddition(Integer(1)))).doMultiplication(Integer(2));
         }
 
-        template<Arithmetic T>
+        template<std::integral T>
         static T doPower(T NumberBase, T NumberExponent) noexcept {
-            return doExponent(doLogarithmE(NumberBase) * NumberExponent);
+            T NumberResult = 1;
+            while (NumberExponent) {
+                if (NumberExponent & 1) NumberResult = NumberResult * NumberBase;
+                NumberBase = NumberBase * NumberBase;
+                NumberExponent >>= 1;
+            }
+            return NumberResult;
         }
 
         template<std::integral T>
@@ -307,29 +239,8 @@ namespace eLibrary::Core {
             return doExponentFraction(doLogarithmEFraction(NumberBase).doMultiplication(NumberExponent));
         }
 
-        template<Arithmetic T>
-        static T doSecant(T NumberSource) {
-            return 1 / doCosine(NumberSource);
-        }
-
         static Fraction doSecantFraction(const Fraction &NumberSource) noexcept {
             return Fraction(1, 1).doDivision(doCosineFraction(NumberSource));
-        }
-
-        template<Arithmetic T>
-        static T doSine(T NumberSource) noexcept {
-            NumberSource -= intmax_t(NumberSource / (std::numbers::pi * 2)) * 2 * std::numbers::pi;
-            T NumberDenominator = 1, NumberNumerator = NumberSource, NumberResult = 0, NumberSignature = 1, NumberTerminate = NumberSource;
-            unsigned short NumberDigit = 1;
-            while (std::abs(NumberTerminate) >= 1e-10) {
-                NumberResult += NumberTerminate;
-                ++NumberDigit;
-                NumberSignature = -NumberSignature;
-                NumberDenominator *= ((NumberDigit << 1) - 2) * ((NumberDigit << 1) - 1);
-                NumberNumerator *= NumberSource * NumberSource;
-                NumberTerminate = NumberSignature * (NumberNumerator / NumberDenominator);
-            }
-            return NumberResult;
         }
 
         static Fraction doSineFraction(const Fraction &NumberSourceSource) noexcept {
@@ -347,11 +258,6 @@ namespace eLibrary::Core {
             return NumberResult;
         }
 
-        template<Arithmetic T>
-        static T doTangent(T NumberSource) noexcept {
-            return doSine(NumberSource) / doCosine(NumberSource);
-        }
-
         static Fraction doTangentFraction(const Fraction &NumberSource) noexcept {
             return doSineFraction(NumberSource).doDivision(doCosineFraction(NumberSource));
         }
@@ -362,7 +268,7 @@ namespace eLibrary::Core {
         }
 
         static Integer getGreatestCommonFactor(const Integer &Number1, const Integer &Number2) noexcept {
-            if (!Number2.getAbsolute().doCompare(0)) return Number1;
+            if (Number2.getAbsolute().isZero()) return Number1;
             return getGreatestCommonFactor(Number2, Number1.doModulo(Number2));
         }
 
@@ -370,14 +276,14 @@ namespace eLibrary::Core {
             if (NumberNSource.isNegative() || NumberNSource.isEven()) throw ArithmeticException(String(u"Mathematics::getJocabiSymbol(const Integer&, const Integer&) NumberNSource"));
             Integer NumberM(NumberMSource), NumberN(NumberNSource);
             if (NumberM.isNegative() || NumberM.doCompare(NumberN) > 0) NumberM = NumberM.doModulo(NumberN);
-            if (!NumberM.doCompare(0)) return NumberNSource.doCompare(1) == 0;
+            if (NumberM.isZero()) return !NumberNSource.doCompare(1);
             if (Mathematics::getGreatestCommonFactor(NumberM, NumberN).doCompare(1)) return 0;
             Integer NumberJ(1);
             if (NumberM.isNegative()) {
                 NumberM = NumberM.getOpposite();
                 if (!NumberN.doModulo(4).doCompare(3)) NumberJ = NumberJ.getOpposite();
             }
-            while (NumberM.doCompare(0)) {
+            while (!NumberM.isZero()) {
                 while (NumberM.isEven() && NumberM.isPositive()) {
                     NumberM = NumberM.doDivision(2);
                     if (!NumberN.doModulo(8).doCompare(3) || !NumberN.doModulo(8).doCompare(5))
@@ -410,26 +316,26 @@ namespace eLibrary::Core {
         static bool isPrime(const Integer &NumberSource) noexcept {
             if (NumberSource.doCompare(2) < 0) return false;
             if (!NumberSource.doCompare(2) || !NumberSource.doCompare(3) || !NumberSource.doCompare(5)) return true;
-            if (NumberSource.isEven() || !NumberSource.doModulo(3).doCompare(0) || !NumberSource.doModulo(5).doCompare(0))
+            if (NumberSource.isEven() || NumberSource.doModulo(3).isZero() || NumberSource.doModulo(5).isZero())
                 return false;
             if (NumberSource.doCompare(49) < 0) return true;
-            if (!NumberSource.doModulo(7).doCompare(0) || !NumberSource.doModulo(11).doCompare(0) ||
-                !NumberSource.doModulo(13).doCompare(0) || !NumberSource.doModulo(17).doCompare(0) ||
-                !NumberSource.doModulo(19).doCompare(0) || !NumberSource.doModulo(23).doCompare(0) ||
-                !NumberSource.doModulo(29).doCompare(0) || !NumberSource.doModulo(31).doCompare(0) ||
-                !NumberSource.doModulo(37).doCompare(0) || !NumberSource.doModulo(41).doCompare(0) ||
-                !NumberSource.doModulo(43).doCompare(0) || !NumberSource.doModulo(47).doCompare(0))
+            if (NumberSource.doModulo(7).isZero() || NumberSource.doModulo(11).isZero() ||
+                NumberSource.doModulo(13).isZero() || NumberSource.doModulo(17).isZero() ||
+                NumberSource.doModulo(19).isZero() || NumberSource.doModulo(23).isZero() ||
+                NumberSource.doModulo(29).isZero() || NumberSource.doModulo(31).isZero() ||
+                NumberSource.doModulo(37).isZero() || NumberSource.doModulo(41).isZero() ||
+                NumberSource.doModulo(43).isZero() || NumberSource.doModulo(47).isZero())
                 return false;
             if (NumberSource.doCompare(2809) < 0) return true;
             if (NumberSource.doCompare(23001) <= 0)
                 return !Integer(2).doPower(NumberSource, NumberSource).doCompare(2) && NumberSource.doCompare(7957) && NumberSource.doCompare(8321) && NumberSource.doCompare(13747) && NumberSource.doCompare(18721) && NumberSource.doCompare(19951);
-            if (NumberSource.doCompare(341531) < 0) return isPrimeRabinMiller(NumberSource, {{{u"9345883071009581737"}}});
+            if (NumberSource.doCompare(341531) < 0) return isPrimeRabinMiller(NumberSource, {{{u"9345883071009581737"}, 10}});
             if (NumberSource.doCompare(885594169) < 0) return isPrimeRabinMiller(NumberSource, {725270293939359937, 3569819667048198375});
-            if (NumberSource.doCompare(350269456337) < 0) return isPrimeRabinMiller(NumberSource, {4230279247111683200, {{u"14694767155120705706"}}, {{u"16641139526367750375"}}});
-            if (NumberSource.doCompare(55245642489451) < 0) return isPrimeRabinMiller(NumberSource, {2, 141889084524735, 1199124725622454117, {{u"11096072698276303650"}}});
+            if (NumberSource.doCompare(350269456337) < 0) return isPrimeRabinMiller(NumberSource, {4230279247111683200, {{u"14694767155120705706"}, 10}, {{u"16641139526367750375"}, 10}});
+            if (NumberSource.doCompare(55245642489451) < 0) return isPrimeRabinMiller(NumberSource, {2, 141889084524735, 1199124725622454117, {{u"11096072698276303650"}, 10}});
             if (NumberSource.doCompare(7999252175582851) < 0) return isPrimeRabinMiller(NumberSource, {2, 4130806001517, 149795463772692060, 186635894390467037, 3967304179347715805});
             if (NumberSource.doCompare(585226005592931977) < 0) return isPrimeRabinMiller(NumberSource, {2, 123635709730000, 9233062284813009, 43835965440333360, 761179012939631437, 1263739024124850375});
-            if (NumberSource.doCompare({{u"18446744073709551616"}}) < 0) return isPrimeRabinMiller(NumberSource, {2, 325, 9375, 28178, 450775, 9780504, 1795265022});
+            if (NumberSource.doCompare({{u"18446744073709551616"}, 10}) < 0) return isPrimeRabinMiller(NumberSource, {2, 325, 9375, 28178, 450775, 9780504, 1795265022});
             return isPrimeRabinMiller(NumberSource, {2}) && isPrimeLucas(NumberSource);
         }
 

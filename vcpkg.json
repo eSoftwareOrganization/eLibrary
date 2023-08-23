@@ -12,29 +12,26 @@
       "host": true
     }
   ],
-  "version-string": "2023.11",
+  "version-string": "2023.12",
   "default-features": ["module-io", "module-multimedia", "module-network"],
   "features": {
     "application-test": {
-      "description": "Build eLibrary::eLibraryTest",
+      "description": "eLibrary::eLibraryTest",
       "dependencies": ["doctest", "nanobench"]
     },
+    "feature-archive": {
+      "description": "eLibrary::IO::ArchiveDescriptor & ArchiveEntry & ArchiveInputStream",
+      "dependencies": ["libarchive"]
+    },
     "module-io": {
-      "description": "Build eLibrary::IO",
-      "dependencies": [
-        "libarchive",
-        {
-          "name": "dlfcn-win32",
-          "platform": "windows"
-        }
-      ]
+      "description": "eLibrary::IO"
     },
     "module-multimedia": {
-      "description": "Build eLibrary::Multimedia",
+      "description": "eLibrary::Multimedia",
       "dependencies": ["ffmpeg", "openal-soft"]
     },
     "module-network": {
-      "description": "Build eLibrary::Network",
+      "description": "eLibrary::Network",
       "dependencies": ["openssl"]
     }
   }

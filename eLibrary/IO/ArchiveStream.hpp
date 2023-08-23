@@ -1,6 +1,6 @@
 #pragma once
 
-#if eLibraryFeature(IO)
+#if eLibraryFeature(IO) && eLibraryFeature(Archive)
 
 #include <IO/Stream.hpp>
 
@@ -87,9 +87,9 @@ namespace eLibrary::IO {
             return StreamCharacter;
         }
 
-        uint32_t doRead(uint8_t *StreamBuffer, uint32_t StreamBufferOffset, uint32_t StreamBufferSize) override {
-            if (!isAvailable()) throw IOException(String(u"ArchiveInputStream::doRead(uint8_t, uint32_t, uint32_t) isAvailable"));
-            return (uint32_t) ::archive_read_data((archive*) StreamDescriptor, StreamBuffer + StreamBufferOffset, StreamBufferSize);
+        void doRead(ByteBuffer &StreamBuffer) override {
+            if (!isAvailable()) throw IOException(String(u"ArchiveInputStream::doRead(ByteBuffer&) isAvailable"));
+            StreamBuffer.setBufferPosition(StreamBuffer.getBufferPosition() + ::archive_read_data((archive*) StreamDescriptor, StreamBuffer.getBufferContainer() + StreamBuffer.getBufferPosition(), StreamBuffer.getRemaining()));
         }
 
         archive_entry *doReadNextHeader() const {
@@ -107,8 +107,6 @@ namespace eLibrary::IO {
             return ::archive_read_has_encrypted_entries((archive*) StreamDescriptor);
         }
     };
-
-    class ArchiveOutputStream final : public Object {};
 
     class ArchiveEntry final : public Object {
     private:

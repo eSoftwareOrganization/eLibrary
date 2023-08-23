@@ -2,6 +2,7 @@
 
 #if eLibraryFeature(IO)
 
+#include <IO/Buffer.hpp>
 #include <IO/Exception.hpp>
 
 namespace eLibrary::IO {
@@ -11,17 +12,16 @@ namespace eLibrary::IO {
 
         virtual int doRead() = 0;
 
-        virtual uint32_t doRead(uint8_t *StreamBuffer, uint32_t StreamBufferOffset, uint32_t StreamBufferSize) {
-            if (!isAvailable()) throw IOException(String(u"InputStream::doRead(uint8_t*, uint32_t, uint32_t) isAvailable"));
+        virtual void doRead(ByteBuffer &StreamBuffer) {
+            if (!isAvailable()) throw IOException(String(u"InputStream::doRead(ByteBuffer&) isAvailable"));
             int StreamCharacter = doRead();
-            if (StreamCharacter == -1) return 0;
-            StreamBuffer[StreamBufferOffset] = (uint8_t) StreamCharacter;
-            for (uint32_t StreamBufferIndex = 0;StreamBufferIndex < StreamBufferSize;++StreamBufferIndex) {
+            if (StreamCharacter == -1) return;
+            StreamBuffer.setValue((uint8_t) StreamCharacter);
+            for (uintmax_t StreamBufferIndex = 0;StreamBufferIndex < StreamBuffer.getRemaining();++StreamBufferIndex) {
                 StreamCharacter = doRead();
-                if (StreamCharacter == -1) return StreamBufferIndex;
-                StreamBuffer[StreamBufferOffset + StreamBufferIndex] = (uint8_t) StreamCharacter;
+                if (StreamCharacter == -1) return;
+                StreamBuffer.setValue((uint8_t) StreamCharacter);
             }
-            return StreamBufferSize;
         }
 
         virtual bool isAvailable() const noexcept {
@@ -37,10 +37,10 @@ namespace eLibrary::IO {
 
         virtual void doWrite(uint8_t) = 0;
 
-        virtual void doWrite(uint8_t *StreamBuffer, uint32_t StreamOffset, uint32_t StreamSize) {
-            if (!isAvailable()) throw IOException(String(u"OutputStream::doWrite(uint8_t*, uint32_t, uint32_t) isAvailable"));
-            for (uint32_t StreamIndex = 0;StreamIndex < StreamSize;++StreamIndex)
-                doWrite(StreamBuffer[StreamOffset + StreamIndex]);
+        virtual void doWrite(const ByteBuffer &StreamBuffer) {
+            if (!isAvailable()) throw IOException(String(u"OutputStream::doWrite(const ByteBuffer&) isAvailable"));
+            for (uintmax_t StreamIndex = 0;StreamIndex < StreamBuffer.getRemaining();++StreamIndex)
+                doWrite(StreamBuffer.getValue());
         }
 
         virtual bool isAvailable() const noexcept {

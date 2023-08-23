@@ -35,25 +35,25 @@ namespace eLibrary::IO {
             if (isAvailable()) throw IOException(String(u"FileInputStream::doOpen<Os...>(const String&, Os...) isAvailable"));
             int StreamOption = O_RDONLY;
             if constexpr (sizeof...(StreamOptionList) > 0) StreamOption |= getOpenOption(StreamOptionList...);
-            StreamDescriptor.doAssign(open(StreamPath.toU8String().c_str(), StreamOption));
+            StreamDescriptor.doAssign(_open(StreamPath.toU8String().c_str(), StreamOption));
             if (!isAvailable()) throw IOException(String(u"FileInputStream::doOpen<Os...>(const String&, Os...) isAvailable"));
         }
 
         int doRead() override {
             if (!isAvailable()) throw IOException(String(u"FileInputStream::doRead() isAvailable"));
             char StreamBuffer;
-            ::read((int) StreamDescriptor, &StreamBuffer, 1);
+            ::_read((int) StreamDescriptor, &StreamBuffer, 1);
             return StreamBuffer;
         }
 
-        uint32_t doRead(uint8_t *StreamBuffer, uint32_t StreamBufferOffset, uint32_t StreamBufferSize) override {
-            if (!isAvailable()) throw IOException(String(u"FileInputStream::doRead(uint8_t*, uint32_t, uint32_t) isAvailable"));
-            return (uint32_t) ::read((int) StreamDescriptor, StreamBuffer + StreamBufferOffset, StreamBufferSize);
+        void doRead(ByteBuffer &FileBuffer) override {
+            if (!isAvailable()) throw IOException(String(u"FileInputStream::doRead(ByteBuffer&) isAvailable"));
+            FileBuffer.setBufferPosition(FileBuffer.getBufferPosition() + ::_read((int) StreamDescriptor, FileBuffer.getBufferContainer() + FileBuffer.getBufferPosition(), FileBuffer.getRemaining()));
         }
 
         void doSeek(long FileOffset, int FileOrigin) const {
             if (!isAvailable()) throw IOException(String(u"FileInputStream::doSeek(long, int) isAvailable"));
-            ::lseek((int) StreamDescriptor, FileOffset, FileOrigin);
+            ::_lseek((int) StreamDescriptor, FileOffset, FileOrigin);
         }
 
         auto getFileLength() const {
@@ -63,7 +63,7 @@ namespace eLibrary::IO {
 
         auto getFilePosition() const {
             if (!isAvailable()) throw IOException(String(u"FileInputStream::getFilePosition() isAvailable"));
-            return ::tell((int) StreamDescriptor);
+            return ::_tell((int) StreamDescriptor);
         }
 
         bool isAvailable() const noexcept override {
@@ -104,28 +104,29 @@ namespace eLibrary::IO {
             if (isAvailable()) throw IOException(String(u"FileOutputStream::doOpen<Os...>(const String&, Os...) isAvailable"));
             int StreamOption = O_WRONLY;
             if constexpr (sizeof...(StreamOptionList) > 0) StreamOption |= getOpenOption(StreamOptionList...);
-            StreamDescriptor.doAssign(open(StreamPath.toU8String().c_str(), StreamOption));
+            StreamDescriptor.doAssign(_open(StreamPath.toU8String().c_str(), StreamOption));
             if (!isAvailable()) throw IOException(String(u"FileOutputStream::doOpen<Os...>(const String&, Os...) isAvailable"));
         }
 
         void doSeek(long FileOffset, int FileOrigin) {
             if (!isAvailable()) throw IOException(String(u"FileOutputStream::doSeek(long, int) isAvailable"));
-            ::lseek((int) StreamDescriptor, FileOffset, FileOrigin);
+            ::_lseek((int) StreamDescriptor, FileOffset, FileOrigin);
         }
 
         void doWrite(uint8_t FileCharacter) override {
             if (!isAvailable()) throw IOException(String(u"FileOutputStream::doWrite(uint8_t) isAvailable"));
-            ::write((int) StreamDescriptor, &FileCharacter, 1);
+            ::_write((int) StreamDescriptor, &FileCharacter, 1);
         }
 
-        void doWrite(uint8_t *FileBuffer, uint32_t FileBufferOffset, uint32_t FileBufferSize) override {
-            if (!isAvailable()) throw IOException(String(u"FileOutputStream::doWrite(uint8_t*, int, int) isAvailable"));
-            ::write((int) StreamDescriptor, FileBuffer + FileBufferOffset, FileBufferSize);
+        void doWrite(const ByteBuffer &FileBuffer) override {
+            if (!isAvailable()) throw IOException(String(u"FileOutputStream::doWrite(const ByteBuffer&) isAvailable"));
+            ::_write((int) StreamDescriptor, FileBuffer.BufferContainer + FileBuffer.getBufferPosition(), FileBuffer.getRemaining());
+            FileBuffer.setBufferPosition(FileBuffer.getBufferLimit());
         }
 
         auto getFilePosition() const {
             if (!isAvailable()) throw IOException(String(u"FileOutputStream::getFilePosition() isAvailable"));
-            return ::tell((int) StreamDescriptor);
+            return ::_tell((int) StreamDescriptor);
         }
 
         bool isAvailable() const noexcept override {

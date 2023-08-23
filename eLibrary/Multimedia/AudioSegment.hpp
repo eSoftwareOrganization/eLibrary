@@ -28,7 +28,7 @@ namespace eLibrary::Multimedia {
             return AV_CHANNEL_LAYOUT_MASK(LayoutChannelCount, LayoutChannelMask);
         }
 
-        auto toOpenALFormat() const noexcept {
+        auto toOpenALFormat() const {
             switch (LayoutChannelMask) {
                 case AV_CH_LAYOUT_5POINT1:
                     return AL_FORMAT_51CHN8;
@@ -43,7 +43,7 @@ namespace eLibrary::Multimedia {
                 case AV_CH_LAYOUT_STEREO:
                     return AL_FORMAT_STEREO8;
             }
-            std::unreachable();
+            throw MediaException(String(u"MediaChannelLayout::toOpenALFormat() LayoutChannelMask"));
         }
     };
 
@@ -113,11 +113,11 @@ namespace eLibrary::Multimedia {
         }
 
         void doExport(const String &AudioPath) const {
-            MediaFormatContext AudioFormatContext(MediaFormatContext::doAllocateOutput(AudioPath));
+            FFMpeg::MediaFormatContext AudioFormatContext(FFMpeg::MediaFormatContext::doAllocateOutput(AudioPath));
             if (avio_open(&AudioFormatContext->pb, AudioPath.toU8String().c_str(), AVIO_FLAG_WRITE) < 0)
                 throw MediaException(String(u"AudioSegment::doExport(const String&) avio_open"));
-            MediaCodec AudioCodec(MediaCodec::doFindEncoder(AudioFormatContext->oformat->audio_codec));
-            MediaCodecContext AudioCodecContext(MediaCodecContext::doAllocate(AudioCodec));
+            FFMpeg::MediaCodec AudioCodec(FFMpeg::MediaCodec::doFindEncoder(AudioFormatContext->oformat->audio_codec));
+            FFMpeg::MediaCodecContext AudioCodecContext(FFMpeg::MediaCodecContext::doAllocate(AudioCodec));
             AVChannelLayout AudioChannelLayoutSource(AudioChannelLayout.toFFMpegFormat());
             av_channel_layout_copy(&AudioCodecContext->ch_layout, &AudioChannelLayoutSource);
             AudioCodecContext->sample_fmt = AudioCodec->sample_fmts[0];
@@ -129,16 +129,16 @@ namespace eLibrary::Multimedia {
             if (avcodec_parameters_from_context(AudioStreamObject->codecpar, (AVCodecContext*) AudioCodecContext))
                 throw MediaException(String(u"AudioSegment::doExport(const String&) avcodec_parameters_from_context"));
             AudioFormatContext.doWriteHeader();
-            MediaSWRContext AudioSWRContext(MediaSWRContext::doAllocate(&AudioCodecContext->ch_layout, &AudioCodecContext->ch_layout, AV_SAMPLE_FMT_U8, AudioCodecContext->sample_fmt, AudioCodecContext->sample_rate, AudioCodecContext->sample_rate));
+            FFMpeg::MediaSWRContext AudioSWRContext(FFMpeg::MediaSWRContext::doAllocate(&AudioCodecContext->ch_layout, &AudioCodecContext->ch_layout, AV_SAMPLE_FMT_U8, AudioCodecContext->sample_fmt, AudioCodecContext->sample_rate, AudioCodecContext->sample_rate));
             AudioSWRContext.doInitialize();
-            MediaFrame AudioFrame(MediaFrame::doAllocate());
+            FFMpeg::MediaFrame AudioFrame(FFMpeg::MediaFrame::doAllocate());
             if (AudioCodecContext->frame_size <= 0) AudioCodecContext->frame_size = 2048;
             av_channel_layout_copy(&AudioFrame->ch_layout, &AudioCodecContext->ch_layout);
             AudioFrame->format = AudioCodecContext->sample_fmt;
             AudioFrame->nb_samples = AudioCodecContext->frame_size;
             AudioFrame->sample_rate = AudioCodecContext->sample_rate;
             AudioFrame.getFrameBuffer();
-            MediaPacket AudioPacket(MediaPacket::doAllocate());
+            FFMpeg::MediaPacket AudioPacket(FFMpeg::MediaPacket::doAllocate());
             uint32_t AudioSampleCurrent = 0;
             auto *AudioDataSample = MemoryAllocator::newArray<uint8_t>(AudioChannelLayout.getChannelCount() * AudioCodecContext->frame_size);
             for (;;) {
@@ -166,19 +166,19 @@ namespace eLibrary::Multimedia {
         }
 
         static AudioSegment doOpen(const String &AudioPath) {
-            MediaFormatContext AudioFormatContext(MediaFormatContext::doOpen(AudioPath));
+            FFMpeg::MediaFormatContext AudioFormatContext(FFMpeg::MediaFormatContext::doOpen(AudioPath));
             AudioFormatContext.doFindStreamInformation();
             int AudioStreamIndex = AudioFormatContext.doFindBestStream(AVMEDIA_TYPE_AUDIO);
-            MediaCodecContext AudioCodecContext(MediaCodecContext::doAllocate());
+            FFMpeg::MediaCodecContext AudioCodecContext(FFMpeg::MediaCodecContext::doAllocate());
             AudioCodecContext.setParameter(AudioFormatContext->streams[AudioStreamIndex]->codecpar);
-            MediaCodec AudioCodec(MediaCodec::doFindDecoder(AudioCodecContext->codec_id));
+            FFMpeg::MediaCodec AudioCodec(FFMpeg::MediaCodec::doFindDecoder(AudioCodecContext->codec_id));
             AudioCodecContext.doOpen(AudioCodec);
             if (AudioCodecContext->sample_rate <= 0)
                 throw MediaException(String(u"AudioSegment::doOpen(const String&) AudioCodecContext->sample_rate"));
-            MediaSWRContext AudioSWRContext(MediaSWRContext::doAllocate(&AudioCodecContext->ch_layout, &AudioCodecContext->ch_layout, AudioCodecContext->sample_fmt, AV_SAMPLE_FMT_U8, AudioCodecContext->sample_rate, AudioCodecContext->sample_rate));
+            FFMpeg::MediaSWRContext AudioSWRContext(FFMpeg::MediaSWRContext::doAllocate(&AudioCodecContext->ch_layout, &AudioCodecContext->ch_layout, AudioCodecContext->sample_fmt, AV_SAMPLE_FMT_U8, AudioCodecContext->sample_rate, AudioCodecContext->sample_rate));
             AudioSWRContext.doInitialize();
-            MediaFrame AudioFrame(MediaFrame::doAllocate());
-            MediaPacket AudioPacket(MediaPacket::doAllocate());
+            FFMpeg::MediaFrame AudioFrame(FFMpeg::MediaFrame::doAllocate());
+            FFMpeg::MediaPacket AudioPacket(FFMpeg::MediaPacket::doAllocate());
             std::vector<std::vector<uint8_t>> AudioDataOutput(AudioCodecContext->ch_layout.nb_channels);
             for (;;) {
                 int AudioStatus = av_read_frame((AVFormatContext*) AudioFormatContext, (AVPacket*) AudioPacket);
@@ -217,7 +217,7 @@ namespace eLibrary::Multimedia {
             if (AudioChannelLayout.getChannelMask() == AudioChannelLayoutSource.getChannelMask()) return *this;
             AVChannelLayout AudioChannelLayoutCurrent(AudioChannelLayout.toFFMpegFormat());
             AVChannelLayout AudioChannelLayoutTarget(AudioChannelLayoutSource.toFFMpegFormat());
-            MediaSWRContext AudioSWRContext(MediaSWRContext::doAllocate(&AudioChannelLayoutCurrent, &AudioChannelLayoutTarget, AV_SAMPLE_FMT_U8P, AV_SAMPLE_FMT_U8P, AudioSampleRate, AudioSampleRate));
+            FFMpeg::MediaSWRContext AudioSWRContext(FFMpeg::MediaSWRContext::doAllocate(&AudioChannelLayoutCurrent, &AudioChannelLayoutTarget, AV_SAMPLE_FMT_U8P, AV_SAMPLE_FMT_U8P, AudioSampleRate, AudioSampleRate));
             AudioSWRContext.doInitialize();
             auto **AudioDataOutput = MemoryAllocator::newArray<uint8_t*>(AudioChannelLayout.getChannelCount());
             for (uint8_t AudioChannel = 0;AudioChannel < AudioChannelLayout.getChannelCount();++AudioChannel)
@@ -229,7 +229,7 @@ namespace eLibrary::Multimedia {
         AudioSegment setSampleRate(uint32_t AudioSampleRateSource) const {
             if (AudioSampleRate == AudioSampleRateSource) return *this;
             AVChannelLayout AudioChannelLayoutSource(AudioChannelLayout.toFFMpegFormat());
-            MediaSWRContext AudioSWRContext(MediaSWRContext::doAllocate(&AudioChannelLayoutSource, &AudioChannelLayoutSource, AV_SAMPLE_FMT_U8P, AV_SAMPLE_FMT_U8P, AudioSampleRate, AudioSampleRateSource));
+            FFMpeg::MediaSWRContext AudioSWRContext(FFMpeg::MediaSWRContext::doAllocate(&AudioChannelLayoutSource, &AudioChannelLayoutSource, AV_SAMPLE_FMT_U8P, AV_SAMPLE_FMT_U8P, AudioSampleRate, AudioSampleRateSource));
             AudioSWRContext.doInitialize();
             auto **AudioDataOutput = MemoryAllocator::newArray<uint8_t*>(AudioChannelLayout.getChannelCount());
             for (uint8_t AudioChannel = 0;AudioChannel < AudioChannelLayout.getChannelCount();++AudioChannel)
@@ -238,10 +238,10 @@ namespace eLibrary::Multimedia {
             return {AudioDataOutput, AudioDataSize, AudioChannelLayout, AudioSampleRate};
         }
 
-        MediaBuffer toMediaBuffer() const {
+        OpenAL::MediaBuffer toMediaBuffer() const {
             auto *AudioDataOutput = MemoryAllocator::newArray<uint8_t>(AudioDataSize * AudioChannelLayout.getChannelCount());
             AVChannelLayout AudioChannelLayoutSource(AudioChannelLayout.toFFMpegFormat());
-            MediaSWRContext AudioSWRContext(MediaSWRContext::doAllocate(&AudioChannelLayoutSource, &AudioChannelLayoutSource, AV_SAMPLE_FMT_U8P, AV_SAMPLE_FMT_U8, AudioSampleRate, AudioSampleRate));
+            FFMpeg::MediaSWRContext AudioSWRContext(FFMpeg::MediaSWRContext::doAllocate(&AudioChannelLayoutSource, &AudioChannelLayoutSource, AV_SAMPLE_FMT_U8P, AV_SAMPLE_FMT_U8, AudioSampleRate, AudioSampleRate));
             AudioSWRContext.doInitialize();
             AudioSWRContext.doConvert((const uint8_t**) AudioData, &AudioDataOutput, AudioDataSize);
             return {AudioChannelLayout.toOpenALFormat(), AudioDataOutput, (ALsizei) AudioDataSize * AudioChannelLayout.getChannelCount(), (ALsizei) AudioSampleRate};
