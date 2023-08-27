@@ -1,6 +1,7 @@
 #include <Core/Container.hpp>
 #include <codecvt>
 #include <locale>
+#include <utility>
 
 namespace eLibrary::Core {
     uint8_t Character::toNumber(uint8_t NumberRadix) const {
