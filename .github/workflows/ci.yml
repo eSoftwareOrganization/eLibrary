@@ -40,15 +40,17 @@ jobs:
 
       - name: CMake Build
         run: |
-          cmake -DCMAKE_CXX_FLAGS="-fprofile-arcs -ftest-coverage" .
+          cmake -DCMAKE_CXX_FLAGS="-fprofile-arcs -ftest-coverage" -S . -B build
+          cmake --build build
 
       - name: Test Run
-          cd eLibraryTest
+        run: |
+          cd build/eLibraryTest
           ./eLibraryTest
 
       - name: LCOV Run
         run: |
-          lcov -c -d ./../ -o coverage.info
+          lcov -c -d ./../../ -o coverage.info
 
       - name: Codecov Uploading
         uses: codecov/codecov-action@v3
