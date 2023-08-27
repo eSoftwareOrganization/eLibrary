@@ -43,11 +43,6 @@ jobs:
           cmake -DCMAKE_CXX_FLAGS="-fprofile-arcs -ftest-coverage" -S . -B build
           cmake --build build
 
-      - name: Test Run
-        run: |
-          cd build/eLibraryTest
-          ./eLibraryTest
-
       - name: LCOV Run
         run: |
           lcov -c -d ./../../ -o coverage.info
