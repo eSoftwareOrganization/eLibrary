@@ -35,12 +35,12 @@ jobs:
         with:
           vcpkgGitCommitId: 436a061a544c124200200517b9ee55c5bb1b7a26
 
-      - name: CMake Build
-        run: |
-          cmake -DCMAKE_TOOLCHAIN_FILE=./vcpkg/scripts/buildsystems/vcpkg.cmake .
-
       - name: LCOV Setup
         uses: hrishikesh-kadam/setup-lcov@v1
+
+      - name: CMake Build
+        run: |
+          cmake -DCMAKE_CXX_FLAGS="-fprofile-arcs -ftest-coverage" -DCMAKE_TOOLCHAIN_FILE=./vcpkg/scripts/buildsystems/vcpkg.cmake .
 
       - name: LCOV Run
         run: |
