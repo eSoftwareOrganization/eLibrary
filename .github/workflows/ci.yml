@@ -40,7 +40,7 @@ jobs:
 
       - name: CMake Build
         run: |
-          cmake -DCMAKE_CXX_FLAGS="-fprofile-arcs -ftest-coverage" -DCMAKE_TOOLCHAIN_FILE=./vcpkg/scripts/buildsystems/vcpkg.cmake .
+          cmake -DCMAKE_CXX_FLAGS="-fprofile-arcs -ftest-coverage" .
 
       - name: LCOV Run
         run: |
