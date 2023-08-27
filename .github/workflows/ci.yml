@@ -40,7 +40,11 @@ jobs:
           cmake -DCMAKE_TOOLCHAIN_FILE=./vcpkg/scripts/buildsystems/vcpkg.cmake .
 
       - name: LCOV Setup
-        uses: danielealbano/lcov-action@v3
+        uses: hrishikesh-kadam/setup-lcov@v1
+
+      - name: LCOV Run
+        run: |
+          lcov -c -d ./ -o coverage.info
 
       - name: Codecov Uploading
         uses: codecov/codecov-action@v3
