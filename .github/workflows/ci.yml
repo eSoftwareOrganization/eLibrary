@@ -35,11 +35,20 @@ jobs:
         with:
           vcpkgGitCommitId: 436a061a544c124200200517b9ee55c5bb1b7a26
 
+      - name: LCOV Setup
+        uses: hrishikesh-kadam/setup-lcov@v1
+
       - name: CMake Build
         run: |
-          cmake -DCMAKE_TOOLCHAIN_FILE=./vcpkg/scripts/buildsystems/vcpkg.cmake .
+          cmake -DCMAKE_CXX_FLAGS="-fprofile-arcs -ftest-coverage" -DCMAKE_TOOLCHAIN_FILE=./vcpkg/scripts/buildsystems/vcpkg.cmake -S . -B build
+          cmake --build build
+
+      - name: LCOV Run
+        run: |
+          lcov -c -d ./ -o coverage.info
 
       - name: Codecov Uploading
         uses: codecov/codecov-action@v3
         env:
-          CODECOV_TOKEN: ${{secrets.CODECOV_TOKEN}}
+          file: coverage.info
+          token: ${{secrets.CODECOV_TOKEN}}

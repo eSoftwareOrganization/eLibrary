@@ -56,7 +56,7 @@ namespace eLibrary::Core {
             return NumberSource >= 0 ? NumberSource : -NumberSource;
         }
 
-        constexpr Integer(const std::vector<uintmax_t> &NumberListSource, bool NumberSignatureSource) noexcept : NumberSignature(NumberSignatureSource), NumberList(NumberListSource) {}
+        Integer(const std::vector<uintmax_t> &NumberListSource, bool NumberSignatureSource) noexcept : NumberSignature(NumberSignatureSource), NumberList(NumberListSource) {}
 
         Integer doMultiplicationAbsolute(const Integer &NumberOther) const {
             auto *NumberProduct = MemoryAllocator::newArray<uintmax_t>(NumberList.size() + NumberOther.NumberList.size());
@@ -80,7 +80,7 @@ namespace eLibrary::Core {
 
         friend class Fraction;
     public:
-        constexpr Integer() noexcept : NumberSignature(true) {
+        Integer() noexcept : NumberSignature(true) {
             NumberList.push_back(0);
         }
 

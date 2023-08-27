@@ -1,6 +1,7 @@
 #pragma once
 
 #include <Core/Object.hpp>
+#include <cwctype>
 #include <string>
 
 namespace eLibrary::Core {
@@ -46,7 +47,7 @@ namespace eLibrary::Core {
         }
 
         Character toLowerCase() const noexcept {
-            return {towlower(CharacterValue)};
+            return {(char16_t) towlower(CharacterValue)};
         }
 
         eLibraryAPI uint8_t toNumber(uint8_t) const;
@@ -54,7 +55,7 @@ namespace eLibrary::Core {
         eLibraryAPI String toString() const noexcept override;
 
         Character toUpperCase() const noexcept {
-            return {towupper(CharacterValue)};
+            return {(char16_t) towupper(CharacterValue)};
         }
 
         eLibraryAPI static Character valueOf(uint8_t, uint8_t);
