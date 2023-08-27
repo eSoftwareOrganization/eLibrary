@@ -1,7 +1,6 @@
 #include <Core/Container.hpp>
 #include <codecvt>
 #include <locale>
-#include <utility>
 
 namespace eLibrary::Core {
     uint8_t Character::toNumber(uint8_t NumberRadix) const {
@@ -65,7 +64,7 @@ namespace eLibrary::Core {
             CharacterContainer = MemoryAllocator::newArray<Character>((CharacterSize = (intmax_t) String16Source.size()) + 1);
             Arrays::doCopy(String16Source.begin(), String16Source.end(), CharacterContainer);
             CharacterContainer[CharacterSize] = Character();
-        } else std::unreachable();
+        } else static_assert(false);
     }
 
     void String::doAssign(const String &StringSource) noexcept {
@@ -197,7 +196,7 @@ namespace eLibrary::Core {
         } else if constexpr (sizeof(std::wstring::value_type) == sizeof(char32_t)) {
             std::u32string StringSource(toU32String());
             return {StringSource.begin(), StringSource.end()};
-        } else std::unreachable();
+        } else static_assert(false);
     }
 
     StringStream::StringStream(uintmax_t CharacterCapacitySource) : CharacterCapacity(CharacterCapacitySource) {
