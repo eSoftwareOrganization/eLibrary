@@ -1,5 +1,6 @@
 #include <eLibrary>
 using namespace eLibrary;
+using namespace eLibrary::Core;
 
 #define DOCTEST_CONFIG_IMPLEMENT
 #include <doctest/doctest.h>

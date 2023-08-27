@@ -107,7 +107,6 @@ namespace eLibrary::Network {
             SSL *DescriptorObject;
 
             doDisableCopyAssignConstruct(NetworkSSLDescriptor)
-
         public:
             explicit NetworkSSLDescriptor(const NetworkSSLContext &DescriptorContext) {
                 DescriptorObject = SSL_new((SSL_CTX *) DescriptorContext);

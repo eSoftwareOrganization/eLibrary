@@ -25,4 +25,11 @@ namespace eLibrary::Core {
 #endif
         ).doConcat(ObjectStream.toString().doReverse());
     }
+
+    template<typename K, typename V>
+    V Objects::doMatchValue(const K &ObjectKeyTarget, std::initializer_list<ObjectEntry<K, V>> ObjectEntryList) {
+        for (const auto &ObjectEntryCurrent : ObjectEntryList)
+            if (!doCompare(ObjectEntryCurrent.EntryKey, ObjectKeyTarget)) return ObjectEntryCurrent.EntryValue;
+        throw Exception(String(u"Objects::doMatchValue<K,V>(const K&, std::initializer_list<ObjectEntry<K, V>>)"));
+    }
 }

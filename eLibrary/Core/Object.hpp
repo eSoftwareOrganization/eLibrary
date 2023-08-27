@@ -50,12 +50,12 @@ namespace eLibrary::Core {
         }
 
         template<typename T>
-        static constexpr T &&doForward(typename std::remove_reference<T>::type &ObjectSource) noexcept {
+        static constexpr T &&doForward(std::remove_reference_t<T> &ObjectSource) noexcept {
             return static_cast<T&&>(ObjectSource);
         }
 
         template<typename T>
-        static constexpr T &&doForward(typename std::remove_reference<T>::type &&ObjectSource) noexcept {
+        static constexpr T &&doForward(std::remove_reference_t<T> &&ObjectSource) noexcept {
             return static_cast<T&&>(ObjectSource);
         }
 
@@ -70,22 +70,18 @@ namespace eLibrary::Core {
         }
 
         template<typename K, typename V>
-        static auto doMatchValue(const K &ObjectKeyTarget, std::initializer_list<ObjectEntry<K, V>> ObjectEntryList) {
-            for (const auto &ObjectEntryCurrent : ObjectEntryList)
-                if (!doCompare(ObjectEntryCurrent.EntryKey, ObjectKeyTarget)) return ObjectEntryCurrent.EntryValue;
-            std::unreachable();
-        }
+        eLibraryAPI static V doMatchValue(const K &ObjectKeyTarget, std::initializer_list<ObjectEntry<K, V>> ObjectEntryList);
 
         template<typename K, typename V>
-        static auto doMatchValue(const K &ObjectKeyTarget, const V &ObjectValueDefault, std::initializer_list<ObjectEntry<K, V>> ObjectEntryList) {
+        static const V &doMatchValue(const K &ObjectKeyTarget, const V &ObjectValueDefault, std::initializer_list<ObjectEntry<K, V>> ObjectEntryList) {
             for (const auto &ObjectEntryCurrent : ObjectEntryList)
                 if (!doCompare(ObjectEntryCurrent.EntryKey, ObjectKeyTarget)) return ObjectEntryCurrent.EntryValue;
             return ObjectValueDefault;
         }
 
         template<typename T>
-        static constexpr typename std::remove_reference<T>::type&& doMove(T &&ObjectSource) noexcept {
-            return static_cast<typename std::remove_reference<T>::type&&>(ObjectSource);
+        static constexpr std::remove_reference_t<T>&& doMove(T &&ObjectSource) noexcept {
+            return static_cast<std::remove_reference_t<T>&&>(ObjectSource);
         }
 
         template<typename T>
@@ -123,6 +119,11 @@ namespace eLibrary::Core {
         template<Comparable T>
         static T getMinimum(const T &Object1, const T &Object2) {
             return doCompare(Object1, Object2) <= 0 ? Object1 : Object2;
+        }
+
+        template<Comparable K, typename V>
+        auto makeEntry(const K &EntryKey, const V &EntryValue) {
+            return ObjectEntry(EntryKey, EntryValue);
         }
     };
 }

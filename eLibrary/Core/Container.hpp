@@ -48,6 +48,11 @@ namespace eLibrary::Core {
             doAssign(Objects::doMove(AnySource));
         }
 
+        template<typename T, typename ...Ts>
+        Any(std::in_place_t, Ts &&...ParameterList) noexcept(std::is_nothrow_constructible_v<T, Ts...>) {
+            doAssign(T(Objects::doForward<Ts>(ParameterList)...));
+        }
+
         ~Any() noexcept {
             doReset();
         }
@@ -479,7 +484,7 @@ namespace eLibrary::Core {
 
         void removeElement(const E &ElementSource) {
             intmax_t ElementIndex = indexOf(ElementSource);
-            if (ElementIndex == -1) throw IndexException(String(u"ArrayList<E>::removeElement(const E&) indexOf"));
+            Arrays::doCheckGE(ElementIndex, 0);
             removeIndex(ElementIndex);
         }
 
@@ -632,7 +637,7 @@ namespace eLibrary::Core {
             uintmax_t ElementIndex = 0;
             for (; ElementIndex < ElementSize; ++ElementIndex)
                 if (!Objects::doCompare(ElementContainer[ElementIndex], ElementSource)) break;
-            if (ElementIndex == ElementSize) throw IndexException(String(u"ArraySet::removeElement(const E&) ElementSource"));
+            Arrays::doCheckL(ElementIndex, ElementSize);
             Arrays::doMove(ElementContainer + ElementIndex + 1, ElementContainer + ElementSize, ElementContainer + ElementIndex);
             if (ElementCapacity == 1) doClear();
             else if (--ElementSize <= ElementCapacity >> 1) {
@@ -866,7 +871,7 @@ namespace eLibrary::Core {
 
         void removeElement(const E &ElementSource) {
             intmax_t ElementIndex = indexOf(ElementSource);
-            if (ElementIndex == -1) throw IndexException(String(u"DoubleLinkedList<E>::removeElement(const E&) ElementSource"));
+            Arrays::doCheckGE(ElementIndex, 0);
             removeIndex(ElementIndex);
         }
 
@@ -1075,7 +1080,7 @@ namespace eLibrary::Core {
             intmax_t ElementIndex = 0;
             LinkedNode *NodeCurrent = NodeHead;
             while (NodeCurrent && Objects::doCompare(NodeCurrent->NodeValue, ElementSource)) NodeCurrent = NodeCurrent->NodeNext, ++ElementIndex;
-            if (!NodeCurrent) throw IndexException(String(u"DoubleLinkedObject::removeElement(const E&) ElementSource"));
+            Arrays::doCheckL(ElementIndex, NodeSize);
             if (ElementIndex == 0) {
                 NodeHead = NodeHead->NodeNext;
                 if (NodeHead->NodePrevious) delete NodeHead->NodePrevious;
@@ -1144,6 +1149,11 @@ namespace eLibrary::Core {
         doEnableMoveAssignParameterConstruct(Optional, T)
 
         constexpr Optional() noexcept = default;
+
+        template<typename ...Ts>
+        Optional(std::in_place_t, Ts &&...ParameterList) noexcept(std::is_nothrow_constructible_v<T, Ts...>) {
+            doAssign(T(Objects::doForward<Ts>(ParameterList)...));
+        }
 
         ~Optional() noexcept {
             doReset();
@@ -1488,99 +1498,6 @@ namespace eLibrary::Core {
         }
     };
 
-    /**
-     * Support for interval modification and summation
-     */
-    template<std::integral T>
-    class [[deprecated]] SegmentTree final : public Object {
-    private:
-        T ElementCount;
-        T *ElementList;
-        T *ElementMark;
-        T *ElementTree;
-
-        void doBuildCore(T ElementCurrent, T ElementStart, T ElementStop) {
-            if (ElementStart == ElementStop) {
-                ElementTree[ElementCurrent] = ElementList[ElementStart];
-                return;
-            }
-            doBuildCore(ElementCurrent << 1, ElementStart, (ElementStart + ElementStop) >> 1);
-            doBuildCore(ElementCurrent << 1 | 1, ((ElementStart + ElementStop) >> 1) + 1, ElementStop);
-            ElementTree[ElementCurrent] = ElementTree[ElementCurrent << 1] + ElementTree[ElementCurrent << 1 | 1];
-        }
-
-        void doPushDown(T ElementCurrent, T ElementStart, T ElementStop) noexcept {
-            if (!ElementMark[ElementCurrent]) return;
-            ElementMark[ElementCurrent << 1] += ElementMark[ElementCurrent];
-            ElementTree[ElementCurrent << 1] += ElementMark[ElementCurrent] * (((ElementStart + ElementStop) >> 1) - ElementStart + 1);
-            ElementMark[ElementCurrent << 1 | 1] += ElementMark[ElementCurrent];
-            ElementTree[ElementCurrent << 1 | 1] += ElementMark[ElementCurrent] * (ElementStop - (((ElementStart + ElementStop) >> 1) + 1) + 1);
-            ElementMark[ElementCurrent] = 0;
-        }
-
-        T doQueryCore(T ElementCurrent, T ElementStart, T ElementStop, T ElementTargetStart, T ElementTargetStop) noexcept {
-            if (ElementTargetStart <= ElementStart && ElementStop <= ElementTargetStop) return ElementTree[ElementCurrent];
-            T ElementSum = 0;
-            doPushDown(ElementCurrent, ElementStart, ElementStop);
-            if (ElementTargetStart <= (ElementStart + ElementStop) >> 1)
-                ElementSum = doQueryCore(ElementCurrent << 1, ElementStart, (ElementStart + ElementStop) >> 1, ElementTargetStart, ElementTargetStop);
-            if (ElementTargetStop > (ElementStart + ElementStop) >> 1)
-                ElementSum += doQueryCore(ElementCurrent << 1 | 1, ((ElementStart + ElementStop) >> 1) + 1, ElementStop, ElementTargetStart, ElementTargetStop);
-            return ElementSum;
-        }
-
-        void doUpdateCore(T ElementCurrent, T ElementStart, T ElementStop, T ElementTargetStart, T ElementTargetStop, T ElementChange) noexcept {
-            if (ElementTargetStart <= ElementStart && ElementStop <= ElementTargetStop) {
-                ElementMark[ElementCurrent] += ElementChange;
-                ElementTree[ElementCurrent] += ElementChange * (ElementStop - ElementStart + 1);
-                return;
-            }
-            doPushDown(ElementCurrent, ElementStart, ElementStop);
-            if (ElementTargetStart <= (ElementStart + ElementStop) >> 1) doUpdateCore(ElementCurrent << 1, ElementStart, (ElementStart + ElementStop) >> 1, ElementTargetStart, ElementTargetStop, ElementChange);
-            if (ElementTargetStop > (ElementStart + ElementStop) >> 1) doUpdateCore(ElementCurrent << 1 | 1, ((ElementStart + ElementStop) >> 1) + 1, ElementStop, ElementTargetStart, ElementTargetStop, ElementChange);
-            ElementTree[ElementCurrent] = ElementTree[ElementCurrent << 1] + ElementTree[ElementCurrent << 1 | 1];
-        }
-
-        doDisableCopyAssignConstruct(SegmentTree)
-    public:
-        explicit SegmentTree(T ElementCountSource) : ElementCount(ElementCountSource) {
-            if (!ElementCount) throw Exception(String(u"SegmentTree<T>::SegmentTree(T) ElementCount"));
-            ElementList = MemoryAllocator::newArray<T>(ElementCount + 1);
-            ElementMark = MemoryAllocator::newArray<T>(ElementCount << 2 | 1);
-            ElementTree = MemoryAllocator::newArray<T>(ElementCount << 2 | 1);
-            memset(ElementList + 1, 0, sizeof(T) * ElementCount);
-            memset(ElementMark + 1, 0, sizeof(T) * (ElementCount << 2));
-            memset(ElementTree + 1, 0, sizeof(T) * (ElementCount << 2));
-        }
-
-        ~SegmentTree() {
-            delete[] ElementList;
-            ElementList = nullptr;
-            delete[] ElementMark;
-            ElementMark = nullptr;
-            delete[] ElementTree;
-            ElementTree = nullptr;
-        }
-
-        void doBuild() noexcept {
-            doBuildCore(1, 1, ElementCount);
-        }
-
-        T doQuery(T ElementStart, T ElementStop) noexcept {
-            return doQueryCore(1, 1, ElementCount, ElementStart, ElementStop);
-        }
-
-        void doUpdate(T ElementStart, T ElementStop, T ElementDelta) noexcept {
-            doUpdateCore(1, 1, ElementCount, ElementStart, ElementStop, ElementDelta);
-        }
-
-        void setElement(T ElementIndex, T ElementSource) {
-            Arrays::doCheckG(ElementIndex, 0);
-            Arrays::doCheckLE(ElementIndex, ElementCount);
-            ElementList[ElementIndex] = ElementSource;
-        }
-    };
-
     template<typename E>
     class SingleLinkedIterator final : public Object {
     private:
@@ -1737,7 +1654,7 @@ namespace eLibrary::Core {
 
         void removeElement(const E &ElementSource) {
             intmax_t ElementIndex = indexOf(ElementSource);
-            if (ElementIndex == -1) throw IndexException(String(u"SingleLinkedList<E>::removeElement(const E&) ElementSource"));
+            Arrays::doCheckGE(ElementIndex, 0);
             removeIndex(ElementIndex);
         }
 
@@ -1884,7 +1801,7 @@ namespace eLibrary::Core {
         }
 
         const E &getBack() const {
-            if (isEmpty()) throw Exception(String(u"SingleLinkedQueue<E>::getBack() isEmpty"));
+            if (isEmpty()) throw IndexException(String(u"SingleLinkedQueue<E>::getBack() isEmpty"));
             return NodeTail->NodeValue;
         }
 
@@ -1893,7 +1810,7 @@ namespace eLibrary::Core {
         }
 
         const E &getFront() const {
-            if (isEmpty()) throw Exception(String(u"SingleLinkedQueue<E>::getFront() isEmpty"));
+            if (isEmpty()) throw IndexException(String(u"SingleLinkedQueue<E>::getFront() isEmpty"));
             return NodeHead->NodeValue;
         }
 
@@ -1902,8 +1819,7 @@ namespace eLibrary::Core {
         }
 
         void removeBack() {
-            if (isEmpty())
-                throw Exception(String(u"SingleLinkedQueue<E>::removeBack() isEmpty"));
+            if (isEmpty()) throw IndexException(String(u"SingleLinkedQueue<E>::removeBack() isEmpty"));
             LinkedNode *NodeCurrent = NodeHead;
             intmax_t ElementIndex = NodeSize - 1;
             while (--ElementIndex) NodeCurrent = NodeCurrent->NodeNext;
@@ -1915,7 +1831,7 @@ namespace eLibrary::Core {
         }
 
         void removeFront() {
-            if (isEmpty()) throw Exception(String(u"SingleLinkedQueue<E>::removeFront() isEmpty"));
+            if (isEmpty()) throw IndexException(String(u"SingleLinkedQueue<E>::removeFront() isEmpty"));
             LinkedNode *NodeCurrent = NodeHead;
             NodeHead = NodeHead->NodeNext;
             delete NodeCurrent;
@@ -2069,7 +1985,7 @@ namespace eLibrary::Core {
             intmax_t ElementIndex = 0;
             LinkedNode *NodeCurrent = NodeHead;
             while (NodeCurrent && Objects::doCompare(NodeCurrent->NodeValue, ElementSource)) NodeCurrent = NodeCurrent->NodeNext, ++ElementIndex;
-            if (!NodeCurrent) throw IndexException(String(u"SingleLinkedSet<E>::removeElement(const E&) ElementSource"));
+            Arrays::doCheckL(ElementIndex, NodeSize);
             NodeCurrent = NodeHead;
             if (ElementIndex == 0) {
                 NodeHead = NodeHead->NodeNext;
@@ -2201,7 +2117,7 @@ namespace eLibrary::Core {
         }
 
         void removeElement() {
-            if (isEmpty()) throw Exception(String(u"SingleLinkedStack<E>::removeElement() isEmpty"));
+            if (isEmpty()) throw IndexException(String(u"SingleLinkedStack<E>::removeElement() isEmpty"));
             LinkedNode *NodePrevious = NodeHead;
             NodeHead = NodeHead->NodeNext;
             delete NodePrevious;
@@ -2230,7 +2146,7 @@ namespace eLibrary::Core {
     public:
         const V &getElement(const K &MapKey) const {
             auto *MapNode = this->doSearchCore(this->NodeRoot, MapKey);
-            if (!MapNode) throw Exception(String(u"TreeMap<K, V>::getElement(const K&) doSearchCore"));
+            if (!MapNode) throw IndexException(String(u"TreeMap<K, V>::getElement(const K&) doSearchCore"));
             return MapNode->NodeValue;
         }
 
@@ -2256,7 +2172,7 @@ namespace eLibrary::Core {
 
         void removeMapping(const K &MapKey) {
             if (!this->doSearchCore(this->NodeRoot, MapKey))
-                throw Exception(String(u"TreeMap<K(Comparable),V>::removeMapping(const K&) MapKey"));
+                throw IndexException(String(u"TreeMap<K(Comparable),V>::removeMapping(const K&) MapKey"));
             this->doRemove(MapKey);
         }
 

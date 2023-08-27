@@ -62,7 +62,7 @@ namespace eLibrary::Core {
 
         template<typename T>
         static auto doCompareAndExchangeReference(volatile T **ValueAddress, T *ValueExpected, T *ValueTarget) noexcept {
-            return doCompareAndExchange((volatile intmax_t*) ValueAddress, (intmax_t) ValueExpected, (intmax_t) ValueTarget);
+            return doCompareAndExchange((volatile intptr_t*) ValueAddress, (intptr_t) ValueExpected, (intptr_t) ValueTarget);
         }
 
         template<Arithmetic T>

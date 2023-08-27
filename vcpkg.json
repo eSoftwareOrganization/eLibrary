@@ -12,8 +12,8 @@
       "host": true
     }
   ],
-  "version-string": "2023.12",
-  "default-features": ["module-io", "module-multimedia", "module-network"],
+  "version-string": "2023.13",
+  "default-features": ["module-multimedia", "module-network"],
   "features": {
     "application-test": {
       "description": "eLibrary::eLibraryTest",
@@ -22,9 +22,6 @@
     "feature-archive": {
       "description": "eLibrary::IO::ArchiveDescriptor & ArchiveEntry & ArchiveInputStream",
       "dependencies": ["libarchive"]
-    },
-    "module-io": {
-      "description": "eLibrary::IO"
     },
     "module-multimedia": {
       "description": "eLibrary::Multimedia",

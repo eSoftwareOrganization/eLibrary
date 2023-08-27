@@ -1,7 +1,6 @@
 #pragma once
 
 #include <Core/Object.hpp>
-#include <format>
 #include <string>
 
 namespace eLibrary::Core {
@@ -237,11 +236,15 @@ namespace eLibrary::Core {
     };
 }
 
+#if __has_include(<format>)
+#include <format>
+
 template<eLibrary::Core::ObjectDerived ObjectT, typename CharacterT>
 struct std::formatter<ObjectT, CharacterT> : public std::formatter<std::string, CharacterT> {
 public:
     template<typename ContextT>
-    auto format(const ObjectT &ObjectSource, ContextT &ObjectContext) const {
+    auto format(const ObjectT &ObjectSource, ContextT &ObjectContext) const noexcept {
         return std::formatter<std::string, CharacterT>::format(ObjectSource.toString().toU8String(), ObjectContext);
     }
 };
+#endif

@@ -29,15 +29,25 @@ Core::Mathematics
 
 Project Dependencies:
 + [doctest](https://github.com/doctest/doctest)
-+ [ffmpeg](https://ffmpeg.org)
-+ [Libarchive](https://github.com/libarchive/libarchive)
++ [ffmpeg](https://ffmpeg.org) for eLibrary::Multimedia
++ [Libarchive](https://github.com/libarchive/libarchive) for eLibrary::IO
 + [nanobench](https://github.com/martinus/nanobench)
-+ [OpenAL Soft](https://github.com/kcat/openal-soft)
-+ [OpenSSL](https://github.com/openssl/openssl)
++ [OpenAL Soft](https://github.com/kcat/openal-soft) for eLibrary::Multimedia
++ [OpenSSL](https://github.com/openssl/openssl) for eLibrary::Network
 
 Project Repository: [GitHub](https://github.com/eSoftwareOrganization/eLibrary)
 
 Project Update Log:
+> eLibrary V2023.13
+- Core::Any Constructor<Ts...>(std::inplace_t, T, Ts&&...)(New)
+- Core::Objects doMatchValue / doMove(...) makeEntry(New)
+- Core::Optional Constructor<Ts...>(std::inplace_t, T, Ts&&...)(New)
+- Core::SegmentTree(Remove)
+- IO::ByteBuffer doCompact(`Arrays::doCopyBackward` Implementation)
+- Multimedia::AudioSegment doAssign(const AudioSegment&)(...) doAssign(AudioSegment&&)(New)
+- Network::DatagramSocket doReceive(ByteBuffer&)(doReceive(char*, int)) doSend(ByteBuffer&)(doSend(char*, int))
+- Network::NetworkSocketAddress toAddressIn(New)
+- Network::SocketOutputStream doWrite(...)
 > eLibrary V2023.12
 - Core::ArrayList doAssign(ArrayList<E>&&)(New)
 - Core::ArraySet doAssign(ArraySet<E>&&)(New)
@@ -245,40 +255,3 @@ Project Update Log:
 - IO::AudioSegment(Remove)
 - IO::Buffer getBufferLimit / getBufferMark / getBufferPosition / getRemaining / hasRemaining / setBufferLimit / setBufferPosition(v2023.05)
 - IO::ByteBuffer Constructor(unsigned) / Constructor(const ByteBuffer&) / ~Constructor / doCompact(New)
-> eLibrary V2023.05
-- Core::ArrayList doReverse(...) removeElement(...)
-- Core::ConcurrentArrayList doAssign / operator= / toSTLVector(New)
-- Core::ConditionVariable / doWait / getHandle / notifyAll / notifyOne / getHandle(New)
-- Core::DoubleLinkedList toArrayList / toSTLList(New)
-- Core::Fraction toString(StringStream Implementation)
-- Core::Integer doDivision / doModulo(0 Dividing Handling) doFactorial(New)
-- Core::Mathematics doCombinator(New)
-- Core::Mutex / doLock / doUnlock / getHandle / tryLock(New)
-- Core::MutexExecutor / doExecute / doExecuteVoid(New)
-- Core::NtDriver Constructor / ~Constructor / doClose / doControl / doOpen / doRead / doUnloadSC / doWrite(Remove) doLoadNt / doUnloadNt(Parameter & Static)
-- Core::Object toString(StringStream Implementation)
-- Core::Semaphore / doAcquire / doRelease / getHandle(New)
-- Core::SingleLinkedList indexOf(From doFind) removeElement(...) toArrayList / toDoubleLinkedList / toSTLForwardList(New)
-- IO::Buffer / doClear / doDiscardMark / doFlip / doMark / doReset / doRewind / getBufferCapacity(New)
-> eLibrary V2023.04
-- Core::ArrayList ~Constructor(...) doAssign / operator= / toSTLVector(New) doConcat(Memory Overflow Fix) Constructor(std::array\<>) / doReverse(New) indexOf(From doFind) toString(StringStream Implementation)
-- Core::ConcurrentArrayList Constructor(std::array\<E, ElementSourceSize>) / doConcat / doReverse(New) indexOf(From doFind)
-- Core::DoubleLinkedList begin / end / LinkedListIterator(Remove) indexOf(From doFindElement + Modifier + Segment Fault Fix) toString(StringStream Implementation)
-- Core::Fraction getValue(Overflow Protection)
-- Core::Integer Constructor(T)(std::numeric_limits<intmax_t>::min()) doCompare(Signature) isNegative / isPositive(0) isEven / isOdd / NumberBaseUnit(New) getValue(Overflow Protection) toString(StringStream Implementation)
-- Core::Mathematics doCosineFraction / doExponentFraction / doInverseHyperbolicTangentFraction(Parameter `NumberPrecision`) getAbsolute(New) isPrimeLucas(Implementation) isPrimeRabinMiller(Integer::isEven Implementation)
-- Core::Object ~Constructor(New)
-- Core::SingleLinkedList begin / end / LinkedListIterator(Remove) doFind(From doFindElement + Segment Fault Fix) toString(StringStream Implementation)
-- Core::String Constructor(char16_t)(New) doConcat / doReplace / doStrip / doTruncate / toLowerCase / toUpperCase(StringStream Implementation) doReplace(Modifier) doReverse(New) toWString(...) valueOf(T, \[unsigned short])(Remove)
-- Core::StringStream addCharacter / addString / doClear() / toString(New)
-- Core::NtDriver Constructor(Parameter)
-- Core::NtFile NtFileAccess / NtFileAttribute / NtFileDisposition / NtFileOption / NtFileShare(From Core::*)
-- Core::NtService NtServiceErrorControl / NtServiceStartType(From Core::*) NtServiceType(New)
-- Core::NtServiceManager doCreateService
-- IO::AudioSegment doOpenWAV(Remove)
-- IO::FastBufferedInputStream(Remove)
-- IO::FastBufferedOutputStream(Remove)
-- IO::InputStream doRead(byte[], int, int) / doSkip(Remove)
-- IO::IOException(Remove)
-- IO::OutputStream doWrite(byte[], int, int)(Remove)
-- IO::SocketInetAddress Constructor(...)

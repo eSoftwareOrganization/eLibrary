@@ -95,8 +95,8 @@ namespace eLibrary::IO {
         }
 
         void doCompact() noexcept {
-            ::memmove(BufferContainer, BufferContainer + BufferPosition, sizeof(uint8_t) * (BufferLimit - BufferPosition));
-            BufferPosition = BufferLimit - BufferPosition;
+            Arrays::doCopyBackward(BufferContainer + BufferPosition, BufferContainer + BufferPosition + getRemaining(), BufferContainer);
+            BufferPosition = getRemaining();
             BufferLimit = BufferCapacity;
         }
 

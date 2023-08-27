@@ -10,6 +10,8 @@ namespace eLibrary::Multimedia {
         uint8_t LayoutChannelCount;
         uint64_t LayoutChannelMask;
     public:
+        constexpr MediaChannelLayout() noexcept : LayoutChannelCount(0), LayoutChannelMask(0) {};
+
         constexpr MediaChannelLayout(uint8_t LayoutChannelCountSource, uint64_t LayoutChannelMaskSource) noexcept : LayoutChannelCount(LayoutChannelCountSource), LayoutChannelMask(LayoutChannelMaskSource) {}
 
         constexpr MediaChannelLayout(const AVChannelLayout &LayoutSource) noexcept : LayoutChannelCount((uint8_t) LayoutSource.nb_channels), LayoutChannelMask(LayoutSource.u.mask) {
@@ -57,36 +59,31 @@ namespace eLibrary::Multimedia {
     class AudioSegment final : public Object {
     private:
         MediaChannelLayout AudioChannelLayout;
-        uint8_t **AudioData;
-        uintmax_t AudioDataSize;
-        uint32_t AudioSampleRate;
+        uint8_t **AudioData = nullptr;
+        uintmax_t AudioDataSize = 0;
+        int AudioSampleRate = 0;
 
-        AudioSegment(const std::vector<std::vector<uint8_t>> &AudioDataSource, const MediaChannelLayout &AudioChannelLayoutSource, uint32_t AudioSampleRateSource) : AudioChannelLayout(AudioChannelLayoutSource), AudioDataSize(AudioDataSource[0].size()), AudioSampleRate(AudioSampleRateSource) {
+        AudioSegment(const std::vector<std::vector<uint8_t>> &AudioDataSource, const MediaChannelLayout &AudioChannelLayoutSource, int AudioSampleRateSource) : AudioChannelLayout(AudioChannelLayoutSource), AudioDataSize(AudioDataSource[0].size()), AudioSampleRate(AudioSampleRateSource) {
             AudioData = MemoryAllocator::newArray<uint8_t*>(AudioDataSource.size());
             for (uint8_t AudioChannel = 0;AudioChannel < AudioChannelLayout.getChannelCount();++AudioChannel) {
                 AudioData[AudioChannel] = MemoryAllocator::newArray<uint8_t>(AudioDataSource[AudioChannel].size());
-                memcpy(AudioData[AudioChannel], AudioDataSource[AudioChannel].data(), sizeof(uint8_t) * AudioDataSource[AudioChannel].size());
+                Arrays::doCopy(AudioDataSource[AudioChannel].begin(), AudioDataSource[AudioChannel].end(), AudioData[AudioChannel]);
             }
         }
 
-        AudioSegment(uint8_t **AudioDataSource, uintmax_t AudioDataSourceSize, const MediaChannelLayout &AudioChannelLayoutSource, uint32_t AudioSampleRateSource) : AudioChannelLayout(AudioChannelLayoutSource), AudioDataSize(AudioDataSourceSize), AudioSampleRate(AudioSampleRateSource) {
+        AudioSegment(uint8_t **AudioDataSource, uintmax_t AudioDataSourceSize, const MediaChannelLayout &AudioChannelLayoutSource, int AudioSampleRateSource) : AudioChannelLayout(AudioChannelLayoutSource), AudioDataSize(AudioDataSourceSize), AudioSampleRate(AudioSampleRateSource) {
             AudioData = MemoryAllocator::newArray<uint8_t*>(AudioChannelLayoutSource.getChannelCount());
             for (uint8_t AudioChannel = 0;AudioChannel < AudioChannelLayout.getChannelCount();++AudioChannel) {
                 AudioData[AudioChannel] = MemoryAllocator::newArray<uint8_t>(AudioDataSourceSize);
-                memcpy(AudioData[AudioChannel], AudioDataSource[AudioChannel], sizeof(uint8_t) * AudioDataSourceSize);
+                Arrays::doCopy(AudioDataSource[AudioChannel], AudioDataSize, AudioData[AudioChannel]);
             }
             for (uint8_t AudioChannel = 0;AudioChannel < AudioChannelLayout.getChannelCount();++AudioChannel)
                 delete[] AudioDataSource[AudioChannel];
             delete[] AudioDataSource;
         }
     public:
-        AudioSegment(const AudioSegment &AudioSource) : AudioChannelLayout(AudioSource.AudioChannelLayout), AudioDataSize(AudioSource.AudioDataSize), AudioSampleRate(AudioSource.AudioSampleRate) {
-            AudioData = MemoryAllocator::newArray<uint8_t*>(AudioChannelLayout.getChannelCount());
-            for (uint8_t AudioChannel = 0;AudioChannel < AudioChannelLayout.getChannelCount();++AudioChannel) {
-                AudioData[AudioChannel] = MemoryAllocator::newArray<uint8_t>(AudioDataSize);
-                memcpy(AudioData[AudioChannel], AudioSource.AudioData[AudioChannel], sizeof(uint8_t) * AudioDataSize);
-            }
-        }
+        doEnableCopyAssignConstruct(AudioSegment)
+        doEnableMoveAssignConstruct(AudioSegment)
 
         ~AudioSegment() noexcept {
             if (AudioData) {
@@ -97,7 +94,7 @@ namespace eLibrary::Multimedia {
             }
         }
 
-        void doAssign(const AudioSegment &AudioSource) {
+        void doAssign(const AudioSegment &AudioSource) noexcept {
             if (Objects::getAddress(AudioSource) == this) return;
             if (AudioData) {
                 for (uint8_t AudioChannel = 0; AudioChannel < AudioChannelLayout.getChannelCount(); ++AudioChannel)
@@ -106,10 +103,26 @@ namespace eLibrary::Multimedia {
             }
             AudioData = MemoryAllocator::newArray<uint8_t*>((AudioChannelLayout = AudioSource.AudioChannelLayout).getChannelCount());
             AudioDataSize = AudioSource.AudioDataSize;
+            AudioSampleRate = AudioSource.AudioSampleRate;
             for (uint8_t AudioChannel = 0;AudioChannel < AudioChannelLayout.getChannelCount();++AudioChannel) {
                 AudioData[AudioChannel] = MemoryAllocator::newArray<uint8_t>(AudioDataSize);
-                memcpy(AudioData[AudioChannel], AudioSource.AudioData[AudioChannel], sizeof(uint8_t) * AudioDataSize);
+                Arrays::doCopy(AudioSource.AudioData[AudioChannel], AudioDataSize, AudioData[AudioChannel]);
             }
+        }
+
+        void doAssign(AudioSegment &&AudioSource) noexcept {
+            if (Objects::getAddress(AudioSource) == this) return;
+            AudioChannelLayout = AudioSource.AudioChannelLayout;
+            AudioData = AudioSource.AudioData;
+            AudioDataSize = AudioSource.AudioDataSize;
+            AudioSampleRate = AudioSource.AudioSampleRate;
+            if (AudioSource.AudioData) {
+                for (uint8_t AudioChannel = 0; AudioChannel < AudioSource.AudioChannelLayout.getChannelCount(); ++AudioChannel)
+                    delete[] AudioSource.AudioData[AudioChannel];
+                delete[] AudioSource.AudioData;
+            }
+            AudioSource.AudioDataSize = 0;
+            AudioSource.AudioSampleRate = 0;
         }
 
         void doExport(const String &AudioPath) const {
@@ -197,20 +210,15 @@ namespace eLibrary::Multimedia {
                 if (AudioStatus != AVERROR(EAGAIN))
                     throw MediaException(String(u"AudioSegment::doOpen(const String&) avcodec_receive_frame"));
             }
-            return {AudioDataOutput, AudioCodecContext->ch_layout, (uint32_t) AudioCodecContext->sample_rate};
+            return {AudioDataOutput, AudioCodecContext->ch_layout, AudioCodecContext->sample_rate};
         }
 
         MediaChannelLayout getChannelLayout() const noexcept {
             return AudioChannelLayout;
         }
 
-        uint32_t getSampleRate() const noexcept {
+        int getSampleRate() const noexcept {
             return AudioSampleRate;
-        }
-
-        AudioSegment &operator=(const AudioSegment &AudioSource) noexcept {
-            doAssign(AudioSource);
-            return *this;
         }
 
         AudioSegment setChannelLayout(const MediaChannelLayout &AudioChannelLayoutSource) const {
