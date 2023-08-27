@@ -1,6 +1,7 @@
 #pragma once
 
 #include <Core/Object.hpp>
+#include <cctype>
 #include <string>
 
 namespace eLibrary::Core {
