@@ -37,9 +37,14 @@ jobs:
 
       - name: CMake Build
         run: |
-          cmake -DCMAKE_TOOLCHAIN_FILE=./vcpkg/scripts/buildsystems/vcpkg.cmake .
+          cmake -DCMAKE_CXX_FLAGS="-fprofile-arcs -ftest-coverage"-DCMAKE_TOOLCHAIN_FILE=./vcpkg/scripts/buildsystems/vcpkg.cmake .
+
+      - name: LCOV Setup
+        run: |
+          lcov -c -d ./ -o eLibraryCoverage.info
 
       - name: Codecov Uploading
         uses: codecov/codecov-action@v3
         env:
-          CODECOV_TOKEN: ${{secrets.CODECOV_TOKEN}}
+          file: eLibraryCoverage.info
+          token: ${{secrets.CODECOV_TOKEN}}
