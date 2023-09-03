@@ -29,3 +29,8 @@ if(ELIBRARY_MODULE_NETWORK)
     find_package(OpenSSL REQUIRED)
     target_link_libraries(eLibraryTest OpenSSL::SSL OpenSSL::Crypto)
 endif()
+
+add_test(
+    NAME eLibraryTest
+    COMMAND eLibraryTest
+)

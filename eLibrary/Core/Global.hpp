@@ -26,6 +26,7 @@ namespace eLibrary::Core {
 #define eLibraryCompiler(CompilerName) eLibraryCompiler_##CompilerName
 #define eLibraryFeature(FeatureName) eLibraryFeature_##FeatureName
 #define eLibrarySystem(SystemName) eLibrarySystem_##SystemName
+#define getObjectNameRaw(...) #__VA_ARGS__
 
 #define eLibraryAPI
 }

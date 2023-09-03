@@ -210,12 +210,15 @@ namespace eLibrary::Core {
     private:
         E *ElementCurrent;
     public:
-        typedef intmax_t difference_type;
-        typedef std::random_access_iterator_tag iterator_category;
+        using difference_type = intmax_t;
+        using iterator_category = std::contiguous_iterator_tag;
+        using value_type = E;
+
+        constexpr ArrayIterator() noexcept : ElementCurrent(nullptr) {}
 
         constexpr ArrayIterator(E *ElementSource) noexcept : ElementCurrent(ElementSource) {}
 
-        ArrayIterator operator+(intmax_t ElementIndex) noexcept {
+        ArrayIterator operator+(intmax_t ElementIndex) const noexcept {
             return {ElementCurrent + ElementIndex};
         }
 
@@ -224,13 +227,25 @@ namespace eLibrary::Core {
             return *this;
         }
 
-        ArrayIterator &operator-(intmax_t ElementIndex) noexcept {
+        ArrayIterator operator++(int) noexcept {
+            return {ElementCurrent++};
+        }
+
+        auto operator-(const ArrayIterator &ElementIndex) const noexcept {
+            return ElementCurrent - ElementIndex.ElementCurrent;
+        }
+
+        ArrayIterator operator-(intmax_t ElementIndex) const noexcept {
             return {ElementCurrent - ElementIndex};
         }
 
         ArrayIterator &operator--() noexcept {
             --ElementCurrent;
             return *this;
+        }
+
+        ArrayIterator operator--(int) noexcept {
+            return {ElementCurrent--};
         }
 
         E &operator*() const {
@@ -375,6 +390,13 @@ namespace eLibrary::Core {
         }
 
         ArrayList(std::initializer_list<E> ElementList) noexcept : ElementCapacity(1), ElementSize((intmax_t) ElementList.size()) {
+            while (ElementCapacity < ElementSize)
+                ElementCapacity <<= 1;
+            ElementContainer = MemoryAllocator::newArray<E>(ElementCapacity);
+            Arrays::doCopy(ElementList.begin(), ElementList.end(), ElementContainer);
+        }
+
+        ArrayList(const std::vector<E> &ElementList) noexcept : ElementCapacity(1), ElementSize((intmax_t) ElementList.size()) {
             while (ElementCapacity < ElementSize)
                 ElementCapacity <<= 1;
             ElementContainer = MemoryAllocator::newArray<E>(ElementCapacity);
@@ -686,24 +708,45 @@ namespace eLibrary::Core {
             LinkedNode *NodeNext, *NodePrevious;
         } *NodeCurrent;
     public:
-        typedef std::forward_iterator_tag iterator_category;
+        using difference_type = ptrdiff_t;
+        using iterator_category = std::bidirectional_iterator_tag;
+        using value_type = E;
 
-        constexpr DoubleLinkedIterator(LinkedNode *NodeSource) noexcept : NodeCurrent(NodeSource) {}
+        constexpr DoubleLinkedIterator() noexcept : NodeCurrent(nullptr) {}
+
+        constexpr DoubleLinkedIterator(void *NodeSource) noexcept : NodeCurrent((LinkedNode*) NodeSource) {}
 
         DoubleLinkedIterator &operator++() {
             NodeCurrent = NodeCurrent->NodeNext;
             return *this;
         }
 
-        E &operator*() noexcept {
+        DoubleLinkedIterator operator++(int) {
+            LinkedNode *NodeBuffer = NodeCurrent;
+            NodeCurrent = NodeCurrent->NodeNext;
+            return {NodeBuffer};
+        }
+
+        DoubleLinkedIterator &operator--() {
+            NodeCurrent = NodeCurrent->NodePrevious;
+            return *this;
+        }
+
+        DoubleLinkedIterator operator--(int) {
+            LinkedNode *NodeBuffer = NodeCurrent;
+            NodeCurrent = NodeCurrent->NodePrevious;
+            return {NodeBuffer};
+        }
+
+        E &operator*() const {
             return NodeCurrent->NodeValue;
         }
 
-        bool operator==(const DoubleLinkedIterator &IteratorSource) noexcept {
+        bool operator==(const DoubleLinkedIterator &IteratorSource) const noexcept {
             return NodeCurrent == IteratorSource.NodeCurrent;
         }
 
-        bool operator!=(const DoubleLinkedIterator &IteratorSource) noexcept {
+        bool operator!=(const DoubleLinkedIterator &IteratorSource) const noexcept {
             return NodeCurrent != IteratorSource.NodeCurrent;
         }
     };
@@ -724,11 +767,22 @@ namespace eLibrary::Core {
 
         template<typename>
         friend class DoubleLinkedSet;
+
+        template<typename ...Es>
+        void doInitialize(E ElementCurrent, Es ...ElementList) noexcept {
+            addElement(ElementCurrent);
+            if constexpr (sizeof...(ElementList)) doInitialize(ElementList...);
+        }
     public:
         doEnableCopyAssignConstruct(DoubleLinkedList)
         doEnableMoveAssignConstruct(DoubleLinkedList)
 
         constexpr DoubleLinkedList() noexcept = default;
+
+        template<typename ...Es>
+        explicit DoubleLinkedList(Es ...ElementList) noexcept {
+            doInitialize(ElementList...);
+        }
 
         DoubleLinkedList(std::initializer_list<E> ElementList) noexcept : NodeSize(ElementList.size()) {
             for (const E &ElementCurrent : ElementList) addElement(ElementCurrent);
@@ -949,6 +1003,14 @@ namespace eLibrary::Core {
             CharacterStream.addCharacter(u']');
             return CharacterStream.toString();
         }
+
+        DoubleLinkedIterator<E> begin() const noexcept {
+            return NodeHead;
+        }
+
+        DoubleLinkedIterator<E> end() const noexcept {
+            return {};
+        }
     };
 
     /**
@@ -1131,6 +1193,14 @@ namespace eLibrary::Core {
             CharacterStream.addCharacter(u'}');
             return CharacterStream.toString();
         }
+
+        DoubleLinkedIterator<E> begin() const noexcept {
+            return NodeHead;
+        }
+
+        DoubleLinkedIterator<E> end() const noexcept {
+            return {};
+        }
     };
 
     template<typename T>
@@ -1199,7 +1269,7 @@ namespace eLibrary::Core {
         }
     };
 
-    template<Comparable K, typename V>
+    template<typename K, typename V>
     class RedBlackTree : public Object {
     protected:
         enum class NodeColorEnumeration {
@@ -1291,10 +1361,10 @@ namespace eLibrary::Core {
             return getSizeCore(NodeCurrent->NodeChildLeft) + getSizeCore(NodeCurrent->NodeChildRight) + 1;
         }
 
-        template<Comparable, typename>
+        template<typename, typename>
         friend class TreeMap;
 
-        template<Comparable>
+        template<typename>
         friend class TreeSet;
     public:
         doEnableCopyAssignConstruct(RedBlackTree)
@@ -1506,24 +1576,34 @@ namespace eLibrary::Core {
             LinkedNode *NodeNext;
         } *NodeCurrent;
     public:
-        typedef std::forward_iterator_tag iterator_category;
+        using difference_type = ptrdiff_t;
+        using iterator_category = std::forward_iterator_tag;
+        using value_type = E;
 
-        constexpr SingleLinkedIterator(LinkedNode *NodeSource) noexcept : NodeCurrent(NodeSource) {}
+        constexpr SingleLinkedIterator() noexcept : NodeCurrent(nullptr) {}
+
+        constexpr SingleLinkedIterator(void *NodeSource) noexcept : NodeCurrent((LinkedNode*) NodeSource) {}
 
         SingleLinkedIterator &operator++() {
             NodeCurrent = NodeCurrent->NodeNext;
             return *this;
         }
 
-        E &operator*() noexcept {
+        SingleLinkedIterator operator++(int) {
+            LinkedNode *NodeBuffer = NodeCurrent;
+            NodeCurrent = NodeCurrent->NodeNext;
+            return {NodeBuffer};
+        }
+
+        E &operator*() const {
             return NodeCurrent->NodeValue;
         }
 
-        bool operator==(const SingleLinkedIterator &IteratorSource) noexcept {
+        bool operator==(const SingleLinkedIterator &IteratorSource) const noexcept {
             return NodeCurrent == IteratorSource.NodeCurrent;
         }
 
-        bool operator!=(const SingleLinkedIterator &IteratorSource) noexcept {
+        bool operator!=(const SingleLinkedIterator &IteratorSource) const noexcept {
             return NodeCurrent != IteratorSource.NodeCurrent;
         }
     };
@@ -1544,11 +1624,22 @@ namespace eLibrary::Core {
 
         template<typename>
         friend class SingleLinkedSet;
+
+        template<typename ...Es>
+        void doInitialize(E ElementCurrent, Es ...ElementList) noexcept {
+            addElement(ElementCurrent);
+            if constexpr (sizeof...(ElementList)) doInitialize(ElementList...);
+        }
     public:
         doEnableCopyAssignConstruct(SingleLinkedList)
         doEnableMoveAssignConstruct(SingleLinkedList)
 
         constexpr SingleLinkedList() noexcept = default;
+
+        template<typename ...Es>
+        explicit SingleLinkedList(Es ...ElementList) noexcept {
+            doInitialize(ElementList...);
+        }
 
         SingleLinkedList(std::initializer_list<E> ElementList) noexcept : NodeSize(ElementList.size()) {
             for (const E &ElementCurrent : ElementList) addElement(ElementCurrent);
@@ -1719,7 +1810,7 @@ namespace eLibrary::Core {
         }
 
         SingleLinkedIterator<E> end() const noexcept {
-            return {NodeTail};
+            return {};
         }
     };
 
@@ -2034,7 +2125,7 @@ namespace eLibrary::Core {
         }
 
         SingleLinkedIterator<E> end() const noexcept {
-            return {NodeTail};
+            return {};
         }
     };
 
@@ -2141,7 +2232,7 @@ namespace eLibrary::Core {
         }
     };
 
-    template<Comparable K, typename V>
+    template<typename K, typename V>
     class TreeMap final : protected RedBlackTree<K, V> {
     public:
         const V &getElement(const K &MapKey) const {
@@ -2183,7 +2274,7 @@ namespace eLibrary::Core {
         }
     };
 
-    template<Comparable E>
+    template<typename E>
     class TreeSet final : protected RedBlackTree<E, std::nullptr_t> {
     private:
         static void toString(const typename RedBlackTree<E, std::nullptr_t>::RedBlackNode *NodeCurrent, StringStream &CharacterStream) noexcept {

@@ -38,6 +38,17 @@ Project Dependencies:
 Project Repository: [GitHub](https://github.com/eSoftwareOrganization/eLibrary)
 
 Project Update Log:
+> eLibrary V2023.14
+- Core::ArrayIterator(...)
+- Core::ArrayList Constructor(const std::vector<E>&)(New)
+- Core::DoubleLinkedIterator(...)
+- Core::DoubleLinkedList Constructor<Es...>(Es...)(New)
+- Core::DoubleLinkedSet begin / end(New)
+- Core::Objects doCompare<T(Arithmetic)>(T, T)(New) doMatchExecute / doMatchValue / makeEntry(Remove)
+- Core::SingleLinkedIterator(...)
+- Core::SingleLinkedList begin / Constructor<Es...>(Es...) / end(New)
+- Core::SingleLinkedSet end(...)
+- Multimedia::MediaCodec toString(...)
 > eLibrary V2023.13
 - Core::Any Constructor<Ts...>(std::inplace_t, T, Ts&&...)(New)
 - Core::Objects doMatchValue / doMove(...) makeEntry(New)
@@ -255,3 +266,14 @@ Project Update Log:
 - IO::AudioSegment(Remove)
 - IO::Buffer getBufferLimit / getBufferMark / getBufferPosition / getRemaining / hasRemaining / setBufferLimit / setBufferPosition(v2023.05)
 - IO::ByteBuffer Constructor(unsigned) / Constructor(const ByteBuffer&) / ~Constructor / doCompact(New)
+
+## Contributors
+
+<!-- ALL-CONTRIBUTORS-LIST:START - Do not remove or modify this section -->
+<!-- prettier-ignore-start -->
+<!-- markdownlint-disable -->
+
+<!-- markdownlint-restore -->
+<!-- prettier-ignore-end -->
+
+<!-- ALL-CONTRIBUTORS-LIST:END -->

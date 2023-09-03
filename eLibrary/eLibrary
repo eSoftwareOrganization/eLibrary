@@ -16,4 +16,3 @@
 #include <IO/Library.hpp>
 #include <Multimedia/AudioSegment.hpp>
 #include <Network/Socket.hpp>
-#include <Core/WindowsNT.hpp>

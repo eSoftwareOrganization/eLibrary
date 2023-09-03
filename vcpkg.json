@@ -12,7 +12,7 @@
       "host": true
     }
   ],
-  "version-string": "2023.13",
+  "version-string": "2023.14",
   "default-features": ["module-multimedia", "module-network"],
   "features": {
     "application-test": {

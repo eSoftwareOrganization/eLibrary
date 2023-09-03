@@ -2,6 +2,8 @@
 
 #if eLibrarySystem(Windows) && !eLibraryCompiler(MSVC)
 
+#warning <Core/WindowsNT.hpp> is deprecated
+
 #include <Core/Exception.hpp>
 
 #include <Windows.h>

@@ -9,7 +9,7 @@ extern "C" {
 #include <archive_entry.h>
 }
 
-namespace eLibrary::IO {
+namespace eLibrary::IO::Archive {
     class ArchiveDescriptor final : public Object {
     private:
         archive *DescriptorHandle;

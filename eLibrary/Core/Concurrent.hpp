@@ -392,7 +392,7 @@ namespace eLibrary::Core {
         }
 
         String toString() const noexcept override {
-            return {std::to_string(NumberValue)};
+            return String::valueOf(NumberValue);
         }
     };
 

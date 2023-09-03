@@ -43,6 +43,11 @@ jobs:
           cmake -DCMAKE_CXX_FLAGS="-fprofile-arcs -ftest-coverage" -DCMAKE_TOOLCHAIN_FILE=./vcpkg/scripts/buildsystems/vcpkg.cmake -S . -B build
           cmake --build build
 
+      - name: Test Run
+        run: |
+          cd build
+          ctest --verbose
+
       - name: LCOV Run
         run: |
           lcov -c -d ./ -o coverage.info

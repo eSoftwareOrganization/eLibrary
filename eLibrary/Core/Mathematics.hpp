@@ -9,7 +9,7 @@ namespace eLibrary::Core {
     private:
         static Integer FunctionPrecision;
     public:
-        MathematicsContext() noexcept = delete;
+        constexpr MathematicsContext() noexcept = delete;
 
         static Integer getFunctionPrecision() noexcept {
             return FunctionPrecision;

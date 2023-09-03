@@ -56,6 +56,10 @@ namespace eLibrary::Multimedia {
             const AVCodec *operator->() noexcept {
                 return CodecObject;
             }
+
+            String toString() const noexcept override {
+                return String(u"MediaCodec[").doConcat({avcodec_get_name(CodecObject->id)}).doConcat(u']');
+            }
         };
 
         class MediaFrame final : public Object {

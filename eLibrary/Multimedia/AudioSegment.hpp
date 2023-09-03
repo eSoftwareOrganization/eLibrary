@@ -234,7 +234,8 @@ namespace eLibrary::Multimedia {
             return {AudioDataOutput, AudioDataSize, AudioChannelLayoutSource, AudioSampleRate};
         }
 
-        AudioSegment setSampleRate(uint32_t AudioSampleRateSource) const {
+        AudioSegment setSampleRate(int AudioSampleRateSource) const {
+            if (AudioSampleRateSource < 0) throw MediaException(String(u"AudioSegment::setSampleRate(int) AudioSampleRateSource"));
             if (AudioSampleRate == AudioSampleRateSource) return *this;
             AVChannelLayout AudioChannelLayoutSource(AudioChannelLayout.toFFMpegFormat());
             FFMpeg::MediaSWRContext AudioSWRContext(FFMpeg::MediaSWRContext::doAllocate(&AudioChannelLayoutSource, &AudioChannelLayoutSource, AV_SAMPLE_FMT_U8P, AV_SAMPLE_FMT_U8P, AudioSampleRate, AudioSampleRateSource));

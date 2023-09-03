@@ -200,6 +200,12 @@ namespace eLibrary::Core {
             return std::to_string(ObjectSource);
         }
 
+        template<typename T>
+        static String valueOf() noexcept {
+            constexpr std::string_view ObjectNameSource = __PRETTY_FUNCTION__;
+            return {std::string{ObjectNameSource.data() + 74, ObjectNameSource.data() + ObjectNameSource.size() - 1}};
+        }
+
         template<ObjectDerived T>
         static String valueOf(const T &ObjectSource) noexcept {
             return ObjectSource.toString();
@@ -237,7 +243,7 @@ namespace eLibrary::Core {
     };
 }
 
-#if __has_include(<format>)
+#if __has_include(<format>) && !eLibraryCompiler(AppleClang)
 #include <format>
 
 template<eLibrary::Core::ObjectDerived ObjectT, typename CharacterT>

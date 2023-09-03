@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 3.17)
 
 cmake_policy(SET CMP0091 NEW)
 
-option(ELIBRARY_FEATURE_ARCHIVE "eLibrary::IO::ArchiveDescriptor & ArchiveEntry & ArchiveInputStream" OFF)
+option(ELIBRARY_FEATURE_ARCHIVE "eLibrary::IO::Archive" OFF)
 option(ELIBRARY_MODULE_IO "eLibrary::IO" ON)
 option(ELIBRARY_MODULE_MULTIMEDIA "eLibrary::Multimedia" OFF)
 option(ELIBRARY_MODULE_NETWORK "eLibrary::Network" OFF)
@@ -14,7 +14,6 @@ if(ELIBRARY_FEATURE_ARCHIVE)
 endif()
 
 if(ELIBRARY_MODULE_IO)
-    list(APPEND VCPKG_MANIFEST_FEATURES "module-io")
     add_compile_definitions(eLibraryFeature_IO=1)
 endif()
 
@@ -32,7 +31,7 @@ if(ELIBRARY_UNIT_TEST)
     list(APPEND VCPKG_MANIFEST_FEATURES "application-test")
 endif()
 
-project(eLibrary)
+project(eLibrary DESCRIPTION "An all-in-one cpp library")
 
 set(CMAKE_CXX_STANDARD 23)
 
@@ -50,5 +49,6 @@ endif()
 add_library(eLibrary eLibrary/Core/Object.cpp eLibrary/Core/String.cpp)
 
 if(ELIBRARY_UNIT_TEST)
+    enable_testing()
     add_subdirectory(eLibraryTest)
 endif()

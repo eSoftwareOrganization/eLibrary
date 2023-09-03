@@ -22,14 +22,6 @@ namespace eLibrary::Core {
     concept ObjectDerived = std::derived_from<T, Object>;
 
     class Objects final : public Object {
-    private:
-        template<typename K, typename V>
-        struct ObjectEntry final {
-            K EntryKey;
-            V EntryValue;
-
-            constexpr ObjectEntry(const K &EntryKeySource, const V &EntryValueSource) : EntryKey(EntryKeySource), EntryValue(EntryValueSource) {}
-        };
     public:
         constexpr Objects() noexcept = delete;
 
@@ -37,6 +29,13 @@ namespace eLibrary::Core {
         static void doCall(F FunctionCurrent, Fs ...FunctionList) {
             FunctionCurrent();
             if constexpr (sizeof...(Fs)) doCall(FunctionList...);
+        }
+
+        template<std::integral T>
+        static intmax_t doCompare(T Object1, T Object2) noexcept {
+            if (Object1 > Object2) return 1;
+            if (Object1 < Object2) return -1;
+            return 0;
         }
 
         template<Comparable T>
@@ -57,26 +56,6 @@ namespace eLibrary::Core {
         template<typename T>
         static constexpr T &&doForward(std::remove_reference_t<T> &&ObjectSource) noexcept {
             return static_cast<T&&>(ObjectSource);
-        }
-
-        template<typename K, typename F>
-        static void doMatchExecute(const K &ObjectKeyTarget, F ObjectRoutineDefault, std::initializer_list<ObjectEntry<K, F>> ObjectEntryList) {
-            for (const auto &ObjectEntryCurrent : ObjectEntryList)
-                if (!doCompare(ObjectEntryCurrent.EntryKey, ObjectKeyTarget)) {
-                    ObjectEntryCurrent.EntryValue();
-                    return;
-                }
-            ObjectRoutineDefault();
-        }
-
-        template<typename K, typename V>
-        eLibraryAPI static V doMatchValue(const K &ObjectKeyTarget, std::initializer_list<ObjectEntry<K, V>> ObjectEntryList);
-
-        template<typename K, typename V>
-        static const V &doMatchValue(const K &ObjectKeyTarget, const V &ObjectValueDefault, std::initializer_list<ObjectEntry<K, V>> ObjectEntryList) {
-            for (const auto &ObjectEntryCurrent : ObjectEntryList)
-                if (!doCompare(ObjectEntryCurrent.EntryKey, ObjectKeyTarget)) return ObjectEntryCurrent.EntryValue;
-            return ObjectValueDefault;
         }
 
         template<typename T>
@@ -119,11 +98,6 @@ namespace eLibrary::Core {
         template<Comparable T>
         static T getMinimum(const T &Object1, const T &Object2) {
             return doCompare(Object1, Object2) <= 0 ? Object1 : Object2;
-        }
-
-        template<Comparable K, typename V>
-        auto makeEntry(const K &EntryKey, const V &EntryValue) {
-            return ObjectEntry(EntryKey, EntryValue);
         }
     };
 }

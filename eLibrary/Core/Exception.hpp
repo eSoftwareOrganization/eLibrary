@@ -41,26 +41,26 @@ namespace eLibrary::Core {
 
     class ArithmeticException final : public Exception {
     public:
-        explicit ArithmeticException(const String &ExceptionMessage) noexcept : Exception(ExceptionMessage) {};
+        using Exception::Exception;
     };
 
     class IndexException final : public Exception {
     public:
-        explicit IndexException(const String &ExceptionMessage) noexcept : Exception(ExceptionMessage) {};
+        using Exception::Exception;
     };
 
     class InterruptedException final : public Exception {
     public:
-        explicit InterruptedException(const String &ExceptionMessage) noexcept : Exception(ExceptionMessage) {}
+        using Exception::Exception;
     };
 
     class RuntimeException final : public Exception {
     public:
-        explicit RuntimeException(const String &ExceptionMessage) noexcept : Exception(ExceptionMessage) {}
+        using Exception::Exception;
     };
 
     class TypeException final : public Exception {
     public:
-        explicit TypeException(const String &ExceptionMessage) noexcept : Exception(ExceptionMessage) {}
+        using Exception::Exception;
     };
 }
