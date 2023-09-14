@@ -53,7 +53,7 @@ jobs:
           lcov -c -d ./ -o coverage.info
 
       - name: Codecov Uploading
-        uses: codecov/codecov-action@v3
+        uses: codecov/codecov-action@v4
         env:
           file: coverage.info
           token: ${{secrets.CODECOV_TOKEN}}
