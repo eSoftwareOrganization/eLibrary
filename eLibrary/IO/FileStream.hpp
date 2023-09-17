@@ -2,7 +2,7 @@
 
 #if eLibraryFeature(IO)
 
-#include <IO/File.hpp>
+#include <IO/IOUtility.hpp>
 #include <IO/Stream.hpp>
 
 namespace eLibrary::IO {

@@ -18,6 +18,8 @@ namespace eLibrary::Core {
         {ObjectSource.hashCode()} -> std::same_as<uintmax_t>;
     };
 
+#define doDefineClass(ClassName) constexpr static Class ClassName##Class{#ClassName};
+#define doDefineClassMethod(ClassName) Class getClass() const noexcept override {doDefineClass(ClassName)return ClassName##Class;}
 #define doDisableCopyAssignConstruct(ClassName) constexpr ClassName(const ClassName&) noexcept = delete;ClassName &operator=(const ClassName&) noexcept = delete;
 #define doEnableCopyAssignConstruct(ClassName) ClassName(const ClassName &ObjectSource) {doAssign(ObjectSource);}ClassName &operator=(const ClassName &ObjectSource) {doAssign(ObjectSource);return *this;}
 #define doEnableCopyAssignParameterConstruct(ClassName, ParameterName) ClassName(const ParameterName &ObjectSource) {doAssign(ObjectSource);}ClassName &operator=(const ParameterName &ObjectSource) {doAssign(ObjectSource);return *this;}

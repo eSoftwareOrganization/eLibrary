@@ -349,6 +349,7 @@ namespace eLibrary::Multimedia {
         class MediaBuffer final : public Object {
         private:
             ALuint BufferIndex;
+            IO::ByteBuffer BufferObject;
 
             doDisableCopyAssignConstruct(MediaBuffer)
             friend class MediaSource;
@@ -357,9 +358,9 @@ namespace eLibrary::Multimedia {
                 alGenBuffers(1, &BufferIndex);
             }
 
-            MediaBuffer(ALenum AudioBufferFormat, const void *AudioBufferData, ALsizei AudioBufferSize, ALsizei AudioSampleRate) noexcept {
+            MediaBuffer(ALenum AudioBufferFormat, const IO::ByteBuffer &AudioBuffer, ALsizei AudioSampleRate) noexcept : BufferObject(AudioBuffer) {
                 alGenBuffers(1, &BufferIndex);
-                alBufferData(BufferIndex, AudioBufferFormat, AudioBufferData, AudioBufferSize, AudioSampleRate);
+                alBufferData(BufferIndex, AudioBufferFormat, AudioBuffer.getBufferContainer(), BufferObject.getBufferLimit(), AudioSampleRate);
             }
 
             ~MediaBuffer() noexcept {
@@ -486,8 +487,8 @@ namespace eLibrary::Multimedia {
             }
         };
 
-#define doDestroyOpenAL() MediaContext::setContextCurrentNull();
-#define doInitializeOpenAL() Multimedia::MediaDevice MediaDeviceObject(String(u""));Multimedia::MediaContext MediaContextObject(MediaDeviceObject);MediaContextObject.setContextCurrent();
+#define doDestroyOpenAL() Multimedia::OpenAL::MediaContext::setContextCurrentNull();
+#define doInitializeOpenAL() Multimedia::OpenAL::MediaDevice MediaDeviceObject({u""});Multimedia::OpenAL::MediaContext MediaContextObject(MediaDeviceObject);MediaContextObject.setContextCurrent();
     }
 }
 #endif

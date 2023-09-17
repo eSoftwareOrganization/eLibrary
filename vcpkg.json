@@ -12,24 +12,16 @@
       "host": true
     }
   ],
-  "version-string": "2023.14",
-  "default-features": ["module-multimedia", "module-network"],
+  "version-string": "2023.15",
+  "default-features": ["module-multimedia"],
   "features": {
-    "application-test": {
-      "description": "eLibrary::eLibraryTest",
-      "dependencies": ["doctest", "nanobench"]
-    },
     "feature-archive": {
-      "description": "eLibrary::IO::ArchiveDescriptor & ArchiveEntry & ArchiveInputStream",
+      "description": "eLibrary::IO::Archive",
       "dependencies": ["libarchive"]
     },
     "module-multimedia": {
       "description": "eLibrary::Multimedia",
       "dependencies": ["ffmpeg", "openal-soft"]
-    },
-    "module-network": {
-      "description": "eLibrary::Network",
-      "dependencies": ["openssl"]
     }
   }
 }

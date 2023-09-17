@@ -1,13 +1,27 @@
 #pragma once
 
 #include <Core/Memory.hpp>
-#include <array>
-#include <forward_list>
 #include <iterator>
-#include <list>
-#include <vector>
 
 namespace eLibrary::Core {
+    namespace {
+        template<typename E>
+        struct DoubleLinkedNode final {
+            E NodeValue;
+            DoubleLinkedNode *NodeNext = nullptr, *NodePrevious = nullptr;
+
+            constexpr explicit DoubleLinkedNode(const E &NodeValueSource) noexcept(std::is_nothrow_copy_constructible_v<E>) : NodeValue(NodeValueSource) {}
+        };
+
+        template<typename E>
+        struct SingleLinkedNode final {
+            E NodeValue;
+            SingleLinkedNode *NodeNext = nullptr;
+
+            constexpr explicit SingleLinkedNode(const E &NodeValueSource) noexcept(std::is_nothrow_copy_constructible_v<E>) : NodeValue(NodeValueSource) {}
+        };
+    }
+
     class Any final : public Object {
     private:
         enum class AnyOperation {
@@ -33,6 +47,7 @@ namespace eLibrary::Core {
             }
         }
     public:
+        doDefineClassMethod(Any)
         doEnableCopyAssignConstruct(Any)
         doEnableMoveAssignConstruct(Any)
 
@@ -203,6 +218,12 @@ namespace eLibrary::Core {
             for (;IteratorInputStart != IteratorInputStop;--IteratorInputStop, ++IteratorOutput)
                 *IteratorOutput = Objects::doMove(*IteratorInputStop);
         }
+
+        template<typename II, typename F>
+        static void doTraverse(II IteratorInputStart, II IteratorInputStop, F IteratorFunction) {
+            for (;IteratorInputStart != IteratorInputStop;++IteratorInputStart)
+                IteratorFunction(*IteratorInputStart);
+        }
     };
 
     template<typename E>
@@ -281,7 +302,9 @@ namespace eLibrary::Core {
         template<typename>
         friend class ArrayList;
     public:
+        doDefineClassMethod(Array)
         doEnableCopyAssignConstruct(Array)
+        doEnableMoveAssignConstruct(Array)
 
         constexpr Array() noexcept = default;
 
@@ -304,7 +327,7 @@ namespace eLibrary::Core {
 
         ~Array() noexcept {
             ElementSize = 0;
-            delete[] ElementContainer;
+            MemoryAllocator::deleteArray(ElementContainer);
             ElementContainer = nullptr;
         }
 
@@ -312,9 +335,16 @@ namespace eLibrary::Core {
             return {MemoryAllocator::newArray<E>(ElementSize), ElementSize};
         }
 
+        void doAssign(Array<E> &&ElementSource) noexcept {
+            if (Objects::getAddress(ElementSource) == this) return;
+            ElementContainer = ElementSource.ElementContainer;
+            ElementSource.ElementContainer = nullptr;
+            ElementSize = ElementSource.ElementSize;
+        }
+
         void doAssign(const Array<E> &ElementSource) noexcept {
             if (Objects::getAddress(ElementSource) == this) return;
-            delete[] ElementContainer;
+            MemoryAllocator::deleteArray(ElementContainer);
             ElementContainer = MemoryAllocator::newArray<E>(ElementSize = ElementSource.ElementSize);
             Arrays::doCopy(ElementSource.ElementContainer, ElementSize, ElementContainer);
         }
@@ -371,6 +401,7 @@ namespace eLibrary::Core {
             if constexpr (sizeof...(ElementList)) doInitialize(ElementList...);
         }
     public:
+        doDefineClassMethod(ArrayList)
         doEnableCopyAssignConstruct(ArrayList)
         doEnableMoveAssignConstruct(ArrayList)
 
@@ -396,11 +427,11 @@ namespace eLibrary::Core {
             Arrays::doCopy(ElementList.begin(), ElementList.end(), ElementContainer);
         }
 
-        ArrayList(const std::vector<E> &ElementList) noexcept : ElementCapacity(1), ElementSize((intmax_t) ElementList.size()) {
-            while (ElementCapacity < ElementSize)
-                ElementCapacity <<= 1;
-            ElementContainer = MemoryAllocator::newArray<E>(ElementCapacity);
-            Arrays::doCopy(ElementList.begin(), ElementList.end(), ElementContainer);
+        template<typename II>
+        ArrayList(II ElementStart, II ElementStop) noexcept {
+            Arrays::doTraverse(ElementStart, ElementStop, [&](const E &ElementCurrent){
+                addElement(ElementCurrent);
+            });
         }
 
         ~ArrayList() noexcept {
@@ -412,10 +443,10 @@ namespace eLibrary::Core {
             if (ElementSize == ElementCapacity) {
                 E *ElementBuffer = MemoryAllocator::newArray<E>(ElementSize);
                 Arrays::doMove(ElementContainer, ElementSize, ElementBuffer);
-                delete[] ElementContainer;
+                MemoryAllocator::deleteArray(ElementContainer);
                 ElementContainer = MemoryAllocator::newArray<E>(ElementCapacity <<= 1);
                 Arrays::doMove(ElementBuffer, ElementSize, ElementContainer);
-                delete[] ElementBuffer;
+                MemoryAllocator::deleteArray(ElementBuffer);
             }
             ElementContainer[ElementSize++] = ElementSource;
         }
@@ -428,10 +459,10 @@ namespace eLibrary::Core {
             if (ElementSize == ElementCapacity) {
                 E *ElementBuffer = MemoryAllocator::newArray<E>(ElementSize);
                 Arrays::doMove(ElementContainer, ElementContainer + ElementSize, ElementBuffer);
-                delete[] ElementContainer;
+                MemoryAllocator::deleteArray(ElementContainer);
                 ElementContainer = MemoryAllocator::newArray<E>(ElementCapacity <<= 1);
                 Arrays::doMove(ElementBuffer, ElementBuffer + ElementSize, ElementContainer);
-                delete[] ElementBuffer;
+                MemoryAllocator::deleteArray(ElementBuffer);
             }
             Arrays::doMoveBackward(ElementContainer + ElementIndex, ElementContainer + ElementSize, ElementContainer + ElementSize + 1);
             ElementContainer[ElementIndex] = ElementSource;
@@ -440,7 +471,7 @@ namespace eLibrary::Core {
 
         void doAssign(ArrayList<E> &&ElementSource) noexcept {
             if (Objects::getAddress(ElementSource) == this) return;
-            delete[] ElementContainer;
+            MemoryAllocator::deleteArray(ElementContainer);
             ElementCapacity = ElementSource.ElementCapacity;
             ElementContainer = ElementSource.ElementContainer;
             ElementSize = ElementSource.ElementSize;
@@ -451,7 +482,7 @@ namespace eLibrary::Core {
 
         void doAssign(const ArrayList<E> &ElementSource) noexcept {
             if (Objects::getAddress(ElementSource) == this) return;
-            delete[] ElementContainer;
+            MemoryAllocator::deleteArray(ElementContainer);
             if (ElementCapacity) ElementContainer = MemoryAllocator::newArray<E>(ElementCapacity = ElementSource.ElementCapacity);
             Arrays::doCopy(ElementSource.ElementContainer, (ElementSize = ElementSource.ElementSize), ElementContainer);
         }
@@ -459,7 +490,7 @@ namespace eLibrary::Core {
         void doClear() noexcept {
             ElementCapacity = 0;
             ElementSize = 0;
-            delete[] ElementContainer;
+            MemoryAllocator::deleteArray(ElementContainer);
             ElementContainer = nullptr;
         }
 
@@ -474,7 +505,7 @@ namespace eLibrary::Core {
             E *ElementBuffer = MemoryAllocator::newArray<E>(ElementSize);
             Arrays::doMove(ElementContainer, ElementSize, ElementBuffer);
             Arrays::doMoveReverse(ElementBuffer, ElementBuffer + ElementSize, ElementContainer);
-            delete[] ElementBuffer;
+            MemoryAllocator::deleteArray(ElementBuffer);
         }
 
         const E &getElement(intmax_t ElementIndex) const {
@@ -519,10 +550,10 @@ namespace eLibrary::Core {
             else if (--ElementSize <= ElementCapacity >> 1) {
                 E *ElementBuffer = MemoryAllocator::newArray<E>(ElementSize);
                 Arrays::doMove(ElementContainer, ElementSize, ElementBuffer);
-                delete[] ElementContainer;
+                MemoryAllocator::deleteArray(ElementContainer);
                 ElementContainer = MemoryAllocator::newArray<E>(ElementCapacity >>= 1);
                 Arrays::doMove(ElementBuffer, ElementSize, ElementContainer);
-                delete[] ElementBuffer;
+                MemoryAllocator::deleteArray(ElementBuffer);
             }
         }
 
@@ -531,10 +562,6 @@ namespace eLibrary::Core {
             Arrays::doCheckGE(ElementIndex, 0);
             Arrays::doCheckL(ElementIndex, ElementSize);
             ElementContainer[ElementIndex] = ElementSource;
-        }
-
-        std::vector<E> toSTLVector() const noexcept {
-            return std::vector<E>(ElementContainer, ElementContainer + ElementSize);
         }
 
         String toString() const noexcept override {
@@ -567,6 +594,7 @@ namespace eLibrary::Core {
         uintmax_t ElementCapacity = 0, ElementSize = 0;
         E *ElementContainer = nullptr;
     public:
+        doDefineClassMethod(ArraySet)
         doEnableCopyAssignConstruct(ArraySet)
         doEnableMoveAssignConstruct(ArraySet)
 
@@ -587,17 +615,17 @@ namespace eLibrary::Core {
             if (ElementSize == ElementCapacity) {
                 E *ElementBuffer = MemoryAllocator::newArray<E>(ElementSize);
                 Arrays::doMove(ElementContainer, ElementContainer + ElementSize, ElementBuffer);
-                delete[] ElementContainer;
+                MemoryAllocator::deleteArray(ElementContainer);
                 ElementContainer = MemoryAllocator::newArray<E>(ElementCapacity <<= 1);
                 Arrays::doMove(ElementBuffer, ElementBuffer + ElementSize, ElementContainer);
-                delete[] ElementBuffer;
+                MemoryAllocator::deleteArray(ElementBuffer);
             }
             ElementContainer[ElementSize++] = ElementSource;
         }
 
         void doAssign(ArraySet &&SetSource) noexcept {
             if (Objects::getAddress(SetSource) == this) return;
-            delete[] ElementContainer;
+            MemoryAllocator::deleteArray(ElementContainer);
             ElementCapacity = SetSource.ElementCapacity;
             ElementContainer = SetSource.ElementContainer;
             ElementSize = SetSource.ElementSize;
@@ -607,7 +635,7 @@ namespace eLibrary::Core {
 
         void doAssign(const ArraySet &SetSource) noexcept {
             if (Objects::getAddress(SetSource) == this) return;
-            delete[] ElementContainer;
+            MemoryAllocator::deleteArray(ElementContainer);
             ElementCapacity = SetSource.ElementCapacity;
             if (ElementCapacity) ElementContainer = MemoryAllocator::newArray<E>(ElementCapacity);
             Arrays::doCopy(SetSource.ElementContainer, SetSource.ElementContainer + (ElementSize = SetSource.ElementSize), ElementContainer);
@@ -616,7 +644,7 @@ namespace eLibrary::Core {
         void doClear() noexcept {
             ElementCapacity = 0;
             ElementSize = 0;
-            delete[] ElementContainer;
+            MemoryAllocator::deleteArray(ElementContainer);
             ElementContainer = nullptr;
         }
 
@@ -665,10 +693,10 @@ namespace eLibrary::Core {
             else if (--ElementSize <= ElementCapacity >> 1) {
                 E *ElementBuffer = MemoryAllocator::newArray<E>(ElementSize);
                 Arrays::doMove(ElementContainer, ElementContainer + ElementSize, ElementBuffer);
-                delete[] ElementContainer;
+                MemoryAllocator::deleteArray(ElementContainer);
                 ElementContainer = MemoryAllocator::newArray<E>(ElementCapacity >>= 1);
                 Arrays::doMove(ElementBuffer, ElementBuffer + ElementSize, ElementContainer);
-                delete[] ElementBuffer;
+                MemoryAllocator::deleteArray(ElementBuffer);
             }
         }
 
@@ -700,13 +728,135 @@ namespace eLibrary::Core {
         }
     };
 
+    template<typename E, typename C>
+    class ContainerQueue final : public Object {
+    private:
+        C ElementContainer;
+    public:
+        doDefineClass(ContainerQueue)
+        doEnableCopyAssignConstruct(ContainerQueue)
+        doEnableMoveAssignConstruct(ContainerQueue)
+
+        constexpr ContainerQueue() noexcept = default;
+
+        ~ContainerQueue() noexcept {
+            doClear();
+        }
+
+        void addBack(const E &ElementSource) noexcept {
+            ElementContainer.addElement(ElementSource);
+        }
+
+        void addFront(const E &ElementSource) noexcept {
+            ElementContainer.addElement(0, ElementSource);
+        }
+
+        void doAssign(const ContainerQueue<E, C> &ElementSource) {
+            if (Objects::getAddress(ElementSource) == this) return;
+            if (!isEmpty()) doClear();
+            ElementContainer.doAssign(ElementSource);
+        }
+
+        void doAssign(ContainerQueue<E, C> &&ElementSource) noexcept {
+            if (Objects::getAddress(ElementSource) == this) return;
+            if (!isEmpty()) doClear();
+            ElementContainer.doAssign(Objects::doMove(ElementSource));
+        }
+
+        void doClear() noexcept {
+            ElementContainer.doClear();
+        }
+
+        const E &getBack() const {
+            return ElementContainer.getElement(-1);
+        }
+
+        intmax_t getElementSize() const noexcept {
+            return ElementContainer.getElementSize();
+        }
+
+        const E &getFront() const {
+            return ElementContainer.getElement(0);
+        }
+
+        bool isEmpty() const noexcept {
+            return ElementContainer.isEmpty();
+        }
+
+        void removeBack() {
+            ElementContainer.removeIndex(-1);
+        }
+
+        void removeFront() {
+            ElementContainer.removeIndex(0);
+        }
+
+        String toString() const noexcept override {
+            return ElementContainer.toString();
+        }
+    };
+
+    template<typename E, typename C>
+    class ContainerStack final : public Object {
+    private:
+        C ElementContainer;
+    public:
+        doDefineClassMethod(ContainerStack)
+        doEnableCopyAssignConstruct(ContainerStack)
+        doEnableMoveAssignConstruct(ContainerStack)
+
+        constexpr ContainerStack() noexcept = default;
+
+        ~ContainerStack() noexcept {
+            doClear();
+        }
+
+        void addElement(const E &ElementSource) noexcept {
+            ElementContainer.addElement(0, ElementSource);
+        }
+
+        void doAssign(const ContainerStack<E, C> &ElementSource) noexcept {
+            if (Objects::getAddress(ElementSource) == this) return;
+            if (!isEmpty()) doClear();
+            ElementContainer.doAssign(ElementSource.ElementContainer);
+        }
+
+        void doAssign(ContainerStack<E, C> &&ElementSource) noexcept {
+            if (Objects::getAddress(ElementSource) == this) return;
+            if (!isEmpty()) doClear();
+            ElementContainer.doAssign(Objects::doMove(ElementSource.ElementContainer));
+        }
+
+        void doClear() noexcept {
+            ElementContainer.doClear();
+        }
+
+        const E &getElement() const {
+            return ElementContainer.getElement(0);
+        }
+
+        intmax_t getElementSize() const noexcept {
+            return ElementContainer.getElementSize();
+        }
+
+        bool isEmpty() const noexcept {
+            return ElementContainer.isEmpty();
+        }
+
+        void removeElement() {
+            ElementContainer.removeIndex(0);
+        }
+
+        String toString() const noexcept override {
+            return ElementContainer.toString();
+        }
+    };
+
     template<typename E>
     class DoubleLinkedIterator final : public Object {
     private:
-        struct LinkedNode {
-            E NodeValue;
-            LinkedNode *NodeNext, *NodePrevious;
-        } *NodeCurrent;
+        using LinkedNode = DoubleLinkedNode<E>;
+        LinkedNode *NodeCurrent;
     public:
         using difference_type = ptrdiff_t;
         using iterator_category = std::bidirectional_iterator_tag;
@@ -714,7 +864,7 @@ namespace eLibrary::Core {
 
         constexpr DoubleLinkedIterator() noexcept : NodeCurrent(nullptr) {}
 
-        constexpr DoubleLinkedIterator(void *NodeSource) noexcept : NodeCurrent((LinkedNode*) NodeSource) {}
+        constexpr DoubleLinkedIterator(LinkedNode *NodeSource) noexcept : NodeCurrent(NodeSource) {}
 
         DoubleLinkedIterator &operator++() {
             NodeCurrent = NodeCurrent->NodeNext;
@@ -757,12 +907,8 @@ namespace eLibrary::Core {
     template<typename E>
     class DoubleLinkedList final : public Object {
     private:
-        struct LinkedNode final {
-            E NodeValue;
-            LinkedNode *NodeNext, *NodePrevious;
-
-            constexpr explicit LinkedNode(const E &NodeValueSource) noexcept: NodeValue(NodeValueSource), NodeNext(nullptr), NodePrevious(nullptr) {}
-        } *NodeHead = nullptr, *NodeTail = nullptr;
+        using LinkedNode = DoubleLinkedNode<E>;
+        LinkedNode *NodeHead = nullptr, *NodeTail = nullptr;
         intmax_t NodeSize = 0;
 
         template<typename>
@@ -774,6 +920,7 @@ namespace eLibrary::Core {
             if constexpr (sizeof...(ElementList)) doInitialize(ElementList...);
         }
     public:
+        doDefineClassMethod(DoubleLinkedList)
         doEnableCopyAssignConstruct(DoubleLinkedList)
         doEnableMoveAssignConstruct(DoubleLinkedList)
 
@@ -786,6 +933,13 @@ namespace eLibrary::Core {
 
         DoubleLinkedList(std::initializer_list<E> ElementList) noexcept : NodeSize(ElementList.size()) {
             for (const E &ElementCurrent : ElementList) addElement(ElementCurrent);
+        }
+
+        template<typename II>
+        DoubleLinkedList(II ElementStart, II ElementStop) noexcept {
+            Arrays::doTraverse(ElementStart, ElementStop, [&](const E &ElementCurrent){
+                addElement(ElementCurrent);
+            });
         }
 
         ~DoubleLinkedList() noexcept {
@@ -811,17 +965,16 @@ namespace eLibrary::Core {
                 addElement(ElementSource);
                 return;
             }
+            auto *NodeTarget = MemoryAllocator::newObject<LinkedNode>(ElementSource);
             if (ElementIndex == 0) {
-                auto *NodeCurrent = MemoryAllocator::newObject<LinkedNode>(ElementSource);
-                NodeCurrent->NodeNext = NodeHead;
-                NodeHead->NodePrevious = NodeCurrent;
-                NodeHead = NodeCurrent;
+                NodeTarget->NodeNext = NodeHead;
+                NodeHead->NodePrevious = NodeTarget;
+                NodeHead = NodeTarget;
                 ++NodeSize;
                 return;
             }
             LinkedNode *NodeCurrent = NodeHead;
             while (--ElementIndex) NodeCurrent = NodeCurrent->NodeNext;
-            auto *NodeTarget = MemoryAllocator::newObject<LinkedNode>(ElementSource);
             NodeTarget->NodePrevious = NodeCurrent;
             NodeTarget->NodeNext = NodeCurrent->NodeNext;
             NodeCurrent->NodeNext->NodePrevious = NodeTarget;
@@ -858,7 +1011,7 @@ namespace eLibrary::Core {
             while (NodeCurrent) {
                 NodePrevious = NodeCurrent;
                 NodeCurrent = NodeCurrent->NodeNext;
-                delete NodePrevious;
+                MemoryAllocator::deleteObject(NodePrevious);
             }
         }
 
@@ -935,28 +1088,28 @@ namespace eLibrary::Core {
             Arrays::doCheckL(ElementIndex, NodeSize);
             LinkedNode *NodeCurrent;
             if (NodeSize == 1) {
-                delete NodeHead;
+                MemoryAllocator::deleteObject(NodeHead);
                 NodeHead = NodeTail = nullptr;
             } else if (ElementIndex == 0) {
                 NodeHead = NodeHead->NodeNext;
-                delete NodeHead->NodePrevious;
+                MemoryAllocator::deleteObject(NodeHead->NodePrevious);
                 NodeHead->NodePrevious = nullptr;
             } else if (ElementIndex == NodeSize - 1) {
                 NodeTail = NodeTail->NodePrevious;
-                delete NodeTail->NodeNext;
+                MemoryAllocator::deleteObject(NodeTail->NodeNext);
                 NodeTail->NodeNext = nullptr;
             } else if (ElementIndex < (NodeSize >> 1)) {
                 NodeCurrent = NodeHead;
                 while (--ElementIndex) NodeCurrent = NodeCurrent->NodeNext;
                 NodeCurrent->NodeNext = NodeCurrent->NodeNext->NodeNext;
-                delete NodeCurrent->NodeNext->NodePrevious;
+                MemoryAllocator::deleteObject(NodeCurrent->NodeNext->NodePrevious);
                 NodeCurrent->NodeNext->NodePrevious = NodeCurrent;
             } else {
                 NodeCurrent = NodeTail;
                 ElementIndex = NodeSize - ElementIndex - 1;
                 while (--ElementIndex) NodeCurrent = NodeCurrent->NodePrevious;
                 NodeCurrent->NodePrevious = NodeCurrent->NodePrevious->NodePrevious;
-                delete NodeCurrent->NodePrevious->NodeNext;
+                MemoryAllocator::deleteObject(NodeCurrent->NodePrevious->NodeNext);
                 NodeCurrent->NodePrevious->NodeNext = NodeCurrent;
             }
             --NodeSize;
@@ -976,16 +1129,6 @@ namespace eLibrary::Core {
                 while (ElementIndex--) NodeCurrent = NodeCurrent->NodePrevious;
             }
             NodeCurrent->NodeValue = ElementSource;
-        }
-
-        std::list<E> toSTLList() const noexcept {
-            std::list<E> ListResult;
-            LinkedNode *NodeCurrent = NodeHead;
-            while (NodeCurrent) {
-                ListResult.push_back(NodeCurrent->NodeValue);
-                NodeCurrent = NodeCurrent->NodeNext;
-            }
-            return ListResult;
         }
 
         String toString() const noexcept override {
@@ -1019,14 +1162,11 @@ namespace eLibrary::Core {
     template<typename E>
     class DoubleLinkedSet final : public Object {
     private:
-        struct LinkedNode final {
-            E NodeValue;
-            LinkedNode *NodeNext, *NodePrevious;
-
-            explicit LinkedNode(const E &Value) noexcept: NodeValue(Value), NodeNext(nullptr), NodePrevious(nullptr) {}
-        } *NodeHead = nullptr, *NodeTail = nullptr;
+        using LinkedNode = DoubleLinkedNode<E>;
+        LinkedNode *NodeHead = nullptr, *NodeTail = nullptr;
         intmax_t NodeSize = 0;
     public:
+        doDefineClassMethod(DoubleLinkedSet)
         doEnableCopyAssignConstruct(DoubleLinkedSet)
         doEnableMoveAssignConstruct(DoubleLinkedSet)
 
@@ -1085,7 +1225,7 @@ namespace eLibrary::Core {
             while (NodeCurrent) {
                 NodePrevious = NodeCurrent;
                 NodeCurrent = NodeCurrent->NodeNext;
-                delete NodePrevious;
+                MemoryAllocator::deleteObject(NodePrevious);
             }
         }
 
@@ -1145,24 +1285,24 @@ namespace eLibrary::Core {
             Arrays::doCheckL(ElementIndex, NodeSize);
             if (ElementIndex == 0) {
                 NodeHead = NodeHead->NodeNext;
-                if (NodeHead->NodePrevious) delete NodeHead->NodePrevious;
+                if (NodeHead->NodePrevious) MemoryAllocator::deleteObject(NodeHead->NodePrevious);
                 NodeHead->NodePrevious = nullptr;
             } else if (ElementIndex == NodeSize - 1) {
                 NodeTail = NodeTail->NodePrevious;
-                if (NodeTail->NodeNext) delete NodeTail->NodeNext;
+                if (NodeTail->NodeNext) MemoryAllocator::deleteObject(NodeTail->NodeNext);
                 NodeTail->NodeNext = nullptr;
             } else if (ElementIndex < (NodeSize >> 1)) {
                 NodeCurrent = NodeHead;
                 while (--ElementIndex) NodeCurrent = NodeCurrent->NodeNext;
                 NodeCurrent->NodeNext = NodeCurrent->NodeNext->NodeNext;
-                delete NodeCurrent->NodeNext->NodePrevious;
+                MemoryAllocator::deleteObject(NodeCurrent->NodeNext->NodePrevious);
                 NodeCurrent->NodeNext->NodePrevious = NodeCurrent;
             } else {
                 NodeCurrent = NodeTail;
                 ElementIndex = NodeSize - ElementIndex - 1;
                 while (--ElementIndex) NodeCurrent = NodeCurrent->NodePrevious;
                 NodeCurrent->NodePrevious = NodeCurrent->NodePrevious->NodePrevious;
-                delete NodeCurrent->NodePrevious->NodeNext;
+                MemoryAllocator::deleteObject(NodeCurrent->NodePrevious->NodeNext);
                 NodeCurrent->NodePrevious->NodeNext = NodeCurrent;
             }
             --NodeSize;
@@ -1213,6 +1353,7 @@ namespace eLibrary::Core {
             OptionalData = MemoryAllocator::newObject<T>(Objects::doForward<Ts>(ParameterList)...);
         }
     public:
+        doDefineClassMethod(Optional)
         doEnableCopyAssignConstruct(Optional)
         doEnableCopyAssignParameterConstruct(Optional, T)
         doEnableMoveAssignConstruct(Optional)
@@ -1288,11 +1429,11 @@ namespace eLibrary::Core {
             ~RedBlackNode() noexcept {
                 NodeParent = nullptr;
                 if (NodeChildLeft) {
-                    delete NodeChildLeft;
+                    MemoryAllocator::deleteObject(NodeChildLeft);
                     NodeChildLeft = nullptr;
                 }
                 if (NodeChildRight) {
-                    delete NodeChildRight;
+                    MemoryAllocator::deleteObject(NodeChildRight);
                     NodeChildRight = nullptr;
                 }
             }
@@ -1373,14 +1514,14 @@ namespace eLibrary::Core {
 
         ~RedBlackTree() noexcept {
             if (NodeRoot) {
-                delete NodeRoot;
+                MemoryAllocator::deleteObject(NodeRoot);
                 NodeRoot = nullptr;
             }
         }
 
         void doAssign(const RedBlackTree<K, V> &TreeSource) noexcept {
             if (Objects::getAddress(TreeSource) == this) return;
-            delete NodeRoot;
+            MemoryAllocator::deleteObject(NodeRoot);
             TreeSource.doOrderCore(TreeSource.NodeRoot, [&](const K &NodeKeySource, const V &NodeValueSource){
                 doInsert(NodeKeySource, NodeValueSource);
             });
@@ -1571,10 +1712,8 @@ namespace eLibrary::Core {
     template<typename E>
     class SingleLinkedIterator final : public Object {
     private:
-        struct LinkedNode {
-            E NodeValue;
-            LinkedNode *NodeNext;
-        } *NodeCurrent;
+        using LinkedNode = SingleLinkedNode<E>;
+        LinkedNode *NodeCurrent;
     public:
         using difference_type = ptrdiff_t;
         using iterator_category = std::forward_iterator_tag;
@@ -1582,7 +1721,7 @@ namespace eLibrary::Core {
 
         constexpr SingleLinkedIterator() noexcept : NodeCurrent(nullptr) {}
 
-        constexpr SingleLinkedIterator(void *NodeSource) noexcept : NodeCurrent((LinkedNode*) NodeSource) {}
+        constexpr SingleLinkedIterator(SingleLinkedNode<E> *NodeSource) noexcept : NodeCurrent(NodeSource) {}
 
         SingleLinkedIterator &operator++() {
             NodeCurrent = NodeCurrent->NodeNext;
@@ -1614,12 +1753,8 @@ namespace eLibrary::Core {
     template<typename E>
     class SingleLinkedList final : public Object {
     protected:
-        struct LinkedNode final {
-            E NodeValue;
-            LinkedNode *NodeNext;
-
-            constexpr explicit LinkedNode(const E &NodeValueSource) noexcept: NodeValue(NodeValueSource), NodeNext(nullptr) {}
-        } *NodeHead = nullptr, *NodeTail = nullptr;
+        using LinkedNode = SingleLinkedNode<E>;
+        LinkedNode *NodeHead = nullptr, *NodeTail = nullptr;
         intmax_t NodeSize = 0;
 
         template<typename>
@@ -1631,6 +1766,7 @@ namespace eLibrary::Core {
             if constexpr (sizeof...(ElementList)) doInitialize(ElementList...);
         }
     public:
+        doDefineClassMethod(SingleLinkedList)
         doEnableCopyAssignConstruct(SingleLinkedList)
         doEnableMoveAssignConstruct(SingleLinkedList)
 
@@ -1643,6 +1779,13 @@ namespace eLibrary::Core {
 
         SingleLinkedList(std::initializer_list<E> ElementList) noexcept : NodeSize(ElementList.size()) {
             for (const E &ElementCurrent : ElementList) addElement(ElementCurrent);
+        }
+
+        template<typename II>
+        SingleLinkedList(II ElementStart, II ElementStop) noexcept {
+            Arrays::doTraverse(ElementStart, ElementStop, [&](const E &ElementCurrent){
+                addElement(ElementCurrent);
+            });
         }
 
         ~SingleLinkedList() noexcept {
@@ -1667,9 +1810,15 @@ namespace eLibrary::Core {
                 addElement(ElementSource);
                 return;
             }
-            LinkedNode *NodeCurrent = NodeHead;
-            if (ElementIndex) while (--ElementIndex) NodeCurrent = NodeCurrent->NodeNext;
             auto *NodeTarget = MemoryAllocator::newObject<LinkedNode>(ElementSource);
+            if (ElementIndex == 0) {
+                NodeTarget->NodeNext = NodeHead;
+                NodeHead = NodeTarget;
+                ++NodeSize;
+                return;
+            }
+            LinkedNode *NodeCurrent = NodeHead;
+            while (--ElementIndex) NodeCurrent = NodeCurrent->NodeNext;
             NodeTarget->NodeNext = NodeCurrent->NodeNext;
             NodeCurrent->NodeNext = NodeTarget;
             ++NodeSize;
@@ -1704,7 +1853,7 @@ namespace eLibrary::Core {
             while (NodeCurrent) {
                 NodePrevious = NodeCurrent;
                 NodeCurrent = NodeCurrent->NodeNext;
-                delete NodePrevious;
+                MemoryAllocator::deleteObject(NodePrevious);
             }
         }
 
@@ -1756,7 +1905,7 @@ namespace eLibrary::Core {
             LinkedNode *NodeCurrent = NodeHead;
             if (ElementIndex == 0) {
                 NodeHead = NodeHead->NodeNext;
-                delete NodeCurrent;
+                MemoryAllocator::deleteObject(NodeCurrent);
                 --NodeSize;
                 return;
             }
@@ -1764,7 +1913,7 @@ namespace eLibrary::Core {
             if (ElementIndex == NodeSize - 1) NodeLast = true;
             while (--ElementIndex) NodeCurrent = NodeCurrent->NodeNext;
             LinkedNode *NodeNext = NodeCurrent->NodeNext->NodeNext;
-            delete NodeCurrent->NodeNext;
+            MemoryAllocator::deleteObject(NodeCurrent->NodeNext);
             NodeCurrent->NodeNext = NodeNext;
             if (NodeLast) NodeTail = NodeCurrent;
             --NodeSize;
@@ -1777,16 +1926,6 @@ namespace eLibrary::Core {
             LinkedNode *NodeCurrent = NodeHead;
             while (ElementIndex--) NodeCurrent = NodeCurrent->NodeNext;
             NodeCurrent->NodeValue = ElementSource;
-        }
-
-        std::forward_list<E> toSTLForwardList() const {
-            std::forward_list<E> ListResult;
-            LinkedNode *NodeCurrent = NodeHead;
-            while (NodeCurrent) {
-                ListResult.insert_after(ListResult.end(), NodeCurrent->NodeValue);
-                NodeCurrent = NodeCurrent->NodeNext;
-            }
-            return ListResult;
         }
 
         String toString() const noexcept override {
@@ -1814,152 +1953,17 @@ namespace eLibrary::Core {
         }
     };
 
-    template<typename E>
-    class SingleLinkedQueue : public Object {
-    protected:
-        struct LinkedNode {
-            E NodeValue;
-            LinkedNode *NodeNext;
-
-            explicit LinkedNode(const E &NodeValueSource) noexcept: NodeValue(NodeValueSource), NodeNext(nullptr) {}
-        } *NodeHead = nullptr, *NodeTail = nullptr;
-        intmax_t NodeSize = 0;
-    public:
-        doEnableCopyAssignConstruct(SingleLinkedQueue)
-        doEnableMoveAssignConstruct(SingleLinkedQueue)
-
-        constexpr SingleLinkedQueue() noexcept = default;
-
-        ~SingleLinkedQueue() noexcept {
-            doClear();
-        }
-
-        void addBack(const E &ElementSource) noexcept {
-            auto *NodeCurrent = MemoryAllocator::newObject<LinkedNode>(ElementSource);
-            if (!NodeHead) {
-                NodeHead = NodeCurrent;
-                NodeTail = NodeCurrent;
-            } else {
-                NodeTail->NodeNext = NodeCurrent;
-                NodeTail = NodeCurrent;
-            }
-            ++NodeSize;
-        }
-
-        void addFront(const E &ElementSource) noexcept {
-            auto *NodeCurrent = MemoryAllocator::newObject<LinkedNode>(ElementSource);
-            if (!NodeHead) {
-                NodeHead = NodeCurrent;
-                NodeTail = NodeCurrent;
-            } else {
-                NodeCurrent->NodeNext = NodeHead;
-                NodeHead = NodeCurrent;
-            }
-            ++NodeSize;
-        }
-
-        void doAssign(const SingleLinkedQueue<E> &ElementSource) {
-            if (Objects::getAddress(ElementSource) == this) return;
-            if (!isEmpty()) doClear();
-            NodeSize = ElementSource.NodeSize;
-            LinkedNode *NodeCurrent = ElementSource.NodeHead;
-            while (NodeCurrent) {
-                addBack(NodeCurrent->NodeValue);
-                NodeCurrent = NodeCurrent->NodeNext;
-            }
-        }
-
-        void doAssign(SingleLinkedQueue<E> &&ElementSource) noexcept {
-            if (Objects::getAddress(ElementSource) == this) return;
-            if (!isEmpty()) doClear();
-            NodeHead = ElementSource.NodeHead;
-            NodeSize = ElementSource.NodeSize;
-            NodeTail = ElementSource.NodeTail;
-            ElementSource.NodeHead = ElementSource.NodeTail = nullptr;
-            ElementSource.NodeSize = 0;
-        }
-
-        void doClear() noexcept {
-            NodeSize = 0;
-            NodeTail = nullptr;
-            LinkedNode *NodeCurrent = NodeHead, *NodePrevious;
-            NodeHead = nullptr;
-            while (NodeCurrent) {
-                NodePrevious = NodeCurrent;
-                NodeCurrent = NodeCurrent->NodeNext;
-                delete NodePrevious;
-            }
-        }
-
-        const E &getBack() const {
-            if (isEmpty()) throw IndexException(String(u"SingleLinkedQueue<E>::getBack() isEmpty"));
-            return NodeTail->NodeValue;
-        }
-
-        intmax_t getElementSize() const noexcept {
-            return NodeSize;
-        }
-
-        const E &getFront() const {
-            if (isEmpty()) throw IndexException(String(u"SingleLinkedQueue<E>::getFront() isEmpty"));
-            return NodeHead->NodeValue;
-        }
-
-        bool isEmpty() const noexcept {
-            return !NodeSize;
-        }
-
-        void removeBack() {
-            if (isEmpty()) throw IndexException(String(u"SingleLinkedQueue<E>::removeBack() isEmpty"));
-            LinkedNode *NodeCurrent = NodeHead;
-            intmax_t ElementIndex = NodeSize - 1;
-            while (--ElementIndex) NodeCurrent = NodeCurrent->NodeNext;
-            LinkedNode *NodeNext = NodeCurrent->NodeNext->NodeNext;
-            delete NodeCurrent->NodeNext;
-            NodeCurrent->NodeNext = NodeNext;
-            NodeTail = NodeCurrent;
-            --NodeSize;
-        }
-
-        void removeFront() {
-            if (isEmpty()) throw IndexException(String(u"SingleLinkedQueue<E>::removeFront() isEmpty"));
-            LinkedNode *NodeCurrent = NodeHead;
-            NodeHead = NodeHead->NodeNext;
-            delete NodeCurrent;
-            --NodeSize;
-        }
-
-        String toString() const noexcept override {
-            StringStream CharacterStream;
-            CharacterStream.addCharacter(u'[');
-            if (NodeHead) {
-                LinkedNode *NodeCurrent = NodeHead;
-                while (NodeCurrent->NodeNext) {
-                    CharacterStream.addString(String::valueOf(NodeCurrent->NodeValue));
-                    CharacterStream.addCharacter(u',');
-                    NodeCurrent = NodeCurrent->NodeNext;
-                }
-                CharacterStream.addString(String::valueOf(NodeCurrent->NodeValue));
-            }
-            CharacterStream.addCharacter(u']');
-            return CharacterStream.toString();
-        }
-    };
-
     /**
      * Support for discrete storage of unique objects
      */
     template<typename E>
     class SingleLinkedSet final : public Object {
     private:
-        struct LinkedNode final {
-            E NodeValue;
-            LinkedNode *NodeNext;
-
-            constexpr explicit LinkedNode(const E &NodeValueSource) noexcept: NodeValue(NodeValueSource), NodeNext(nullptr) {}
-        } *NodeHead = nullptr, *NodeTail = nullptr;
+        using LinkedNode = SingleLinkedNode<E>;
+        LinkedNode *NodeHead = nullptr, *NodeTail = nullptr;
         intmax_t NodeSize = 0;
     public:
+        doDefineClassMethod(SingleLinkedSet)
         doEnableCopyAssignConstruct(SingleLinkedSet)
         doEnableMoveAssignConstruct(SingleLinkedSet)
 
@@ -2019,7 +2023,7 @@ namespace eLibrary::Core {
             while (NodeCurrent) {
                 NodePrevious = NodeCurrent;
                 NodeCurrent = NodeCurrent->NodeNext;
-                delete NodePrevious;
+                MemoryAllocator::deleteObject(NodePrevious);
             }
         }
 
@@ -2080,7 +2084,7 @@ namespace eLibrary::Core {
             NodeCurrent = NodeHead;
             if (ElementIndex == 0) {
                 NodeHead = NodeHead->NodeNext;
-                delete NodeCurrent;
+                MemoryAllocator::deleteObject(NodeCurrent);
                 --NodeSize;
                 return;
             }
@@ -2088,7 +2092,7 @@ namespace eLibrary::Core {
             if (ElementIndex == NodeSize - 1) NodeLast = true;
             while (--ElementIndex) NodeCurrent = NodeCurrent->NodeNext;
             LinkedNode *NodeNext = NodeCurrent->NodeNext->NodeNext;
-            delete NodeCurrent->NodeNext;
+            MemoryAllocator::deleteObject(NodeCurrent->NodeNext);
             NodeCurrent->NodeNext = NodeNext;
             if (NodeLast) NodeTail = NodeCurrent;
             --NodeSize;
@@ -2126,109 +2130,6 @@ namespace eLibrary::Core {
 
         SingleLinkedIterator<E> end() const noexcept {
             return {};
-        }
-    };
-
-    template<typename E>
-    class SingleLinkedStack final : public Object {
-    protected:
-        struct LinkedNode final {
-            E NodeValue;
-            LinkedNode *NodeNext;
-
-            constexpr explicit LinkedNode(const E &NodeValueSource) noexcept: NodeValue(NodeValueSource), NodeNext(nullptr) {}
-        } *NodeHead = nullptr;
-        intmax_t NodeSize = 0;
-    public:
-        doEnableCopyAssignConstruct(SingleLinkedStack)
-        doEnableMoveAssignConstruct(SingleLinkedStack)
-
-        constexpr SingleLinkedStack() noexcept = default;
-
-        SingleLinkedStack(std::initializer_list<E> ElementList) noexcept : NodeSize(ElementList.size()) {
-            for (const E &ElementCurrent : ElementList) addElement(ElementCurrent);
-        }
-
-        ~SingleLinkedStack() noexcept {
-            doClear();
-        }
-
-        void addElement(const E &ElementSource) noexcept {
-            auto *NodeCurrent = MemoryAllocator::newObject<LinkedNode>(ElementSource);
-            if (!NodeHead) NodeHead = NodeCurrent;
-            else {
-                NodeCurrent->NodeNext = NodeHead;
-                NodeHead = NodeCurrent;
-            }
-            ++NodeSize;
-        }
-
-        void doAssign(const SingleLinkedStack<E> &ElementSource) noexcept {
-            if (Objects::getAddress(ElementSource) == this) return;
-            if (!isEmpty()) doClear();
-            NodeSize = ElementSource.NodeSize;
-            LinkedNode *NodeCurrent = ElementSource.NodeHead;
-            while (NodeCurrent) {
-                addElement(NodeCurrent->NodeValue);
-                NodeCurrent = NodeCurrent->NodeNext;
-            }
-        }
-
-        void doAssign(SingleLinkedStack<E> &&ElementSource) noexcept {
-            if (Objects::getAddress(ElementSource) == this) return;
-            if (!isEmpty()) doClear();
-            NodeHead = ElementSource.NodeHead;
-            NodeSize = ElementSource.NodeSize;
-            ElementSource.NodeHead = nullptr;
-            ElementSource.NodeSize = 0;
-        }
-
-        void doClear() noexcept {
-            NodeSize = 0;
-            LinkedNode *NodeCurrent = NodeHead, *NodePrevious;
-            NodeHead = nullptr;
-            while (NodeCurrent) {
-                NodePrevious = NodeCurrent;
-                NodeCurrent = NodeCurrent->NodeNext;
-                delete NodePrevious;
-            }
-        }
-
-        const E &getElement() const {
-            if (isEmpty()) throw IndexException(String(u"SingleLinkedList<E>::getElement() isEmpty"));
-            return NodeHead->NodeValue;
-        }
-
-        intmax_t getElementSize() const noexcept {
-            return NodeSize;
-        }
-
-        bool isEmpty() const noexcept {
-            return !NodeSize;
-        }
-
-        void removeElement() {
-            if (isEmpty()) throw IndexException(String(u"SingleLinkedStack<E>::removeElement() isEmpty"));
-            LinkedNode *NodePrevious = NodeHead;
-            NodeHead = NodeHead->NodeNext;
-            delete NodePrevious;
-            --NodeSize;
-        }
-
-        String toString() const noexcept override {
-            StringStream CharacterStream;
-            CharacterStream.addCharacter(u'[');
-            if (NodeHead) {
-                LinkedNode *NodeCurrent = NodeHead;
-                while (NodeCurrent->NodeNext) {
-                    CharacterStream.addString(String::valueOf(NodeCurrent->NodeValue));
-                    CharacterStream.addCharacter(u',');
-                    NodeCurrent = NodeCurrent->NodeNext;
-                }
-                CharacterStream.addString(String::valueOf(NodeCurrent->NodeValue));
-            }
-            CharacterStream.addCharacter(u']');
-            return CharacterStream.toString();
         }
     };
 
@@ -2341,4 +2242,22 @@ namespace eLibrary::Core {
             return CharacterStream.toString();
         }
     };
+
+    template<typename E>
+    using ArrayQueue = ContainerQueue<E, ArrayList<E>>;
+
+    template<typename E>
+    using ArrayStack = ContainerStack<E, ArrayList<E>>;
+
+    template<typename E>
+    using DoubleLinkedQueue = ContainerQueue<E, DoubleLinkedList<E>>;
+
+    template<typename E>
+    using DoubleLinkedStack = ContainerStack<E, DoubleLinkedList<E>>;
+
+    template<typename E>
+    using SingleLinkedQueue = ContainerQueue<E, SingleLinkedList<E>>;
+
+    template<typename E>
+    using SingleLinkedStack = ContainerStack<E, SingleLinkedList<E>>;
 }

@@ -12,11 +12,6 @@ namespace eLibrary::Core {
     public:
         constexpr Numbers() noexcept = delete;
 
-        template<std::integral OT, std::integral IT>
-        static OT doCast(IT NumberSource) {
-            return (OT) NumberSource;
-        }
-
         template<std::floating_point T>
         static intmax_t doCompare(T Number1, T Number2) noexcept {
             if (Number1 - Number2 > std::numeric_limits<T>::epsilon()) return 1;
@@ -328,6 +323,42 @@ namespace eLibrary::Core {
             }
             if (isNegative()) CharacterStream.addCharacter(u'-');
             return CharacterStream.toString().doReverse();
+        }
+    };
+
+    template<std::integral T>
+    class IntegerBuiltin final : public Object {
+    private:
+        T NumberValue;
+    public:
+        constexpr IntegerBuiltin() noexcept = default;
+
+        constexpr IntegerBuiltin(T NumberSource) noexcept : NumberValue(NumberSource) {}
+
+        template<Arithmetic OT>
+        OT doCast() const {
+            if (Numbers::doCompare(NumberValue, std::numeric_limits<OT>::max()) > 0 || Numbers::doCompare(NumberValue, std::numeric_limits<OT>::min()) < 0) throw TypeException(String(u"IntegerBuiltin::doCast<OT(Arithmetic)>() NumberValue"));
+            return (OT) NumberValue;
+        }
+
+        intmax_t doCompare(const IntegerBuiltin<T> &NumberSource) const noexcept {
+            return Numbers::doCompare(NumberValue, NumberSource.NumberValue);
+        }
+
+        T getValue() const noexcept {
+            return NumberValue;
+        }
+
+        uintmax_t hashCode() const noexcept override {
+            return NumberValue;
+        }
+
+        operator T() const noexcept {
+            return NumberValue;
+        }
+
+        String toString() const noexcept override {
+            return String::valueOf(NumberValue);
         }
     };
 

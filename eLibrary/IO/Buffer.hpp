@@ -78,7 +78,7 @@ namespace eLibrary::IO {
             BufferCapacity = 0;
             BufferLimit = 0;
             BufferPosition = 0;
-            delete[] BufferContainer;
+            MemoryAllocator::deleteArray(BufferContainer);
             BufferContainer = nullptr;
         }
 
@@ -89,7 +89,7 @@ namespace eLibrary::IO {
         void doAssign(const ByteBuffer &BufferSource) noexcept {
             if (Objects::getAddress(BufferSource) == this) return;
             BufferPosition = BufferSource.BufferPosition;
-            delete[] BufferContainer;
+            MemoryAllocator::deleteArray(BufferContainer);
             BufferContainer = MemoryAllocator::newArray<uint8_t>(BufferCapacity = BufferSource.BufferCapacity);
             Arrays::doCopy(BufferSource.BufferContainer, BufferLimit = BufferSource.BufferLimit, BufferContainer);
         }

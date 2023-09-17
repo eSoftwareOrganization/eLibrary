@@ -33,11 +33,36 @@ Project Dependencies:
 + [Libarchive](https://github.com/libarchive/libarchive) for eLibrary::IO
 + [nanobench](https://github.com/martinus/nanobench)
 + [OpenAL Soft](https://github.com/kcat/openal-soft) for eLibrary::Multimedia
-+ [OpenSSL](https://github.com/openssl/openssl) for eLibrary::Network
 
 Project Repository: [GitHub](https://github.com/eSoftwareOrganization/eLibrary)
 
 Project Update Log:
+> eLibrary V2023.15
+- Core::Array doAssign(New)
+- Core::ArrayList Constructor<II>(II, II)(New) Constructor(const std::vector<E>&) / toSTLVector(Remove)
+- Core::Arrays doTraverse(New)
+- Core::ContainerQueue(SingleLinkedQueue)
+- Core::ContainerStack(SingleLinkedStack)
+- Core::DoubleLinkedList addElement(...) Constructor<II>(II, II)(New) toSTLList(Remove)
+- Core::IntegerBuiltin / doCast / doCompare / getValue(New)
+- Core::MemoryAllocator deleteArray<T> / deleteObject<T>(New)
+- Core::Numbers doCast(Remove)
+- Core::SingleLinkedList addElement(...) Constructor<II>(II, II)(New) toSTLForwardList(Remove)
+- IO::File doRemove / getAccessTime / getFileSize / getModificationTime / isDirectory / isExists / isFile(New)
+- IO::FileDescriptor doAssign(FileDescriptor&&)(New)
+- Multimedia::AudioSegment toMediaBuffer(Memory Leak Fixup)
+- Multimedia::OpenAL::MediaBuffer Constructor(ALenum, const IO::ByteBuffer&, ALsizei)(Constructor(ALenum, const void*, ALsizei, ALsizei))
+- Network::DatagramSocket setUDPNoChecksum(New)
+- Network::NetworkAddress toAddressIn(Remove) toAddressIn4 / toAddressIn6(New)
+- Network::NetworkSocketAddress toAddressIn(Remove) toAddressIn4 / toAddressIn6(New)
+- Network::NetworkSocketDescriptor doAssign(NetworkSocketDescriptor&&)(New)
+- Network::NetworkSSLContext(Remove)
+- Network::NetworkSSLDescriptor(Remove)
+- Network::NetworkSSLInitializer(Remove)
+- Network::NetworkSSLMethod(Remove)
+- Network::SocketInputStream doRead(...)
+- Network::SocketOutputStream doWrite(...)
+- Network::StreamSocketServer setTCPNoDelay(New)
 > eLibrary V2023.14
 - Core::ArrayIterator(...)
 - Core::ArrayList Constructor(const std::vector<E>&)(New)

@@ -1,7 +1,6 @@
 #pragma once
 
 #include <Core/Number.hpp>
-
 #include <numbers>
 
 namespace eLibrary::Core {
@@ -299,7 +298,7 @@ namespace eLibrary::Core {
 
         template<std::unsigned_integral T>
         static T getTrailingZeroCount(T NumberSource) noexcept {
-            constexpr int ConvertTable[64] = {
+            static constexpr int ConvertTable[] = {
                 0, 1, 2, 53, 3, 7, 54, 27, 4, 38, 41, 8, 34, 55, 48, 28,
                 62, 5, 39, 46, 44, 42, 22, 9, 24, 35, 59, 56, 49, 18, 29, 11,
                 63, 52, 6, 26, 37, 40, 33, 47, 61, 45, 43, 21, 23, 58, 17, 10,

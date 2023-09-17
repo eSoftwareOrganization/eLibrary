@@ -67,9 +67,17 @@ namespace eLibrary::Core {
         }
     }
 
+    String::~String() noexcept {
+        if (CharacterContainer && CharacterSize) {
+            CharacterSize = 0;
+            MemoryAllocator::deleteArray(CharacterContainer);
+            CharacterContainer = nullptr;
+        }
+    }
+
     void String::doAssign(const String &StringSource) noexcept {
         if (Objects::getAddress(StringSource) == this) return;
-        delete[] CharacterContainer;
+        MemoryAllocator::deleteArray(CharacterContainer);
         CharacterContainer = MemoryAllocator::newArray<Character>((CharacterSize = StringSource.CharacterSize) + 1);
         Arrays::doCopy(StringSource.CharacterContainer, CharacterSize, CharacterContainer);
         CharacterContainer[CharacterSize] = Character();
@@ -77,7 +85,7 @@ namespace eLibrary::Core {
 
     void String::doAssign(String &&StringSource) noexcept {
         if (Objects::getAddress(StringSource) == this) return;
-        delete[] CharacterContainer;
+        MemoryAllocator::deleteArray(CharacterContainer);
         CharacterContainer = StringSource.CharacterContainer;
         CharacterSize = StringSource.CharacterSize;
         StringSource.CharacterContainer = nullptr;
@@ -180,7 +188,7 @@ namespace eLibrary::Core {
             CharacterBuffer[CharacterIndex] = (char16_t) CharacterContainer[CharacterIndex];
         CharacterBuffer[CharacterSize] = char16_t();
         std::u16string CharacterResult(CharacterBuffer, (size_t) CharacterSize);
-        delete[] CharacterBuffer;
+        MemoryAllocator::deleteArray(CharacterBuffer);
         return CharacterResult;
     }
 
@@ -208,10 +216,10 @@ namespace eLibrary::Core {
         if (CharacterSize == CharacterCapacity) {
             auto *ElementBuffer = MemoryAllocator::newArray<Character>(CharacterSize);
             Arrays::doMove(CharacterContainer, CharacterSize, ElementBuffer);
-            delete[] CharacterContainer;
+            MemoryAllocator::deleteArray(CharacterContainer);
             CharacterContainer = MemoryAllocator::newArray<Character>(CharacterCapacity <<= 1);
             Arrays::doMove(ElementBuffer, CharacterSize, CharacterContainer);
-            delete[] ElementBuffer;
+            MemoryAllocator::deleteArray(ElementBuffer);
         }
         CharacterContainer[CharacterSize++] = CharacterSource;
     }
@@ -221,14 +229,21 @@ namespace eLibrary::Core {
         if (CharacterSize + StringSource.CharacterSize >= CharacterCapacity) {
             auto *ElementBuffer = MemoryAllocator::newArray<Character>(CharacterSize);
             Arrays::doMove(CharacterContainer, CharacterSize, ElementBuffer);
-            delete[] CharacterContainer;
+            MemoryAllocator::deleteArray(CharacterContainer);
             while (CharacterCapacity <= CharacterSize + StringSource.CharacterSize) CharacterCapacity <<= 1;
             CharacterContainer = MemoryAllocator::newArray<Character>(CharacterCapacity);
             Arrays::doMove(ElementBuffer, CharacterSize, CharacterContainer);
-            delete[] ElementBuffer;
+            MemoryAllocator::deleteArray(ElementBuffer);
         }
         Arrays::doCopy(StringSource.CharacterContainer, StringSource.CharacterSize, CharacterContainer + CharacterSize);
         CharacterSize += StringSource.CharacterSize;
+    }
+
+    void StringStream::doClear() noexcept {
+        CharacterCapacity = 0;
+        CharacterSize = 0;
+        MemoryAllocator::deleteArray(CharacterContainer);
+        CharacterContainer = nullptr;
     }
 
     String StringStream::toString() const noexcept {
@@ -237,7 +252,7 @@ namespace eLibrary::Core {
             CharacterBuffer[CharacterIndex] = (char16_t) CharacterContainer[CharacterIndex];
         CharacterBuffer[CharacterSize] = char16_t();
         std::u16string CharacterResult(CharacterBuffer, (size_t) CharacterSize);
-        delete[] CharacterBuffer;
+        MemoryAllocator::deleteArray(CharacterBuffer);
         return CharacterResult;
     }
 }

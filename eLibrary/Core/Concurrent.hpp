@@ -307,7 +307,7 @@ namespace eLibrary::Core {
         ~AbstractQueuedSynchronizer() noexcept {
             NodeTail = nullptr;
             if (NodeHead) {
-                delete NodeHead;
+                MemoryAllocator::deleteObject(NodeHead);
                 NodeHead = nullptr;
             }
         }

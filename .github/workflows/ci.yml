@@ -40,17 +40,13 @@ jobs:
 
       - name: CMake Build
         run: |
-          cmake -DCMAKE_CXX_FLAGS="-fprofile-arcs -ftest-coverage" -DCMAKE_TOOLCHAIN_FILE=./vcpkg/scripts/buildsystems/vcpkg.cmake -S . -B build
+          cmake -DCMAKE_TOOLCHAIN_FILE=./vcpkg/scripts/buildsystems/vcpkg.cmake -DELIBRARY_UNIT_TEST=ON -S . -B build
           cmake --build build
 
-      - name: Test Run
+      - name: CTest Run
         run: |
           cd build
           ctest --verbose
-
-      - name: LCOV Run
-        run: |
-          lcov -c -d ./ -o coverage.info
 
       - name: Codecov Uploading
         uses: codecov/codecov-action@v3

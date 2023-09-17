@@ -1,11 +1,11 @@
-#include <Core/Number.hpp>
-#include <typeinfo>
-
-#if __has_include(<cxxabi.h>)
-#include <cxxabi.h>
-#endif
+#include <Core/String.hpp>
 
 namespace eLibrary::Core {
+    Class Object::getClass() const noexcept {
+        doDefineClass(Object)
+        return ObjectClass;
+    }
+
     String Object::toString() const noexcept {
         StringStream ObjectStream;
         uintmax_t ObjectHash = hashCode();
@@ -17,12 +17,6 @@ namespace eLibrary::Core {
         ObjectStream.addCharacter('x');
         ObjectStream.addCharacter('0');
         ObjectStream.addCharacter('@');
-        return String(
-#if eLibraryCompiler(GNU)
-              abi::__cxa_demangle(typeid(*this).name(), nullptr, nullptr, nullptr)
-#else
-              typeid(*this).name()
-#endif
-        ).doConcat(ObjectStream.toString().doReverse());
+        return String(getClass().getClassName()).doConcat(ObjectStream.toString().doReverse());
     }
 }

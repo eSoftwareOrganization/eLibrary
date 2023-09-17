@@ -9,7 +9,17 @@ namespace eLibrary::Core {
         constexpr MemoryAllocator() noexcept = delete;
 
         template<typename T>
-        static T *newArray(uintmax_t ArraySize) {
+        static void deleteArray(T *ArraySource) noexcept {
+            delete[] ArraySource;
+        }
+
+        template<typename T>
+        static void deleteObject(T *ObjectSource) noexcept(std::is_nothrow_destructible_v<T>) {
+            delete ObjectSource;
+        }
+
+        template<typename T>
+        static T *newArray(uintmax_t ArraySize) noexcept {
             return new (std::nothrow) T[ArraySize];
         }
 

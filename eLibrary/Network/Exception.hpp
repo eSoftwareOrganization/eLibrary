@@ -9,6 +9,8 @@ namespace eLibrary::Network {
 
     class NetworkException final : public IO::IOException {
     public:
+        doDefineClassMethod(NetworkException)
+
         using IOException::IOException;
     };
 }

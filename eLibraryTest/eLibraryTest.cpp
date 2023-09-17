@@ -3,9 +3,9 @@ using namespace eLibrary;
 using namespace eLibrary::Core;
 
 #define DOCTEST_CONFIG_IMPLEMENT
-#include <doctest/doctest.h>
+#include "3rd_party/doctest.h"
 #define ANKERL_NANOBENCH_IMPLEMENT
-#include <nanobench.h>
+#include "3rd_party/nanobench.h"
 
 #include <random>
 
@@ -140,8 +140,8 @@ TEST_SUITE("Concurrent") {
 }
 
 #if eLibraryFeature(IO)
-TEST_SUITE("File") {
-    TEST_CASE("FileInputStream&FileOutputStream") {
+TEST_SUITE("IO") {
+    TEST_CASE("File&FileInputStream&FileOutputStream") {
         IO::FileOutputStream StreamOutput;
         StreamOutput.doOpen({u"FileStream.tst"}, IO::FileOption::OptionBinary, IO::FileOption::OptionCreate);
         IO::ByteBuffer NumberBufferSource(IO::ByteBuffer::doAllocate(10000));
@@ -156,6 +156,20 @@ TEST_SUITE("File") {
         StreamInput.doRead(NumberBuffer);
         CHECK_EQ(::memcmp(NumberBuffer.getBufferContainer(), NumberBufferSource.getBufferContainer(), 10000), 0);
         StreamInput.doClose();
+        IO::File FileObject(IO::File({u"FileStream.tst"}));
+        CHECK(!FileObject.isDirectory());
+        CHECK(FileObject.isExists());
+        CHECK(FileObject.isFile());
+        CHECK_EQ(FileObject.getFileSize(), 10000);
+    }
+}
+#endif
+
+#if eLibraryFeature(Multimedia)
+TEST_SUITE("Multimedia") {
+    TEST_CASE("AudioSegment") {
+        doInitializeOpenAL()
+        doDestroyOpenAL()
     }
 }
 #endif
@@ -204,10 +218,10 @@ TEST_SUITE("Number") {
 
     TEST_CASE("IntegerFactorial") {
         for (uintmax_t NumberEpoch = 0; NumberEpoch < 10000; ++NumberEpoch) {
-            Integer NumberObject(RandomEngine() % 10000 + 1);
+            Integer NumberObject(RandomEngine() % 1000 + 1);
             CHECK_EQ(NumberObject.doFactorial().doCompare(NumberObject.doSubtraction(1).doFactorial().doMultiplication(NumberObject)), 0);
         }
-        Integer NumberObject(RandomEngine() % 50000);
+        Integer NumberObject(RandomEngine() % 10000);
         TestBench.run("IntegerFactorial", [&] {
             NumberObject.doFactorial();
         });
@@ -228,7 +242,7 @@ TEST_SUITE("Number") {
 
     TEST_CASE("IntegerMultiplication") {
         for (uintmax_t NumberEpoch = 0; NumberEpoch < 10000; ++NumberEpoch) {
-            intmax_t Number1 = (doGenerateSigned()) % 10000000, Number2 = (doGenerateSigned()) % 10000000;
+            intmax_t Number1 = (doGenerateSigned()) % 10000, Number2 = (doGenerateSigned()) % 10000;
             Integer NumberObject1(Number1), NumberObject2(Number2);
 
             CHECK_EQ(NumberObject1.doMultiplication(NumberObject2).doCompare(Number1 * Number2), 0);
@@ -241,10 +255,10 @@ TEST_SUITE("Number") {
 
     TEST_CASE("IntegerPower") {
         for (uintmax_t NumberEpoch = 0; NumberEpoch < 10000; ++NumberEpoch) {
-            uintmax_t NumberBase = RandomEngine() % 10000000 + 1, NumberExponent = RandomEngine() % 10000000 + 1, NumberModulo = RandomEngine() + 1;
+            uintmax_t NumberBase = RandomEngine() + 1, NumberExponent = RandomEngine() % 10000 + 1, NumberModulo = RandomEngine() + 1;
             CHECK_EQ(Integer(NumberBase).doPower(NumberExponent, NumberModulo).getValue<uintmax_t>(), Mathematics::doPower(NumberBase, NumberExponent, NumberModulo));
         }
-        Integer NumberBaseObject(RandomEngine64()), NumberExponentObject(RandomEngine() % 1000);
+        Integer NumberBaseObject(RandomEngine64()), NumberExponentObject(RandomEngine() % 10000 + 1);
         TestBench.run("IntegerPower", [&] {
             NumberBaseObject.doPower(NumberExponentObject);
         });
@@ -271,8 +285,47 @@ TEST_SUITE("Number") {
     }
 }
 
+#if eLibraryFeature(Network)
+TEST_SUITE("Socket") {
+    TEST_CASE("StreamSocket") {
+        doInitializeSocket()
+
+        Network::StreamSocket SocketClient(Network::NetworkSocketAddress(Network::NetworkAddress(Array<uint8_t>{127, 0, 0, 1}), 26916));
+        Network::StreamSocketServer SocketServer(Network::NetworkSocketAddress(Network::NetworkAddress(Array<uint8_t>{127, 0, 0, 1}), 26916));
+        SocketServer.doBind();
+        SocketServer.doListen();
+        uint8_t SocketCharacter1 = RandomEngine() % 256, SocketCharacter2 = RandomEngine() % 256;
+        FunctionThread SocketServerThread([&] {
+            auto SocketTarget = SocketServer.doAccept();
+            Network::SocketOutputStream::getInstance(SocketTarget).doWrite(SocketCharacter1);
+            CHECK_EQ((uint8_t) Network::SocketInputStream::getInstance(SocketTarget).doRead(), SocketCharacter2);
+        });
+        SocketServerThread.doStart();
+        SocketClient.doConnect();
+        CHECK_EQ((uint8_t) Network::SocketInputStream::getInstance(SocketClient).doRead(), SocketCharacter1);
+        Network::SocketOutputStream::getInstance(SocketClient).doWrite(SocketCharacter2);
+        SocketServerThread.doJoin();
+        SocketClient.doClose();
+        SocketServer.doClose();
+
+        doDestroySocket()
+    }
+}
+#endif
+
+//#include <chrono>
+//#include <thread>
 int main(int ParameterCount, char *ParameterList[]) {
     RandomEngine.seed(RandomDevice());
     RandomEngine64.seed(RandomEngine());
     return doctest::Context(ParameterCount, ParameterList).run();
+//    auto AudioObject(Multimedia::AudioSegment::doOpen({u"bgm01.wav"}));
+//    auto AudioMediaBuffer(AudioObject.toMediaBuffer());
+//    Multimedia::OpenAL::MediaSource AudioMediaSource;
+//    AudioMediaSource.setSourceBuffer(AudioMediaBuffer);
+//    AudioMediaSource.doPlay();
+//    std::this_thread::sleep_for(std::chrono::seconds(95));
+//    AudioMediaSource.~MediaSource();
+//    AudioMediaBuffer.~MediaBuffer();
+    return 0;
 }

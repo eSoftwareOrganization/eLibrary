@@ -12,6 +12,8 @@ namespace eLibrary::Core {
     private:
         char16_t CharacterValue;
     public:
+        doDefineClassMethod(Character)
+
         constexpr Character(char16_t CharacterSource=char16_t()) noexcept : CharacterValue(CharacterSource) {}
 
         intmax_t doCompare(const Character &CharacterSource) const noexcept {
@@ -71,6 +73,7 @@ namespace eLibrary::Core {
 
         friend class StringStream;
     public:
+        doDefineClassMethod(String)
         doEnableCopyAssignConstruct(String)
         doEnableMoveAssignConstruct(String)
 
@@ -86,13 +89,7 @@ namespace eLibrary::Core {
 
         eLibraryAPI String(const std::wstring&) noexcept;
 
-        ~String() noexcept {
-            if (CharacterContainer && CharacterSize) {
-                CharacterSize = 0;
-                delete[] CharacterContainer;
-                CharacterContainer = nullptr;
-            }
-        }
+        eLibraryAPI ~String() noexcept;
 
         eLibraryAPI void doAssign(const String&) noexcept;
 
@@ -202,8 +199,16 @@ namespace eLibrary::Core {
 
         template<typename T>
         static String valueOf() noexcept {
+#ifdef __PRETTY_FUNCTION
             constexpr std::string_view ObjectNameSource = __PRETTY_FUNCTION__;
             return {std::string{ObjectNameSource.data() + 74, ObjectNameSource.data() + ObjectNameSource.size() - 1}};
+#elifdef __FUNCSIG__
+            constexpr std::string_view ObjectNameSource = __FUNCSIG__;
+            return {std::string{ObjectNameSource.data() + 69, ObjectNameSource.data() + ObjectNameSource.size()}};
+#else
+#include <typeinfo>
+            return {typeid(std::declval<T>()).name()};
+#endif
         }
 
         template<ObjectDerived T>
@@ -220,6 +225,8 @@ namespace eLibrary::Core {
 
         doDisableCopyAssignConstruct(StringStream)
     public:
+        doDefineClassMethod(StringStream)
+
         constexpr StringStream() noexcept = default;
 
         eLibraryAPI explicit StringStream(uintmax_t CharacterCapacitySource);
@@ -232,12 +239,7 @@ namespace eLibrary::Core {
 
         eLibraryAPI void addString(const String &StringSource);
 
-        void doClear() noexcept {
-            CharacterCapacity = 0;
-            CharacterSize = 0;
-            delete[] CharacterContainer;
-            CharacterContainer = nullptr;
-        }
+        eLibraryAPI void doClear() noexcept;
 
         eLibraryAPI String toString() const noexcept override;
     };

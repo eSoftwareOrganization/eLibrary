@@ -1,11 +1,8 @@
 #pragma once
 
 #include <Core/String.hpp>
-
-#if eLibraryCompiler(GNU)
-#include <cxxabi.h>
-#endif
 #include <exception>
+#include <source_location>
 
 namespace eLibrary::Core {
     /**
@@ -16,19 +13,13 @@ namespace eLibrary::Core {
         mutable std::string ExceptionDetail;
         String ExceptionMessage;
     public:
+        doDefineClassMethod(Exception)
+
         explicit Exception(const String &ExceptionMessageSource) noexcept : ExceptionMessage(ExceptionMessageSource) {}
 
         String toString() const noexcept override {
             if (ExceptionDetail.empty()) {
-                ExceptionDetail = String(
-#if eLibraryCompiler(GNU)
-                        abi::__cxa_demangle(
-#endif
-                                typeid(*this).name()
-#if eLibraryCompiler(GNU)
-                                , nullptr, nullptr, nullptr)
-#endif
-                ).doConcat(u' ').doConcat(ExceptionMessage).toU8String();
+                ExceptionDetail = String(getClass().getClassName()).doConcat(u' ').doConcat(ExceptionMessage).toU8String();
             }
             return {ExceptionDetail};
         }
@@ -41,26 +32,36 @@ namespace eLibrary::Core {
 
     class ArithmeticException final : public Exception {
     public:
+        doDefineClassMethod(ArithmeticException)
+
         using Exception::Exception;
     };
 
     class IndexException final : public Exception {
     public:
+        doDefineClassMethod(IndexException)
+
         using Exception::Exception;
     };
 
     class InterruptedException final : public Exception {
     public:
+        doDefineClassMethod(InterruptedException)
+
         using Exception::Exception;
     };
 
     class RuntimeException final : public Exception {
     public:
+        doDefineClassMethod(RuntimeException)
+
         using Exception::Exception;
     };
 
     class TypeException final : public Exception {
     public:
+        doDefineClassMethod(TypeException)
+
         using Exception::Exception;
     };
 }

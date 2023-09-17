@@ -9,6 +9,8 @@ namespace eLibrary::IO {
 
     class IOException : public Exception {
     public:
+        doDefineClassMethod(IOException)
+
         using Exception::Exception;
     };
 }

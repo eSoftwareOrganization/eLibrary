@@ -78,8 +78,8 @@ namespace eLibrary::Multimedia {
                 Arrays::doCopy(AudioDataSource[AudioChannel], AudioDataSize, AudioData[AudioChannel]);
             }
             for (uint8_t AudioChannel = 0;AudioChannel < AudioChannelLayout.getChannelCount();++AudioChannel)
-                delete[] AudioDataSource[AudioChannel];
-            delete[] AudioDataSource;
+                MemoryAllocator::deleteArray(AudioDataSource[AudioChannel]);
+            MemoryAllocator::deleteArray(AudioDataSource);
         }
     public:
         doEnableCopyAssignConstruct(AudioSegment)
@@ -88,8 +88,8 @@ namespace eLibrary::Multimedia {
         ~AudioSegment() noexcept {
             if (AudioData) {
                 for (uint8_t AudioChannel = 0;AudioChannel < AudioChannelLayout.getChannelCount();++AudioChannel)
-                    delete[] AudioData[AudioChannel];
-                delete[] AudioData;
+                    MemoryAllocator::deleteArray(AudioData[AudioChannel]);
+                MemoryAllocator::deleteArray(AudioData);
                 AudioData = nullptr;
             }
         }
@@ -98,8 +98,8 @@ namespace eLibrary::Multimedia {
             if (Objects::getAddress(AudioSource) == this) return;
             if (AudioData) {
                 for (uint8_t AudioChannel = 0; AudioChannel < AudioChannelLayout.getChannelCount(); ++AudioChannel)
-                    delete[] AudioData[AudioChannel];
-                delete[] AudioData;
+                    MemoryAllocator::deleteArray(AudioData[AudioChannel]);
+                MemoryAllocator::deleteArray(AudioData);
             }
             AudioData = MemoryAllocator::newArray<uint8_t*>((AudioChannelLayout = AudioSource.AudioChannelLayout).getChannelCount());
             AudioDataSize = AudioSource.AudioDataSize;
@@ -118,8 +118,8 @@ namespace eLibrary::Multimedia {
             AudioSampleRate = AudioSource.AudioSampleRate;
             if (AudioSource.AudioData) {
                 for (uint8_t AudioChannel = 0; AudioChannel < AudioSource.AudioChannelLayout.getChannelCount(); ++AudioChannel)
-                    delete[] AudioSource.AudioData[AudioChannel];
-                delete[] AudioSource.AudioData;
+                    MemoryAllocator::deleteArray(AudioSource.AudioData[AudioChannel]);
+                MemoryAllocator::deleteArray(AudioSource.AudioData);
             }
             AudioSource.AudioDataSize = 0;
             AudioSource.AudioSampleRate = 0;
@@ -174,7 +174,7 @@ namespace eLibrary::Multimedia {
                 else if (AudioStatus != AVERROR(EAGAIN))
                     throw MediaException(String(u"AudioSegment::doExport(const String&) avcodec_receive_packet"));
             }
-            delete[] AudioDataSample;
+            MemoryAllocator::deleteArray(AudioDataSample);
             AudioFormatContext.doWriteTrailer();
         }
 
@@ -205,7 +205,7 @@ namespace eLibrary::Multimedia {
                     for (int AudioSample = 0; AudioSample < AudioFrame->nb_samples; ++AudioSample)
                         for (int AudioChannel = 0;AudioChannel < AudioCodecContext->ch_layout.nb_channels;++AudioChannel)
                             AudioDataOutput[AudioChannel].push_back(AudioDataBuffer[AudioCodecContext->ch_layout.nb_channels * AudioSample + AudioChannel]);
-                    delete[] AudioDataBuffer;
+                    MemoryAllocator::deleteArray(AudioDataBuffer);
                 }
                 if (AudioStatus != AVERROR(EAGAIN))
                     throw MediaException(String(u"AudioSegment::doOpen(const String&) avcodec_receive_frame"));
@@ -248,12 +248,13 @@ namespace eLibrary::Multimedia {
         }
 
         OpenAL::MediaBuffer toMediaBuffer() const {
-            auto *AudioDataOutput = MemoryAllocator::newArray<uint8_t>(AudioDataSize * AudioChannelLayout.getChannelCount());
+            IO::ByteBuffer AudioDataOutput(IO::ByteBuffer::doAllocate(AudioDataSize * AudioChannelLayout.getChannelCount()));
             AVChannelLayout AudioChannelLayoutSource(AudioChannelLayout.toFFMpegFormat());
             FFMpeg::MediaSWRContext AudioSWRContext(FFMpeg::MediaSWRContext::doAllocate(&AudioChannelLayoutSource, &AudioChannelLayoutSource, AV_SAMPLE_FMT_U8P, AV_SAMPLE_FMT_U8, AudioSampleRate, AudioSampleRate));
             AudioSWRContext.doInitialize();
-            AudioSWRContext.doConvert((const uint8_t**) AudioData, &AudioDataOutput, AudioDataSize);
-            return {AudioChannelLayout.toOpenALFormat(), AudioDataOutput, (ALsizei) AudioDataSize * AudioChannelLayout.getChannelCount(), (ALsizei) AudioSampleRate};
+            auto *AudioDataBuffer(AudioDataOutput.getBufferContainer());
+            AudioSWRContext.doConvert((const uint8_t**) AudioData, &AudioDataBuffer, AudioDataSize);
+            return {AudioChannelLayout.toOpenALFormat(), AudioDataOutput, (ALsizei) AudioSampleRate};
         }
     };
 }
