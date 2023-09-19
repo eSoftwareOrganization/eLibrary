@@ -121,7 +121,7 @@ namespace eLibrary::IO {
 
         auto getFilePosition() const {
             if (!isAvailable()) throw IOException(String(u"FileOutputStream::getFilePosition() isAvailable"));
-            return ::tell((int) StreamDescriptor);
+            return ::lseek((int) StreamDescriptor, 0, SEEK_CUR);
         }
 
         bool isAvailable() const noexcept override {

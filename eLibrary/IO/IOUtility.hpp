@@ -116,7 +116,12 @@ namespace eLibrary::IO {
     };
 
     enum class FileOption : int {
-        OptionAppend = O_APPEND, OptionBinary = O_BINARY, OptionCreate = O_CREAT, OptionText = O_TEXT, OptionTruncate = O_TRUNC
+        OptionAppend = O_APPEND, OptionCreate = O_CREAT, OptionTruncate = O_TRUNC,
+#ifdef O_BINARY
+        OptionBinary = O_BINARY
+#else
+        OptionBinary = 0
+#endif
     };
 }
 #endif

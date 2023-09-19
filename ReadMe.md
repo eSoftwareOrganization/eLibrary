@@ -37,6 +37,9 @@ Project Dependencies:
 Project Repository: [GitHub](https://github.com/eSoftwareOrganization/eLibrary)
 
 Project Update Log:
+> eLibrary V2023.15.4
+- IO::FileOption OptionText(Remove)
+- IO::FileOutputStream getFilePosition(...)
 > eLibrary V2023.15.3
 - IO::File isExists(...)
 - IO::FileInputStream getFileLength(Remove) getFilePosition(...)
