@@ -163,7 +163,6 @@ namespace eLibrary::Core {
 #else
             pthread_attr_t ThreadAttribute;
             pthread_attr_init(&ThreadAttribute);
-            pthread_attr_setschedpolicy(&ThreadAttribute, SCHED_MAX);
             pthread_create(&ThreadHandle, &ThreadAttribute, Thread::doExecuteCore, this);
             pthread_attr_destroy(&ThreadAttribute);
 #endif

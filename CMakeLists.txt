@@ -27,7 +27,7 @@ if(ELIBRARY_MODULE_NETWORK)
     add_compile_definitions(eLibraryFeature_Network=1)
 endif()
 
-project(eLibrary DESCRIPTION "An all-in-one cpp library" VERSION 2023.15.1)
+project(eLibrary DESCRIPTION "An all-in-one cpp library" VERSION 2023.15.2)
 
 set(CMAKE_CXX_STANDARD 23)
 

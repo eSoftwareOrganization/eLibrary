@@ -3,8 +3,11 @@
 #if eLibraryFeature(IO)
 
 #include <IO/Exception.hpp>
-#include <sys/fcntl.h>
+#include <fcntl.h>
 #include <sys/stat.h>
+#if __has_include(<io.h>)
+#include <io.h>
+#endif
 
 namespace eLibrary::IO {
     class File : public Object {
@@ -21,30 +24,30 @@ namespace eLibrary::IO {
         }
 
         auto getAccessTime() const {
-            struct _stat FileStatistic{};
-            if (::_stat(FilePath.toU8String().c_str(), &FileStatistic))
-                throw IOException(String(u"File::getAccessTime() _stat"));
+            struct stat FileStatistic{};
+            if (::stat(FilePath.toU8String().c_str(), &FileStatistic))
+                throw IOException(String(u"File::getAccessTime() stat"));
             return FileStatistic.st_atime;
         }
 
         auto getFileSize() const {
-            struct _stat FileStatistic{};
-            if (::_stat(FilePath.toU8String().c_str(), &FileStatistic))
-                throw IOException(String(u"File::getFileSize() _stat"));
+            struct stat FileStatistic{};
+            if (::stat(FilePath.toU8String().c_str(), &FileStatistic))
+                throw IOException(String(u"File::getFileSize() stat"));
             return FileStatistic.st_size;
         }
 
         auto getModificationTime() const {
-            struct _stat FileStatistic{};
-            if (::_stat(FilePath.toU8String().c_str(), &FileStatistic))
-                throw IOException(String(u"File::getModificationTime() _stat"));
+            struct stat FileStatistic{};
+            if (::stat(FilePath.toU8String().c_str(), &FileStatistic))
+                throw IOException(String(u"File::getModificationTime() stat"));
             return FileStatistic.st_mtime;
         }
 
         bool isDirectory() const {
-            struct _stat FileStatistic{};
-            if (::_stat(FilePath.toU8String().c_str(), &FileStatistic))
-                throw IOException(String(u"File::isDirectory() _stat"));
+            struct stat FileStatistic{};
+            if (::stat(FilePath.toU8String().c_str(), &FileStatistic))
+                throw IOException(String(u"File::isDirectory() stat"));
             return FileStatistic.st_mode & S_IFDIR;
         }
 
@@ -53,9 +56,9 @@ namespace eLibrary::IO {
         }
 
         bool isFile() const {
-            struct _stat FileStatistic{};
-            if (::_stat(FilePath.toU8String().c_str(), &FileStatistic))
-                throw IOException(String(u"File::isFile() _stat"));
+            struct stat FileStatistic{};
+            if (::stat(FilePath.toU8String().c_str(), &FileStatistic))
+                throw IOException(String(u"File::isFile() stat"));
             return FileStatistic.st_mode & S_IFREG;
         }
 
@@ -92,7 +95,7 @@ namespace eLibrary::IO {
 
         virtual void doClose() {
             if (!isAvailable()) throw IOException(String(u"FileDescriptor::doClose() isAvailable"));
-            ::_close(DescriptorHandle);
+            ::close(DescriptorHandle);
             DescriptorHandle = -1;
         }
 

@@ -3,6 +3,7 @@
 #if eLibraryFeature(IO)
 
 #include <IO/Exception.hpp>
+#include <cstring>
 
 namespace eLibrary::IO {
     class Buffer : public Object {

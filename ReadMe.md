@@ -37,8 +37,14 @@ Project Dependencies:
 Project Repository: [GitHub](https://github.com/eSoftwareOrganization/eLibrary)
 
 Project Update Log:
+> eLibrary V2023.15.2
+- Core::Thread(...)
+- IO::File(...)
+- IO::FileDescriptor(...)
+- IO::FileInputStream(...)
+- IO::FileOutputStream(...)
 > eLibrary V2023.15.1
-- Core::CLass(Remove)
+- Core::Class(Remove)
 - Core::Exception getClassName(New)
 > eLibrary V2023.15
 - Core::Array doAssign(New)
