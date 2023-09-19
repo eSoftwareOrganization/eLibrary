@@ -313,19 +313,8 @@ TEST_SUITE("Socket") {
 }
 #endif
 
-//#include <chrono>
-//#include <thread>
 int main(int ParameterCount, char *ParameterList[]) {
     RandomEngine.seed(RandomDevice());
     RandomEngine64.seed(RandomEngine());
     return doctest::Context(ParameterCount, ParameterList).run();
-//    auto AudioObject(Multimedia::AudioSegment::doOpen({u"bgm01.wav"}));
-//    auto AudioMediaBuffer(AudioObject.toMediaBuffer());
-//    Multimedia::OpenAL::MediaSource AudioMediaSource;
-//    AudioMediaSource.setSourceBuffer(AudioMediaBuffer);
-//    AudioMediaSource.doPlay();
-//    std::this_thread::sleep_for(std::chrono::seconds(95));
-//    AudioMediaSource.~MediaSource();
-//    AudioMediaBuffer.~MediaBuffer();
-    return 0;
 }

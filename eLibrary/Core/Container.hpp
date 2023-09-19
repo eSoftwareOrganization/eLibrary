@@ -47,7 +47,6 @@ namespace eLibrary::Core {
             }
         }
     public:
-        doDefineClassMethod(Any)
         doEnableCopyAssignConstruct(Any)
         doEnableMoveAssignConstruct(Any)
 
@@ -302,7 +301,6 @@ namespace eLibrary::Core {
         template<typename>
         friend class ArrayList;
     public:
-        doDefineClassMethod(Array)
         doEnableCopyAssignConstruct(Array)
         doEnableMoveAssignConstruct(Array)
 
@@ -401,7 +399,6 @@ namespace eLibrary::Core {
             if constexpr (sizeof...(ElementList)) doInitialize(ElementList...);
         }
     public:
-        doDefineClassMethod(ArrayList)
         doEnableCopyAssignConstruct(ArrayList)
         doEnableMoveAssignConstruct(ArrayList)
 
@@ -594,7 +591,6 @@ namespace eLibrary::Core {
         uintmax_t ElementCapacity = 0, ElementSize = 0;
         E *ElementContainer = nullptr;
     public:
-        doDefineClassMethod(ArraySet)
         doEnableCopyAssignConstruct(ArraySet)
         doEnableMoveAssignConstruct(ArraySet)
 
@@ -733,7 +729,6 @@ namespace eLibrary::Core {
     private:
         C ElementContainer;
     public:
-        doDefineClass(ContainerQueue)
         doEnableCopyAssignConstruct(ContainerQueue)
         doEnableMoveAssignConstruct(ContainerQueue)
 
@@ -801,7 +796,6 @@ namespace eLibrary::Core {
     private:
         C ElementContainer;
     public:
-        doDefineClassMethod(ContainerStack)
         doEnableCopyAssignConstruct(ContainerStack)
         doEnableMoveAssignConstruct(ContainerStack)
 
@@ -920,7 +914,6 @@ namespace eLibrary::Core {
             if constexpr (sizeof...(ElementList)) doInitialize(ElementList...);
         }
     public:
-        doDefineClassMethod(DoubleLinkedList)
         doEnableCopyAssignConstruct(DoubleLinkedList)
         doEnableMoveAssignConstruct(DoubleLinkedList)
 
@@ -1166,7 +1159,6 @@ namespace eLibrary::Core {
         LinkedNode *NodeHead = nullptr, *NodeTail = nullptr;
         intmax_t NodeSize = 0;
     public:
-        doDefineClassMethod(DoubleLinkedSet)
         doEnableCopyAssignConstruct(DoubleLinkedSet)
         doEnableMoveAssignConstruct(DoubleLinkedSet)
 
@@ -1353,7 +1345,6 @@ namespace eLibrary::Core {
             OptionalData = MemoryAllocator::newObject<T>(Objects::doForward<Ts>(ParameterList)...);
         }
     public:
-        doDefineClassMethod(Optional)
         doEnableCopyAssignConstruct(Optional)
         doEnableCopyAssignParameterConstruct(Optional, T)
         doEnableMoveAssignConstruct(Optional)
@@ -1766,7 +1757,6 @@ namespace eLibrary::Core {
             if constexpr (sizeof...(ElementList)) doInitialize(ElementList...);
         }
     public:
-        doDefineClassMethod(SingleLinkedList)
         doEnableCopyAssignConstruct(SingleLinkedList)
         doEnableMoveAssignConstruct(SingleLinkedList)
 
@@ -1963,7 +1953,6 @@ namespace eLibrary::Core {
         LinkedNode *NodeHead = nullptr, *NodeTail = nullptr;
         intmax_t NodeSize = 0;
     public:
-        doDefineClassMethod(SingleLinkedSet)
         doEnableCopyAssignConstruct(SingleLinkedSet)
         doEnableMoveAssignConstruct(SingleLinkedSet)
 
@@ -2136,6 +2125,7 @@ namespace eLibrary::Core {
     template<typename K, typename V>
     class TreeMap final : protected RedBlackTree<K, V> {
     public:
+
         const V &getElement(const K &MapKey) const {
             auto *MapNode = this->doSearchCore(this->NodeRoot, MapKey);
             if (!MapNode) throw IndexException(String(u"TreeMap<K, V>::getElement(const K&) doSearchCore"));

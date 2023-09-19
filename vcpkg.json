@@ -12,7 +12,6 @@
       "host": true
     }
   ],
-  "version-string": "2023.15",
   "default-features": ["module-multimedia"],
   "features": {
     "feature-archive": {

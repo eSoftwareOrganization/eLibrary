@@ -12,26 +12,11 @@ namespace eLibrary::Core {
     public:
         virtual ~Object() noexcept = default;
 
-        eLibraryAPI virtual Class getClass() const noexcept;
-
         virtual uintmax_t hashCode() const noexcept {
             return (uintmax_t) this;
         }
 
         eLibraryAPI virtual String toString() const noexcept;
-    };
-
-    class Class final : public Object {
-    private:
-        const char *ClassName;
-    public:
-        constexpr Class(const char *ClassNameSource) noexcept : ClassName(ClassNameSource) {}
-
-        doDefineClassMethod(Class)
-
-        const char *getClassName() const noexcept {
-            return ClassName;
-        }
     };
 
     template<typename T>

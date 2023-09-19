@@ -37,6 +37,9 @@ Project Dependencies:
 Project Repository: [GitHub](https://github.com/eSoftwareOrganization/eLibrary)
 
 Project Update Log:
+> eLibrary V2023.15.1
+- Core::CLass(Remove)
+- Core::Exception getClassName(New)
 > eLibrary V2023.15
 - Core::Array doAssign(New)
 - Core::ArrayList Constructor<II>(II, II)(New) Constructor(const std::vector<E>&) / toSTLVector(Remove)

@@ -9,9 +9,11 @@ namespace eLibrary::Multimedia {
 
     class MediaException final : public IO::IOException {
     public:
-        doDefineClassMethod(MediaException)
-
         using IOException::IOException;
+
+        const char *getClassName() const noexcept override {
+            return "Multimedia::MediaException";
+        }
     };
 }
 #endif

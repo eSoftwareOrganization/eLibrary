@@ -9,9 +9,11 @@ namespace eLibrary::IO {
 
     class IOException : public Exception {
     public:
-        doDefineClassMethod(IOException)
-
         using Exception::Exception;
+
+        const char *getClassName() const noexcept override {
+            return "IO::IOException";
+        }
     };
 }
 #endif

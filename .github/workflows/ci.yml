@@ -33,7 +33,7 @@ jobs:
       - name: VCPKG Setup
         uses: lukka/run-vcpkg@v11
         with:
-          vcpkgGitCommitId: 436a061a544c124200200517b9ee55c5bb1b7a26
+          vcpkgGitCommitId: a86e61b9609dfda9c5c8e45db91bfe11bd49b20d
 
       - name: LCOV Setup
         uses: hrishikesh-kadam/setup-lcov@v1

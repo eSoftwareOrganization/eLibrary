@@ -1,11 +1,6 @@
 #include <Core/String.hpp>
 
 namespace eLibrary::Core {
-    Class Object::getClass() const noexcept {
-        doDefineClass(Object)
-        return ObjectClass;
-    }
-
     String Object::toString() const noexcept {
         StringStream ObjectStream;
         uintmax_t ObjectHash = hashCode();
@@ -17,6 +12,6 @@ namespace eLibrary::Core {
         ObjectStream.addCharacter('x');
         ObjectStream.addCharacter('0');
         ObjectStream.addCharacter('@');
-        return String(getClass().getClassName()).doConcat(ObjectStream.toString().doReverse());
+        return String(u"Object").doConcat(ObjectStream.toString().doReverse());
     }
 }

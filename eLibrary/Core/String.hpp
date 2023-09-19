@@ -12,8 +12,6 @@ namespace eLibrary::Core {
     private:
         char16_t CharacterValue;
     public:
-        doDefineClassMethod(Character)
-
         constexpr Character(char16_t CharacterSource=char16_t()) noexcept : CharacterValue(CharacterSource) {}
 
         intmax_t doCompare(const Character &CharacterSource) const noexcept {
@@ -73,7 +71,6 @@ namespace eLibrary::Core {
 
         friend class StringStream;
     public:
-        doDefineClassMethod(String)
         doEnableCopyAssignConstruct(String)
         doEnableMoveAssignConstruct(String)
 
@@ -225,8 +222,6 @@ namespace eLibrary::Core {
 
         doDisableCopyAssignConstruct(StringStream)
     public:
-        doDefineClassMethod(StringStream)
-
         constexpr StringStream() noexcept = default;
 
         eLibraryAPI explicit StringStream(uintmax_t CharacterCapacitySource);

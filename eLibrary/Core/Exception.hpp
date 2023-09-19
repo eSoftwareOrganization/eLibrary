@@ -2,7 +2,6 @@
 
 #include <Core/String.hpp>
 #include <exception>
-#include <source_location>
 
 namespace eLibrary::Core {
     /**
@@ -13,13 +12,15 @@ namespace eLibrary::Core {
         mutable std::string ExceptionDetail;
         String ExceptionMessage;
     public:
-        doDefineClassMethod(Exception)
-
         explicit Exception(const String &ExceptionMessageSource) noexcept : ExceptionMessage(ExceptionMessageSource) {}
+
+        virtual const char *getClassName() const noexcept {
+            return "Core::Exception";
+        }
 
         String toString() const noexcept override {
             if (ExceptionDetail.empty()) {
-                ExceptionDetail = String(getClass().getClassName()).doConcat(u' ').doConcat(ExceptionMessage).toU8String();
+                ExceptionDetail = String(getClassName()).doConcat(u' ').doConcat(ExceptionMessage).toU8String();
             }
             return {ExceptionDetail};
         }
@@ -32,36 +33,46 @@ namespace eLibrary::Core {
 
     class ArithmeticException final : public Exception {
     public:
-        doDefineClassMethod(ArithmeticException)
-
         using Exception::Exception;
+
+        const char *getClassName() const noexcept override {
+            return "Core::ArithmeticException";
+        }
     };
 
     class IndexException final : public Exception {
     public:
-        doDefineClassMethod(IndexException)
-
         using Exception::Exception;
+
+        const char *getClassName() const noexcept override {
+            return "Core::IndexException";
+        }
     };
 
     class InterruptedException final : public Exception {
     public:
-        doDefineClassMethod(InterruptedException)
-
         using Exception::Exception;
+
+        const char *getClassName() const noexcept override {
+            return "Core::InterruptedException";
+        }
     };
 
     class RuntimeException final : public Exception {
     public:
-        doDefineClassMethod(RuntimeException)
-
         using Exception::Exception;
+
+        const char *getClassName() const noexcept override {
+            return "Core::RuntimeException";
+        }
     };
 
     class TypeException final : public Exception {
     public:
-        doDefineClassMethod(TypeException)
-
         using Exception::Exception;
+
+        const char *getClassName() const noexcept override {
+            return "Core::TypeException";
+        }
     };
 }
