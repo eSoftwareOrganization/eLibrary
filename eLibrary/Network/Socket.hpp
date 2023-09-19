@@ -23,7 +23,10 @@ namespace eLibrary::Network {
 
         auto toAddressIn4() const {
             if (SocketAddress.getAddressProtocol() == NetworkAddress::NetworkAddressProtocol::ProtocolIPv4) {
-                sockaddr_in AddressResult = {AF_INET, htons(SocketPort), SocketAddress.toAddressIn4()};
+                sockaddr_in AddressResult{};
+                AddressResult.sin_addr = SocketAddress.toAddressIn4();
+                AddressResult.sin_family = AF_INET;
+                AddressResult.sin_port = htons(SocketPort);
                 return AddressResult;
             }
             throw NetworkException(String(u"NetworkSocketAddress::toAddressIn4() SocketAddress::getAddressProtocol"));
@@ -31,7 +34,10 @@ namespace eLibrary::Network {
 
         auto toAddressIn6() const {
             if (SocketAddress.getAddressProtocol() == NetworkAddress::NetworkAddressProtocol::ProtocolIPv6) {
-                sockaddr_in6 AddressResult = {AF_INET6, htons(SocketPort), 0, SocketAddress.toAddressIn6()};
+                sockaddr_in6 AddressResult{};
+                AddressResult.sin6_addr = SocketAddress.toAddressIn6();
+                AddressResult.sin6_family = AF_INET6;
+                AddressResult.sin6_port = htons(SocketPort);
                 return AddressResult;
             }
             throw NetworkException(String(u"NetworkSocketAddress::toAddressIn6() SocketAddress::getAddressProtocol"));
@@ -113,10 +119,12 @@ namespace eLibrary::Network {
                 throw NetworkException(String(u"DatagramSocket::setSocketOption(NetworkSocketOption, int) setsockopt"));
         }
 
+#if UDP_NOCHECKSUM
         void setUDPNoChecksum(bool OptionValue) {
             if (::setsockopt((int) SocketDescriptor, IPPROTO_UDP, UDP_NOCHECKSUM, (char*) &OptionValue, sizeof(bool)))
                 throw NetworkException(String(u"DatagramSocket::setUDPNoChecksum(bool) setsockopt"));
         }
+#endif
     };
 
     class StreamSocket final : public Object {
@@ -209,7 +217,7 @@ namespace eLibrary::Network {
             if (!isBound()) throw NetworkException(String(u"StreamSocketServer::doAccept() isBound"));
             int SocketTarget = ::accept((int) SocketDescriptor, nullptr, nullptr);
             sockaddr_storage SocketTargetAddress{};
-            int SocketTargetAddressSize = sizeof(sockaddr_storage);
+            socklen_t SocketTargetAddressSize = sizeof(sockaddr_storage);
             if (::getpeername(SocketTarget, (sockaddr*) &SocketTargetAddress, &SocketTargetAddressSize))
                 throw NetworkException(String(u"StreamSocketServer::doAccept() getpeername"));
             if (((sockaddr*) &SocketTargetAddress)->sa_family == AF_INET) return {SocketTarget, NetworkSocketAddress(NetworkAddress(((sockaddr_in*) &SocketTargetAddress)->sin_addr), ntohs(((sockaddr_in*) &SocketTargetAddress)->sin_port))};

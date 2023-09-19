@@ -8,6 +8,9 @@
 #if __has_include(<io.h>)
 #include <io.h>
 #endif
+#if __has_include(<unistd.h>)
+#include <unistd.h>
+#endif
 
 namespace eLibrary::IO {
     class File : public Object {
@@ -52,7 +55,7 @@ namespace eLibrary::IO {
         }
 
         bool isExists() const noexcept {
-            return _access(FilePath.toU8String().c_str(), 0) != -1;
+            return access(FilePath.toU8String().c_str(), 0) != -1;
         }
 
         bool isFile() const {

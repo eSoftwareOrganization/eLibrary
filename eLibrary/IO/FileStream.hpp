@@ -56,14 +56,9 @@ namespace eLibrary::IO {
             ::lseek((int) StreamDescriptor, FileOffset, FileOrigin);
         }
 
-        auto getFileLength() const {
-            if (!isAvailable()) throw IOException(String(u"FileInputStream::getFileLength() isAvailable"));
-            return ::filelength((int) StreamDescriptor);
-        }
-
         auto getFilePosition() const {
             if (!isAvailable()) throw IOException(String(u"FileInputStream::getFilePosition() isAvailable"));
-            return ::tell((int) StreamDescriptor);
+            return ::lseek((int) StreamDescriptor, 0, SEEK_CUR);
         }
 
         bool isAvailable() const noexcept override {

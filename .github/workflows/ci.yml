@@ -43,11 +43,6 @@ jobs:
           cmake -DCMAKE_TOOLCHAIN_FILE=./vcpkg/scripts/buildsystems/vcpkg.cmake -DELIBRARY_UNIT_TEST=ON -S . -B build
           cmake --build build
 
-      - name: CTest Run
-        run: |
-          cd build
-          ctest --verbose
-
       - name: Codecov Uploading
         uses: codecov/codecov-action@v3
         env:

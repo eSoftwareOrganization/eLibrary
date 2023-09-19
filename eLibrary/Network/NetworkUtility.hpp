@@ -105,7 +105,7 @@ namespace eLibrary::Network {
 
         auto toAddressIn4() const {
             if (AddressProtocol == NetworkAddressProtocol::ProtocolIPv4) {
-                in_addr AddressResult;
+                in_addr AddressResult{};
                 AddressResult.s_addr = ::htonl((AddressFieldList.getElement(0) << 24) | (AddressFieldList.getElement(1) << 16) | (AddressFieldList.getElement(2) << 8) | AddressFieldList.getElement(3));
                 return AddressResult;
             }
@@ -114,7 +114,7 @@ namespace eLibrary::Network {
 
         auto toAddressIn6() const {
             if (AddressProtocol == NetworkAddressProtocol::ProtocolIPv6) {
-                in6_addr AddressResult;
+                in6_addr AddressResult{};
                 Arrays::doCopy(AddressFieldList.begin(), 16, AddressResult.s6_addr);
                 return AddressResult;
             }

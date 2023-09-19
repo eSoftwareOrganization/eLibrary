@@ -37,6 +37,12 @@ Project Dependencies:
 Project Repository: [GitHub](https://github.com/eSoftwareOrganization/eLibrary)
 
 Project Update Log:
+> eLibrary V2023.15.3
+- IO::File isExists(...)
+- IO::FileInputStream getFileLength(Remove) getFilePosition(...)
+- Network::NetworkAddress toAddressIn4 / toAddressIn6(...)
+- Network::NetworkSocketAddress toAddressIn4 / toAddressIn6(...)
+- Network::StreamSocket doAccept(...)
 > eLibrary V2023.15.2
 - Core::Thread(...)
 - IO::File(...)
