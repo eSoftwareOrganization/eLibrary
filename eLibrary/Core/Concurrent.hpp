@@ -4,7 +4,6 @@
 #define eLibraryHeaderCoreConcurrent
 
 #include <Core/Number.hpp>
-#include <utility>
 
 #if eLibraryCompiler(MSVC)
 #include <intrin.h>
@@ -59,7 +58,6 @@ namespace eLibrary::Core {
             if constexpr (sizeof(T) == sizeof(int16_t)) return doCompareAndExchange16((volatile int16_t*) ValueAddress, (int16_t) ValueExpected, (int16_t) ValueTarget);
             else if constexpr (sizeof(T) == sizeof(int32_t)) return doCompareAndExchange32((volatile int32_t*) ValueAddress, (int32_t) ValueExpected, (int32_t) ValueTarget);
             else if constexpr (sizeof(T) == sizeof(int64_t)) return doCompareAndExchange64((volatile int64_t*) ValueAddress, (int64_t) ValueExpected, (int64_t) ValueTarget);
-            else std::unreachable();
         }
 
         template<typename T>
