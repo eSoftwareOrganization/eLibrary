@@ -4,6 +4,7 @@
 #define eLibraryHeaderCoreConcurrent
 
 #include <Core/Number.hpp>
+#include <utility>
 
 #if eLibraryCompiler(MSVC)
 #include <intrin.h>
