@@ -1,5 +1,8 @@
 #pragma once
 
+#ifndef eLibraryHeaderMultimediaAudioUtility
+#define eLibraryHeaderMultimediaAudioUtility
+
 #if eLibraryFeature(Multimedia)
 
 #include <Multimedia/Exception.hpp>
@@ -491,4 +494,6 @@ namespace eLibrary::Multimedia {
 #define doInitializeOpenAL() Multimedia::OpenAL::MediaDevice MediaDeviceObject({u""});Multimedia::OpenAL::MediaContext MediaContextObject(MediaDeviceObject);MediaContextObject.setContextCurrent();
     }
 }
+#endif
+
 #endif

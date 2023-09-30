@@ -1,5 +1,8 @@
 #pragma once
 
+#ifndef eLibraryHeaderIOLibrary
+#define eLibraryHeaderIOLibrary
+
 #include <IO/Exception.hpp>
 #if eLibrarySystem(Windows)
 #include <libloaderapi.h>
@@ -56,3 +59,5 @@ namespace eLibrary::IO {
         }
     };
 }
+
+#endif

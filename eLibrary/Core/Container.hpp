@@ -1,7 +1,11 @@
 #pragma once
 
+#ifndef eLibraryHeaderCoreContainer
+#define eLibraryHeaderCoreContainer
+
 #include <Core/Memory.hpp>
 #include <iterator>
+#include <typeinfo>
 
 namespace eLibrary::Core {
     namespace {
@@ -111,6 +115,10 @@ namespace eLibrary::Core {
             AnyFunction = nullptr;
             AnyType = nullptr;
             AnyValue = nullptr;
+        }
+
+        const char *getClassName() const noexcept override {
+            return "Any";
         }
 
         template<typename T>
@@ -226,7 +234,7 @@ namespace eLibrary::Core {
     };
 
     template<typename E>
-    class ArrayIterator final : public Object {
+    class ArrayIterator final {
     private:
         E *ElementCurrent;
     public:
@@ -345,6 +353,10 @@ namespace eLibrary::Core {
             MemoryAllocator::deleteArray(ElementContainer);
             ElementContainer = MemoryAllocator::newArray<E>(ElementSize = ElementSource.ElementSize);
             Arrays::doCopy(ElementSource.ElementContainer, ElementSize, ElementContainer);
+        }
+
+        const char *getClassName() const noexcept override {
+            return "Array";
         }
 
         const E &getElement(intmax_t ElementIndex) const {
@@ -503,6 +515,10 @@ namespace eLibrary::Core {
             Arrays::doMove(ElementContainer, ElementSize, ElementBuffer);
             Arrays::doMoveReverse(ElementBuffer, ElementBuffer + ElementSize, ElementContainer);
             MemoryAllocator::deleteArray(ElementBuffer);
+        }
+
+        const char *getClassName() const noexcept override {
+            return "ArrayList";
         }
 
         const E &getElement(intmax_t ElementIndex) const {
@@ -665,6 +681,10 @@ namespace eLibrary::Core {
             return SetResult;
         }
 
+        const char *getClassName() const noexcept override {
+            return "ArraySet";
+        }
+
         intmax_t getElementSize() const noexcept {
             return ElementSize;
         }
@@ -766,6 +786,10 @@ namespace eLibrary::Core {
             return ElementContainer.getElement(-1);
         }
 
+        const char *getClassName() const noexcept override {
+            return "ContainerQueue";
+        }
+
         intmax_t getElementSize() const noexcept {
             return ElementContainer.getElementSize();
         }
@@ -825,6 +849,10 @@ namespace eLibrary::Core {
             ElementContainer.doClear();
         }
 
+        const char *getClassName() const noexcept override {
+            return "ContainerStack";
+        }
+
         const E &getElement() const {
             return ElementContainer.getElement(0);
         }
@@ -847,7 +875,7 @@ namespace eLibrary::Core {
     };
 
     template<typename E>
-    class DoubleLinkedIterator final : public Object {
+    class DoubleLinkedIterator final {
     private:
         using LinkedNode = DoubleLinkedNode<E>;
         LinkedNode *NodeCurrent;
@@ -1026,6 +1054,10 @@ namespace eLibrary::Core {
             }
             NodeTemporary->NodeNext->NodePrevious = NodeHead;
             NodeHead->NodeNext = NodeTemporary->NodeNext;
+        }
+
+        const char *getClassName() const noexcept override {
+            return "DoubleLinkedList";
         }
 
         const E &getElement(intmax_t ElementIndex) const {
@@ -1253,6 +1285,10 @@ namespace eLibrary::Core {
             return SetResult;
         }
 
+        const char *getClassName() const noexcept override {
+            return "DoubleLinkedSet";
+        }
+
         intmax_t getElementSize() const noexcept {
             return NodeSize;
         }
@@ -1338,11 +1374,13 @@ namespace eLibrary::Core {
     template<typename T>
     class Optional final : public Object {
     private:
-        T *OptionalData = nullptr;
+        alignas(alignof(T)) uint8_t OptionalData[sizeof(T)]{};
+        bool OptionalValue = false;
 
         template<typename ...Ts>
         void doCreate(Ts &&...ParameterList) noexcept(std::is_nothrow_constructible<T, Ts...>::value){
-            OptionalData = MemoryAllocator::newObject<T>(Objects::doForward<Ts>(ParameterList)...);
+            new (OptionalData) T(Objects::doForward<Ts>(ParameterList)...);
+            OptionalValue = true;
         }
     public:
         doEnableCopyAssignConstruct(Optional)
@@ -1385,19 +1423,23 @@ namespace eLibrary::Core {
         }
 
         void doReset() noexcept(std::is_nothrow_destructible<T>::value) {
-            if (OptionalData) {
-                delete OptionalData;
-                OptionalData = nullptr;
+            if (hasValue()) {
+                OptionalValue = false;
+                ((T*) OptionalData)->~T();
             }
+        }
+
+        const char *getClassName() const noexcept override {
+            return "Optional";
         }
 
         const T &getValue() const {
             if (!hasValue()) throw Exception(String(u"Optional<T>::getValue() hasValue"));
-            return *OptionalData;
+            return *((T*) OptionalData);
         }
 
         bool hasValue() const noexcept {
-            return OptionalData;
+            return OptionalValue;
         }
     };
 
@@ -1691,6 +1733,10 @@ namespace eLibrary::Core {
             return {NodeResult->NodeValue};
         }
 
+        const char *getClassName() const noexcept override {
+            return "RedBlackTree";
+        }
+
         uintmax_t getHeight() const noexcept {
             return NodeRoot ? getHeightCore(NodeRoot) : 0;
         }
@@ -1701,7 +1747,7 @@ namespace eLibrary::Core {
     };
 
     template<typename E>
-    class SingleLinkedIterator final : public Object {
+    class SingleLinkedIterator final {
     private:
         using LinkedNode = SingleLinkedNode<E>;
         LinkedNode *NodeCurrent;
@@ -1845,6 +1891,10 @@ namespace eLibrary::Core {
                 NodeCurrent = NodeCurrent->NodeNext;
                 MemoryAllocator::deleteObject(NodePrevious);
             }
+        }
+
+        const char *getClassName() const noexcept override {
+            return "SingleLinkedList";
         }
 
         const E &getElement(intmax_t ElementIndex) const {
@@ -2048,6 +2098,10 @@ namespace eLibrary::Core {
             return SetResult;
         }
 
+        const char *getClassName() const noexcept override {
+            return "SingleLinkedSet";
+        }
+
         intmax_t getElementSize() const noexcept {
             return NodeSize;
         }
@@ -2125,6 +2179,9 @@ namespace eLibrary::Core {
     template<typename K, typename V>
     class TreeMap final : protected RedBlackTree<K, V> {
     public:
+        const char *getClassName() const noexcept override {
+            return "TreeMap";
+        }
 
         const V &getElement(const K &MapKey) const {
             auto *MapNode = this->doSearchCore(this->NodeRoot, MapKey);
@@ -2207,6 +2264,10 @@ namespace eLibrary::Core {
             return SetResult;
         }
 
+        const char *getClassName() const noexcept override {
+            return "TreeSet";
+        }
+
         uintmax_t getElementSize() const noexcept {
             return this->getSize();
         }
@@ -2233,6 +2294,111 @@ namespace eLibrary::Core {
         }
     };
 
+    namespace {
+        template<size_t V, size_t ...Vs>
+        constexpr size_t getMaximumInteger = V > getMaximumInteger<Vs...> ? V : getMaximumInteger<Vs...>;
+
+        template<size_t V>
+        constexpr size_t getMaximumInteger<V> = V;
+
+        template<typename ...Ts>
+        struct VariantUtility;
+
+        template<typename T, typename ...Ts>
+        struct VariantUtility<T, Ts...> {
+            static void doCopy(const std::type_info *VariantType, void *VariantDataSource, void *VariantDataDestination) {
+                if (VariantType == &typeid(T)) new (VariantDataDestination) T(*((T*) VariantDataSource));
+                else VariantUtility<Ts...>::doCopy(VariantType, VariantDataSource, VariantDataDestination);
+            }
+
+            static void doDestroy(const std::type_info *VariantType, void *VariantData) {
+                if (VariantType == &typeid(T)) ((T*) VariantData)->~T();
+                else VariantUtility<Ts...>::doDestroy(VariantType, VariantData);
+            }
+
+            static void doMove(const std::type_info *VariantType, void *VariantDataSource, void *VariantDataDestination) {
+                if (VariantType == &typeid(T)) new (VariantDataDestination) T(Objects::doMove(*((T*) VariantDataSource)));
+                else VariantUtility<Ts...>::doMove(VariantType, VariantDataSource, VariantDataDestination);
+            }
+        };
+
+        template<>
+        struct VariantUtility<> {
+            static void doCopy(const std::type_info *VariantType, void *VariantDataSource, void *VariantDataDestination) {}
+
+            static void doDestroy(const std::type_info *VariantType, void *VariantData) {}
+
+            static void doMove(const std::type_info *VariantType, void *VariantDataSource, void *VariantDataDestination) {}
+        };
+
+        template<typename T, typename ...Ts>
+        constexpr bool isContainsType = true;
+
+        template<typename T, typename T1, typename ...T2>
+        constexpr bool isContainsType<T, T1, T2...> = std::is_same_v<T, T1> || isContainsType<T, T2...>;
+
+        template<typename T>
+        constexpr bool isContainsType<T> = false;
+
+        template<typename T, typename ...Ts>
+        concept ContainsType = isContainsType<T, Ts...>;
+    }
+
+    template<typename ...Ts>
+    class Variant final : public Object {
+    private:
+        alignas(getMaximumInteger<alignof(Ts)...>) uint8_t VariantData[getMaximumInteger<sizeof(Ts)...>]{};
+        const std::type_info *VariantType = nullptr;
+        bool VariantValue = false;
+    public:
+        doEnableCopyAssignConstruct(Variant)
+        doEnableMoveAssignConstruct(Variant)
+
+        constexpr Variant() noexcept = default;
+
+        template<typename T> requires ContainsType<T, Ts...>
+        Variant(const T &VariantSource) {
+            new (VariantData) T(VariantSource);
+            VariantType = &typeid(T);
+        }
+
+        template<typename T> requires ContainsType<T, Ts...>
+        Variant(T &&VariantSource) {
+            new (VariantData) T(Objects::doMove(VariantSource));
+            VariantType = &typeid(T);
+        }
+
+        ~Variant() {
+            VariantUtility<Ts...>::doDestroy(VariantType, VariantData);
+        }
+
+        void doAssign(const Variant<Ts...> &VariantSource) {
+            if (Objects::getAddress(VariantSource) == this) return;
+            VariantUtility<Ts...>::doDestroy(VariantType, VariantData);
+            VariantUtility<Ts...>::doCopy(VariantSource.VariantType, VariantSource.VariantData, VariantData);
+            VariantType = VariantSource.VariantType;
+        }
+
+        void doAssign(Variant<Ts...> &&VariantSource) {
+            if (Objects::getAddress(VariantSource) == this) return;
+            VariantUtility<Ts...>::doDestroy(VariantType, VariantData);
+            VariantUtility<Ts...>::doMove(VariantSource.VariantType, VariantSource.VariantData, VariantData);
+            VariantType = VariantSource.VariantType;
+            VariantSource.VariantType = nullptr;
+        }
+
+        const char *getClassName() const noexcept override {
+            return "Variant";
+        }
+
+        template<typename T>
+        auto getValue() {
+            if (&typeid(T) != VariantType)
+                throw TypeException(String(u"Variant::getValue<T>() T"));
+            return *((T*) VariantData);
+        }
+    };
+
     template<typename E>
     using ArrayQueue = ContainerQueue<E, ArrayList<E>>;
 
@@ -2251,3 +2417,5 @@ namespace eLibrary::Core {
     template<typename E>
     using SingleLinkedStack = ContainerStack<E, SingleLinkedList<E>>;
 }
+
+#endif

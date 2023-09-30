@@ -1,5 +1,8 @@
 #pragma once
 
+#ifndef eLibraryHeaderIOException
+#define eLibraryHeaderIOException
+
 #if eLibraryFeature(IO)
 
 #include <Core/Exception.hpp>
@@ -12,8 +15,10 @@ namespace eLibrary::IO {
         using Exception::Exception;
 
         const char *getClassName() const noexcept override {
-            return "IO::IOException";
+            return "IOException";
         }
     };
 }
+#endif
+
 #endif

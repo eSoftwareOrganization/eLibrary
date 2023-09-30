@@ -1,5 +1,8 @@
 #pragma once
 
+#ifndef eLibraryHeaderCoreString
+#define eLibraryHeaderCoreString
+
 #include <Core/Object.hpp>
 #include <cwctype>
 #include <string>
@@ -16,6 +19,10 @@ namespace eLibrary::Core {
 
         intmax_t doCompare(const Character &CharacterSource) const noexcept {
             return (intmax_t) CharacterValue - CharacterSource.CharacterValue;
+        }
+
+        const char *getClassName() const noexcept override {
+            return "Character";
         }
 
         uintmax_t hashCode() const noexcept override {
@@ -135,6 +142,10 @@ namespace eLibrary::Core {
             return CharacterSize;
         }
 
+        const char *getClassName() const noexcept override {
+            return "String";
+        }
+
         uintmax_t hashCode() const noexcept override {
             uintmax_t CharacterCode = 0;
             for (intmax_t ElementIndex = 0; ElementIndex < CharacterSize; ++ElementIndex)
@@ -236,6 +247,10 @@ namespace eLibrary::Core {
 
         eLibraryAPI void doClear() noexcept;
 
+        const char *getClassName() const noexcept override {
+            return "StringStream";
+        }
+
         eLibraryAPI String toString() const noexcept override;
     };
 }
@@ -251,4 +266,6 @@ public:
         return std::formatter<std::string, CharacterT>::format(ObjectSource.toString().toU8String(), ObjectContext);
     }
 };
+#endif
+
 #endif

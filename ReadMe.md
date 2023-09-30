@@ -37,6 +37,19 @@ Project Dependencies:
 Project Repository: [GitHub](https://github.com/eSoftwareOrganization/eLibrary)
 
 Project Update Log:
+> eLibrary V2023.16.0
+- Core::ConcurrentUtility doCompareAndExchange<T>(New) doCompareAndExchange16 / doCompareAndExchange32 / doCompareAndExchange64(doCompareAndExchange)
+- Core::TypeBase / getTypeName / isClass / isEnumeration(New)
+- Core::TypeClass doRegisterProperty / getClassParent / getClassProperty(New)
+- Core::TypeEnumeration doRegisterProperty / getEnumerationProperty(New)
+- Core::TypeManager doQueryClass / doRegisterClass / doRegisterEnumeration / getInstance(New)
+- Core::TypePropertyBase / getValueType(New)
+- Core::TypePropertyClass(New)
+- Core::TypePropertyEnumeration(New)
+- Core::Object getClassName(New)
+- Core::Optional(...)
+- Core::Variant(New)
+- IO::FileDescriptor ~FileDescriptor(...)
 > eLibrary V2023.15.4
 - IO::FileOption OptionText(Remove)
 - IO::FileOutputStream getFilePosition(...)
@@ -278,37 +291,6 @@ Project Update Log:
 - Network::Socket doReceive / doSend(Remove) getInputStream / getOutputStream(Experimental / New)
 - Network::SocketInputStream / doRead / getInstance / isAvailable(Experimental / New)
 - Network::SocketOutputStream / doClose / doWrite / getInstance / isAvailable(Experimental / New)
-> eLibrary V2023.07
-- Core::ArithmeticException(New)
-- Core::Fraction doAddition / doSubtraction(isNegative / isPositive Implementation) toString(0)
-- Core::Integer toString(0)
-- Core::Mathematics doCosecant / doCosecantFraction / doCotangent / doCotangentFraction / doSecant / doSecantFraction / doSineFraction / doTangentFraction(New)
-- Core::MathematicsContext getFunctionPrecision / setFunctionPrecision(New)
-- IO::FileInputStream / doClose / doRead / doSeek / isAvailable / getFileLength / getFilePosition(New)
-- IO::FileOutputStream / doClose / doFlush / doSeek / doTruncate / doWrite / getFilePosition(New)
-- IO::InputStream doRead(byte*, int, int)(New)
-- IO::IOException(New)
-- IO::OutputStream doWrite(byte*, int, int)(New)
-- IO::URLConnection(Remove)
-- Network::DatagramSocket / doClose / doReceive / doSend / isClosed / setBroadcast(New)
-- Network::NetworkAddress / isAnyLocalAddress / isLinkLocalAddress / isLoopbackAddress / isMulticastAddress / isSiteLocalAddress / NetworkAddressProtocol(New)
-- Network::NetworkSocketAddress(IO::SocketInetAddress) getAddressInformation(Remove) getSocketAddress(From getSocketIP) Constructor / getSocketIP(...)
-- Network::StreamSocket(IO::Socket) doClose / doConnect(...) doReceive / doSend / getRemoteSocketAddress / isClosed / isConnected / setAddressReuse(New)
-- Network::StreamSocketServer(IO::SocketServer) isBound / isClosed(New) setAddressReuse(From setConnectionReuse)
-> eLibrary V2023.06
-- Core::AbstractQueuedSynchronizer / AbstractQueuedNode / tryAcquireExclusive / tryAcquireShared / tryReleaseExclusive / tryReleaseShared(New)
-- Core::ArrayList toSTLArray(From toArray)
-- Core::AtomicNumber / addAndGet / compareAndSet / decrementAndGet / getAndAdd / getAndDecrement / getAndIncrement / getAndSet / getValue / incrementAndGet(New)
-- Core::ConcurrentArrayList(Remove)
-- Core::ConcurrentUtility / doCompareAndExchange / doCompareAndExchangeReference / doCompareAndSet / doCompareAndSetReference / getAndAddNumber / getAndSetNumber(New)
-- Core::ConditionVariable(Remove)
-- Core::Mutex(Remove)
-- Core::MutexExecutor(Remove)
-- Core::Semaphore(Remove)
-- Core::String ~Constructor(StringReference)
-- IO::AudioSegment(Remove)
-- IO::Buffer getBufferLimit / getBufferMark / getBufferPosition / getRemaining / hasRemaining / setBufferLimit / setBufferPosition(v2023.05)
-- IO::ByteBuffer Constructor(unsigned) / Constructor(const ByteBuffer&) / ~Constructor / doCompact(New)
 
 ## Contributors
 

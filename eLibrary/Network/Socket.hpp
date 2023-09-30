@@ -1,5 +1,8 @@
 #pragma once
 
+#ifndef eLibraryHeaderNetworkSocket
+#define eLibraryHeaderNetworkSocket
+
 #if eLibraryFeature(Network)
 
 #include <IO/Stream.hpp>
@@ -343,4 +346,6 @@ namespace eLibrary::Network {
         }
     };
 }
+#endif
+
 #endif

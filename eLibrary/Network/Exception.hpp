@@ -1,5 +1,8 @@
 #pragma once
 
+#ifndef eLibraryHeaderNetworkException
+#define eLibraryHeaderNetworkException
+
 #if eLibraryFeature(Network)
 
 #include <IO/Exception.hpp>
@@ -12,8 +15,10 @@ namespace eLibrary::Network {
         using IOException::IOException;
 
         const char *getClassName() const noexcept override {
-            return "Network::NetworkException";
+            return "NetworkException";
         }
     };
 }
+#endif
+
 #endif

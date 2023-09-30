@@ -1,5 +1,8 @@
 #pragma once
 
+#ifndef eLibraryHeaderCoreConcurrent
+#define eLibraryHeaderCoreConcurrent
+
 #include <Core/Number.hpp>
 
 #if eLibraryCompiler(MSVC)
@@ -19,46 +22,44 @@ namespace eLibrary::Core {
         constexpr ConcurrentUtility() noexcept = delete;
 
 #if eLibraryCompiler(MSVC)
-        static int8_t doCompareAndExchange(volatile int8_t *ValueAddress, int8_t ValueExpected, int8_t ValueTarget) noexcept {
-            std::unreachable();
-        }
-
-        static int16_t doCompareAndExchange(volatile int16_t *ValueAddress, int16_t ValueExpected, int16_t ValueTarget) noexcept {
+        static int16_t doCompareAndExchange16(volatile int16_t *ValueAddress, int16_t ValueExpected, int16_t ValueTarget) noexcept {
             return InterlockedCompareExchange16(ValueAddress, ValueTarget, ValueExpected);
         }
 
-        static int32_t doCompareAndExchange(volatile int32_t *ValueAddress, int32_t ValueExpected, int32_t ValueTarget) noexcept {
+        static int32_t doCompareAndExchange32(volatile int32_t *ValueAddress, int32_t ValueExpected, int32_t ValueTarget) noexcept {
             return InterlockedCompareExchange((volatile LONG*) ValueAddress, ValueTarget, ValueExpected);
         }
 
-        static int64_t doCompareAndExchange(volatile int64_t *ValueAddress, int64_t ValueExpected, int64_t ValueTarget) noexcept {
+        static int64_t doCompareAndExchange64(volatile int64_t *ValueAddress, int64_t ValueExpected, int64_t ValueTarget) noexcept {
             return InterlockedCompareExchange64(ValueAddress, ValueTarget, ValueExpected);
         }
 #else
-        static int8_t doCompareAndExchange(volatile int8_t *ValueAddress, int8_t ValueExpected, int8_t ValueTarget) noexcept {
-            int8_t ValueResult;
-            asm volatile("lock\n\tcmpxchgb %2, (%3)":"=a"(ValueResult):"a"(ValueExpected), "r"(ValueTarget), "r"(ValueAddress):"cc", "memory");
-            return ValueResult;
-        }
-
-        static int16_t doCompareAndExchange(volatile int16_t *ValueAddress, int16_t ValueExpected, int16_t ValueTarget) noexcept {
+        static int16_t doCompareAndExchange16(volatile int16_t *ValueAddress, int16_t ValueExpected, int16_t ValueTarget) noexcept {
             int16_t ValueResult;
             asm volatile("lock\n\tcmpxchgw %2, (%3)":"=a"(ValueResult):"a"(ValueExpected), "r"(ValueTarget), "r"(ValueAddress):"cc", "memory");
             return ValueResult;
         }
 
-        static int32_t doCompareAndExchange(volatile int32_t *ValueAddress, int32_t ValueExpected, int32_t ValueTarget) noexcept {
+        static int32_t doCompareAndExchange32(volatile int32_t *ValueAddress, int32_t ValueExpected, int32_t ValueTarget) noexcept {
             int32_t ValueResult;
             asm volatile("lock\n\tcmpxchgl %2, (%3)":"=a"(ValueResult):"a"(ValueExpected), "r"(ValueTarget), "r"(ValueAddress):"cc", "memory");
             return ValueResult;
         }
 
-        static int64_t doCompareAndExchange(volatile int64_t *ValueAddress, int64_t ValueExpected, int64_t ValueTarget) noexcept {
+        static int64_t doCompareAndExchange64(volatile int64_t *ValueAddress, int64_t ValueExpected, int64_t ValueTarget) noexcept {
             int64_t ValueResult;
             asm volatile("lock\n\tcmpxchgq %2, (%3)":"=a"(ValueResult):"a"(ValueExpected), "r"(ValueTarget), "r"(ValueAddress):"cc", "memory");
             return ValueResult;
         }
 #endif
+
+        template<typename T>
+        static T doCompareAndExchange(volatile T *ValueAddress, T ValueExpected, T ValueTarget) noexcept {
+            if constexpr (sizeof(T) == sizeof(int16_t)) return doCompareAndExchange16((volatile int16_t*) ValueAddress, (int16_t) ValueExpected, (int16_t) ValueTarget);
+            else if constexpr (sizeof(T) == sizeof(int32_t)) return doCompareAndExchange32((volatile int32_t*) ValueAddress, (int32_t) ValueExpected, (int32_t) ValueTarget);
+            else if constexpr (sizeof(T) == sizeof(int64_t)) return doCompareAndExchange64((volatile int64_t*) ValueAddress, (int64_t) ValueExpected, (int64_t) ValueTarget);
+            else std::unreachable();
+        }
 
         template<typename T>
         static auto doCompareAndExchangeReference(volatile T **ValueAddress, T *ValueExpected, T *ValueTarget) noexcept {
@@ -217,6 +218,10 @@ namespace eLibrary::Core {
 #endif
         }
 
+        const char *getClassName() const noexcept override {
+            return "Thread";
+        }
+
         bool isFinished() const noexcept {
             return ThreadFinish;
         }
@@ -247,6 +252,10 @@ namespace eLibrary::Core {
         void doExecute() noexcept override {
             std::apply(ThreadFunction, ThreadParameter);
         }
+
+        const char *getClassName() const noexcept override {
+            return "FunctionThread";
+        }
     };
 
     class ReentrantThread : public Thread {
@@ -257,6 +266,10 @@ namespace eLibrary::Core {
 
         void doStart() override {
             doStartCore();
+        }
+
+        const char *getClassName() const noexcept override {
+            return "ReentrantThread";
         }
     };
 
@@ -272,6 +285,10 @@ namespace eLibrary::Core {
 
         void doExecute() noexcept override {
             std::apply(ThreadFunction, ThreadParameter);
+        }
+
+        const char *getClassName() const noexcept override {
+            return "ReentrantFunctionThread";
         }
     };
 
@@ -374,6 +391,10 @@ namespace eLibrary::Core {
             return ConcurrentUtility::getAndXorNumber(&NumberValue, NumberSource);
         }
 
+        const char *getClassName() const noexcept override {
+            return "AtomicNumber";
+        }
+
         T getValue() const noexcept {
             return NumberValue;
         }
@@ -395,6 +416,15 @@ namespace eLibrary::Core {
         }
     };
 
+    template<>
+    class AtomicNumber<bool> {};
+
+    template<>
+    class AtomicNumber<int8_t> {};
+
+    template<>
+    class AtomicNumber<uint8_t> {};
+
     template<typename T>
     class AtomicReference final : public Object {
     private:
@@ -408,6 +438,10 @@ namespace eLibrary::Core {
             return ConcurrentUtility::getAndSetReference(&ObjectValue, &ObjectTarget);
         }
 
+        const char *getClassName() const noexcept override {
+            return "AtomicReference";
+        }
+
         T *getValue() const noexcept {
             return ObjectValue;
         }
@@ -417,3 +451,5 @@ namespace eLibrary::Core {
         }
     };
 }
+
+#endif

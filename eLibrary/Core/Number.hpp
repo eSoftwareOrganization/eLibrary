@@ -1,5 +1,8 @@
 #pragma once
 
+#ifndef eLibraryHeaderCoreNumber
+#define eLibraryHeaderCoreNumber
+
 #include <Core/Container.hpp>
 #include <limits>
 #include <vector>
@@ -272,6 +275,10 @@ namespace eLibrary::Core {
             return NumberResult;
         }
 
+        const char *getClassName() const noexcept override {
+            return "Integer";
+        }
+
         Integer getOpposite() const noexcept {
             Integer NumberResult(*this);
             NumberResult.NumberSignature = !NumberSignature;
@@ -343,6 +350,10 @@ namespace eLibrary::Core {
 
         intmax_t doCompare(const IntegerBuiltin<T> &NumberSource) const noexcept {
             return Numbers::doCompare(NumberValue, NumberSource.NumberValue);
+        }
+
+        const char *getClassName() const noexcept override {
+            return "IntegerBuiltin";
         }
 
         T getValue() const noexcept {
@@ -430,6 +441,10 @@ namespace eLibrary::Core {
             return {NumberNumerator, NumberDenominator, true};
         }
 
+        const char *getClassName() const noexcept override {
+            return "Fraction";
+        }
+
         Integer getDenominator() const noexcept {
             return NumberDenominator;
         }
@@ -466,3 +481,5 @@ namespace eLibrary::Core {
         }
     };
 }
+
+#endif

@@ -1,5 +1,8 @@
 #pragma once
 
+#ifndef eLibraryHeaderCoreException
+#define eLibraryHeaderCoreException
+
 #include <Core/String.hpp>
 #include <exception>
 
@@ -14,8 +17,8 @@ namespace eLibrary::Core {
     public:
         explicit Exception(const String &ExceptionMessageSource) noexcept : ExceptionMessage(ExceptionMessageSource) {}
 
-        virtual const char *getClassName() const noexcept {
-            return "Core::Exception";
+        const char *getClassName() const noexcept override {
+            return "Exception";
         }
 
         String toString() const noexcept override {
@@ -36,7 +39,7 @@ namespace eLibrary::Core {
         using Exception::Exception;
 
         const char *getClassName() const noexcept override {
-            return "Core::ArithmeticException";
+            return "ArithmeticException";
         }
     };
 
@@ -45,7 +48,7 @@ namespace eLibrary::Core {
         using Exception::Exception;
 
         const char *getClassName() const noexcept override {
-            return "Core::IndexException";
+            return "IndexException";
         }
     };
 
@@ -54,7 +57,7 @@ namespace eLibrary::Core {
         using Exception::Exception;
 
         const char *getClassName() const noexcept override {
-            return "Core::InterruptedException";
+            return "InterruptedException";
         }
     };
 
@@ -63,7 +66,7 @@ namespace eLibrary::Core {
         using Exception::Exception;
 
         const char *getClassName() const noexcept override {
-            return "Core::RuntimeException";
+            return "RuntimeException";
         }
     };
 
@@ -72,7 +75,9 @@ namespace eLibrary::Core {
         using Exception::Exception;
 
         const char *getClassName() const noexcept override {
-            return "Core::TypeException";
+            return "TypeException";
         }
     };
 }
+
+#endif

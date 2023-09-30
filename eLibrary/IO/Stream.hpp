@@ -1,5 +1,8 @@
 #pragma once
 
+#ifndef eLibraryHeaderIOStream
+#define eLibraryHeaderIOStream
+
 #if eLibraryFeature(IO)
 
 #include <IO/Buffer.hpp>
@@ -48,4 +51,6 @@ namespace eLibrary::IO {
         }
     };
 }
+#endif
+
 #endif

@@ -1,5 +1,8 @@
 #pragma once
 
+#ifndef eLibraryHeaderCoreMemory
+#define eLibraryHeaderCoreMemory
+
 #include <Core/Exception.hpp>
 #include <new>
 
@@ -29,3 +32,5 @@ namespace eLibrary::Core {
         }
     };
 }
+
+#endif

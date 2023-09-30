@@ -1,8 +1,11 @@
 #pragma once
 
+#ifndef eLibraryHeaderMultimediaAudioSegment
+#define eLibraryHeaderMultimediaAudioSegment
+
 #if eLibraryFeature(Multimedia)
 
-#include <Multimedia/AudioUtility.hpp>
+#include <Multimedia/MediaUtility.hpp>
 
 namespace eLibrary::Multimedia {
     class MediaChannelLayout final {
@@ -258,4 +261,6 @@ namespace eLibrary::Multimedia {
         }
     };
 }
+#endif
+
 #endif

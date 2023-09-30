@@ -14,10 +14,6 @@
   ],
   "default-features": ["module-multimedia"],
   "features": {
-    "feature-archive": {
-      "description": "eLibrary::IO::Archive",
-      "dependencies": ["libarchive"]
-    },
     "module-multimedia": {
       "description": "eLibrary::Multimedia",
       "dependencies": ["ffmpeg", "openal-soft"]

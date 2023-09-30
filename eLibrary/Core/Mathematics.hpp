@@ -1,5 +1,8 @@
 #pragma once
 
+#ifndef eLibraryHeaderCoreMathematics
+#define eLibraryHeaderCoreMathematics
+
 #include <Core/Number.hpp>
 #include <numbers>
 
@@ -361,3 +364,5 @@ namespace eLibrary::Core {
 
     Fraction Mathematics::NumberPi = {52163, 16604};
 }
+
+#endif

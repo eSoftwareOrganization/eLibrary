@@ -1,5 +1,8 @@
 #pragma once
 
+#ifndef eLibraryHeaderCoreGlobal
+#define eLibraryHeaderCoreGlobal
+
 #include <concepts>
 #include <cstdint>
 #include <type_traits>
@@ -30,3 +33,5 @@ namespace eLibrary::Core {
 
 #define eLibraryAPI
 }
+
+#endif

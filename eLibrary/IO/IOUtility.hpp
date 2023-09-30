@@ -1,5 +1,8 @@
 #pragma once
 
+#ifndef eLibraryHeaderIOUtility
+#define eLibraryHeaderIOUtility
+
 #if eLibraryFeature(IO)
 
 #include <IO/Exception.hpp>
@@ -80,10 +83,6 @@ namespace eLibrary::IO {
 
         constexpr FileDescriptor() noexcept = default;
 
-        ~FileDescriptor() noexcept {
-            if (isAvailable()) doClose();
-        }
-
         void doAssign(FileDescriptor &&DescriptorSource) noexcept {
             if (Objects::getAddress(DescriptorSource) == this) return;
             if (isAvailable()) doClose();
@@ -124,4 +123,6 @@ namespace eLibrary::IO {
 #endif
     };
 }
+#endif
+
 #endif

@@ -1,7 +1,7 @@
-#include <eLibrary>
+#include <eLibrary.hpp>
 using namespace eLibrary;
 using namespace eLibrary::Core;
-/*
+
 #define DOCTEST_CONFIG_IMPLEMENT
 #include "3rd_party/doctest.h"
 #define ANKERL_NANOBENCH_IMPLEMENT
@@ -312,13 +312,11 @@ TEST_SUITE("Socket") {
     }
 }
 #endif
-*/
 
 int main(int ParameterCount, char *ParameterList[]) {
-//    RandomEngine.seed(RandomDevice());
-//    RandomEngine64.seed(RandomEngine());
-//    return doctest::Context(ParameterCount, ParameterList).run();
-    FILE *FileOperator = fopen("Inst.wav", "r");
-    printf("%ld\n", ftell(FileOperator));
-    fclose(FileOperator);
+    doInitializeCore();
+
+    RandomEngine.seed(RandomDevice());
+    RandomEngine64.seed(RandomEngine());
+    return doctest::Context(ParameterCount, ParameterList).run();
 }

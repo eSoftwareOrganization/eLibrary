@@ -1,5 +1,8 @@
 #pragma once
 
+#ifndef eLibraryHeaderMultimediaException
+#define eLibraryHeaderMultimediaException
+
 #if eLibraryFeature(Multimedia)
 
 #include <IO/Exception.hpp>
@@ -12,8 +15,10 @@ namespace eLibrary::Multimedia {
         using IOException::IOException;
 
         const char *getClassName() const noexcept override {
-            return "Multimedia::MediaException";
+            return "MediaException";
         }
     };
 }
+#endif
+
 #endif

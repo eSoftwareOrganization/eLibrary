@@ -1,5 +1,8 @@
 #pragma once
 
+#ifndef eLibraryHeaderNetworkNetworkUtility
+#define eLibraryHeaderNetworkNetworkUtility
+
 #if eLibraryFeature(Network)
 
 #include <IO/IOUtility.hpp>
@@ -106,7 +109,7 @@ namespace eLibrary::Network {
         auto toAddressIn4() const {
             if (AddressProtocol == NetworkAddressProtocol::ProtocolIPv4) {
                 in_addr AddressResult{};
-                AddressResult.s_addr = ::htonl((AddressFieldList.getElement(0) << 24) | (AddressFieldList.getElement(1) << 16) | (AddressFieldList.getElement(2) << 8) | AddressFieldList.getElement(3));
+                AddressResult.s_addr = htonl((AddressFieldList.getElement(0) << 24) | (AddressFieldList.getElement(1) << 16) | (AddressFieldList.getElement(2) << 8) | AddressFieldList.getElement(3));
                 return AddressResult;
             }
             throw NetworkException(String(u"NetworkAddress::toAddressIn4() AddressProtocol"));
@@ -155,10 +158,6 @@ namespace eLibrary::Network {
             DescriptorHandle = DescriptorSource;
         }
 
-        ~NetworkSocketDescriptor() noexcept {
-            if (isAvailable()) doClose();
-        }
-
         void doAssign(NetworkSocketDescriptor &&DescriptorSource) noexcept {
             if (Objects::getAddress(DescriptorSource) == this) return;
             if (isAvailable()) doClose();
@@ -189,4 +188,6 @@ namespace eLibrary::Network {
 #define doInitializeSocket()
 #endif
 }
+#endif
+
 #endif

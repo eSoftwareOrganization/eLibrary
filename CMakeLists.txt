@@ -2,17 +2,11 @@ cmake_minimum_required(VERSION 3.17)
 
 cmake_policy(SET CMP0091 NEW)
 
-option(ELIBRARY_FEATURE_ARCHIVE "eLibrary::IO::Archive" OFF)
 option(ELIBRARY_MODULE_IO "eLibrary::IO" ON)
 option(ELIBRARY_MODULE_MULTIMEDIA "eLibrary::Multimedia" OFF)
 option(ELIBRARY_MODULE_NETWORK "eLibrary::Network" ON)
 option(ELIBRARY_PACKAGE OFF)
 option(ELIBRARY_UNIT_TEST OFF)
-
-if(ELIBRARY_FEATURE_ARCHIVE)
-    list(APPEND VCPKG_MANIFEST_FEATURES "feature-archive")
-    add_compile_definitions(eLibraryFeature_Archive=1)
-endif()
 
 if(ELIBRARY_MODULE_IO)
     add_compile_definitions(eLibraryFeature_IO=1)
@@ -27,7 +21,7 @@ if(ELIBRARY_MODULE_NETWORK)
     add_compile_definitions(eLibraryFeature_Network=1)
 endif()
 
-project(eLibrary DESCRIPTION "An all-in-one cpp library" VERSION 2023.15.3)
+project(eLibrary DESCRIPTION "An all-in-one cpp library" VERSION 2023.16)
 
 set(CMAKE_CXX_STANDARD 23)
 

@@ -1,5 +1,8 @@
 #pragma once
 
+#ifndef eLibraryHeaderIOBuffer
+#define eLibraryHeaderIOBuffer
+
 #if eLibraryFeature(IO)
 
 #include <IO/Exception.hpp>
@@ -131,4 +134,6 @@ namespace eLibrary::IO {
         }
     };
 }
+#endif
+
 #endif

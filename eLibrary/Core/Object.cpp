@@ -12,6 +12,6 @@ namespace eLibrary::Core {
         ObjectStream.addCharacter('x');
         ObjectStream.addCharacter('0');
         ObjectStream.addCharacter('@');
-        return String(u"Object").doConcat(ObjectStream.toString().doReverse());
+        return String(getClassName()).doConcat(ObjectStream.toString().doReverse());
     }
 }
