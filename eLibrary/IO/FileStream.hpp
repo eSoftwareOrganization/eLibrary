@@ -38,7 +38,7 @@ namespace eLibrary::IO {
             if (isAvailable()) throw IOException(String(u"FileInputStream::doOpen<Os...>(const String&, Os...) isAvailable"));
             int StreamOption = O_RDONLY;
             if constexpr (sizeof...(StreamOptionList) > 0) StreamOption |= getOpenOption(StreamOptionList...);
-            StreamDescriptor.doAssign(::open(StreamPath.toU8String().c_str(), StreamOption));
+            StreamDescriptor.doAssign(::open(StreamPath.toU8String().c_str(), StreamOption, 0777));
             if (!isAvailable()) throw IOException(String(u"FileInputStream::doOpen<Os...>(const String&, Os...) isAvailable"));
         }
 
@@ -102,7 +102,7 @@ namespace eLibrary::IO {
             if (isAvailable()) throw IOException(String(u"FileOutputStream::doOpen<Os...>(const String&, Os...) isAvailable"));
             int StreamOption = O_WRONLY;
             if constexpr (sizeof...(StreamOptionList) > 0) StreamOption |= getOpenOption(StreamOptionList...);
-            StreamDescriptor.doAssign(::open(StreamPath.toU8String().c_str(), StreamOption));
+            StreamDescriptor.doAssign(::open(StreamPath.toU8String().c_str(), StreamOption, 0777));
             if (!isAvailable()) throw IOException(String(u"FileOutputStream::doOpen<Os...>(const String&, Os...) isAvailable"));
         }
 
