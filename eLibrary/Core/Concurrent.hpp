@@ -53,11 +53,19 @@ namespace eLibrary::Core {
         }
 #endif
 
-        template<typename T>
+        template<SizeEqual<int16_t> T>
         static T doCompareAndExchange(volatile T *ValueAddress, T ValueExpected, T ValueTarget) noexcept {
-            if constexpr (sizeof(T) == sizeof(int16_t)) return doCompareAndExchange16((volatile int16_t*) ValueAddress, (int16_t) ValueExpected, (int16_t) ValueTarget);
-            else if constexpr (sizeof(T) == sizeof(int32_t)) return doCompareAndExchange32((volatile int32_t*) ValueAddress, (int32_t) ValueExpected, (int32_t) ValueTarget);
-            else if constexpr (sizeof(T) == sizeof(int64_t)) return doCompareAndExchange64((volatile int64_t*) ValueAddress, (int64_t) ValueExpected, (int64_t) ValueTarget);
+            return doCompareAndExchange16((volatile int16_t*) ValueAddress, (int16_t) ValueExpected, (int16_t) ValueTarget);
+        }
+
+        template<SizeEqual<int32_t> T>
+        static T doCompareAndExchange(volatile T *ValueAddress, T ValueExpected, T ValueTarget) noexcept {
+            return doCompareAndExchange32((volatile int32_t*) ValueAddress, (int32_t) ValueExpected, (int32_t) ValueTarget);
+        }
+
+        template<SizeEqual<int64_t> T>
+        static T doCompareAndExchange(volatile T *ValueAddress, T ValueExpected, T ValueTarget) noexcept {
+            return doCompareAndExchange64((volatile int64_t*) ValueAddress, (int64_t) ValueExpected, (int64_t) ValueTarget);
         }
 
         template<typename T>
@@ -304,18 +312,6 @@ namespace eLibrary::Core {
             volatile int8_t NodeStatus;
             volatile AbstractQueuedNode *NodeNext = nullptr;
             volatile AbstractQueuedNode *NodePrevious = nullptr;
-
-            bool setNodeNextCAS(AbstractQueuedNode *NodeExpected, AbstractQueuedNode *NodeTarget) noexcept {
-                return ConcurrentUtility::doCompareAndSetReference(&NodeNext, NodeExpected, NodeTarget);
-            }
-
-            bool setNodePreviousCAS(AbstractQueuedNode *NodeExpected, AbstractQueuedNode *NodeTarget) noexcept {
-                return ConcurrentUtility::doCompareAndSetReference(&NodePrevious, NodeExpected, NodeTarget);
-            }
-
-            bool setNodeStatusCAS(int8_t NodeStatusExpected, int8_t NodeStatusTarget) noexcept {
-                return ConcurrentUtility::doCompareAndSet(&NodeStatus, NodeStatusExpected, NodeStatusTarget);
-            }
         };
         volatile AbstractQueuedNode *NodeHead = nullptr, *NodeTail = nullptr;
     public:

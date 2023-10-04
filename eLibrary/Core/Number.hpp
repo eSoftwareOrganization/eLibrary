@@ -137,6 +137,20 @@ namespace eLibrary::Core {
             return {NumberResult, !(!NumberSignature && !NumberOther.NumberSignature)};
         }
 
+        Integer doBitShiftLeft(uintmax_t NumberOther) const {
+            std::vector<uintmax_t> NumberResult;
+            NumberResult.reserve(NumberList.size());
+            uintmax_t NumberCarry = 0;
+            for (uintmax_t NumberPart = 0;;++NumberPart) {
+                if (!NumberCarry && NumberPart >= NumberList.size()) break;
+                uintmax_t NumberCurrent = NumberCarry;
+                if (NumberPart < NumberList.size()) NumberCurrent += NumberList[NumberPart] << NumberOther;
+                NumberResult.push_back(NumberCurrent % 10000000);
+                NumberCarry = NumberCurrent / 10000000;
+            }
+            return {NumberResult, NumberSignature};
+        }
+
         intmax_t doCompare(const Integer &NumberOther) const noexcept {
             if (NumberSignature != NumberOther.NumberSignature && (NumberList.size() != 1 || NumberList[0]) && (NumberOther.NumberList.size() != 1 || NumberList[0]))
                 return Numbers::doCompare(NumberSignature, NumberOther.NumberSignature);
@@ -279,6 +293,11 @@ namespace eLibrary::Core {
             return "Integer";
         }
 
+        Integer getGreatestCommonFactor(const Integer &NumberSource) const noexcept {
+            if (NumberSource.getAbsolute().isZero()) return *this;
+            return NumberSource.getGreatestCommonFactor(doModulo(NumberSource));
+        }
+
         Integer getOpposite() const noexcept {
             Integer NumberResult(*this);
             NumberResult.NumberSignature = !NumberSignature;
@@ -333,14 +352,14 @@ namespace eLibrary::Core {
         }
     };
 
-    template<std::integral T>
-    class IntegerBuiltin final : public Object {
+    template<Arithmetic T>
+    class NumberBuiltin final : public Object {
     private:
         T NumberValue;
     public:
-        constexpr IntegerBuiltin() noexcept = default;
+        constexpr NumberBuiltin() noexcept = default;
 
-        constexpr IntegerBuiltin(T NumberSource) noexcept : NumberValue(NumberSource) {}
+        constexpr NumberBuiltin(T NumberSource) noexcept : NumberValue(NumberSource) {}
 
         template<Arithmetic OT>
         OT doCast() const {
@@ -348,12 +367,12 @@ namespace eLibrary::Core {
             return (OT) NumberValue;
         }
 
-        intmax_t doCompare(const IntegerBuiltin<T> &NumberSource) const noexcept {
+        intmax_t doCompare(const NumberBuiltin<T> &NumberSource) const noexcept {
             return Numbers::doCompare(NumberValue, NumberSource.NumberValue);
         }
 
         const char *getClassName() const noexcept override {
-            return "IntegerBuiltin";
+            return "NumberBuiltin";
         }
 
         T getValue() const noexcept {
@@ -381,13 +400,8 @@ namespace eLibrary::Core {
         Integer NumberDenominator, NumberNumerator;
         bool NumberSignature;
 
-        static Integer getGreatestCommonFactor(const Integer &Number1, const Integer &Number2) noexcept {
-            if (Number2.getAbsolute().isZero()) return Number1;
-            return getGreatestCommonFactor(Number2, Number1.doModulo(Number2));
-        }
-
         Fraction(const Integer &NumberNumeratorSource, const Integer &NumberDenominatorSource, bool NumberSignatureSource) noexcept : NumberSignature(NumberSignatureSource) {
-            Integer NumberFactor(getGreatestCommonFactor(NumberDenominatorSource, NumberNumeratorSource));
+            Integer NumberFactor(NumberDenominatorSource.getGreatestCommonFactor(NumberNumeratorSource));
             NumberDenominator = NumberDenominatorSource.doDivision(NumberFactor);
             NumberNumerator = NumberNumeratorSource.doDivision(NumberFactor);
         }
@@ -396,7 +410,7 @@ namespace eLibrary::Core {
 
         Fraction(const Integer &NumberNumeratorSource, const Integer &NumberDenominatorSource) noexcept {
             NumberSignature = !(NumberDenominatorSource.isPositive() ^ NumberNumeratorSource.isPositive());
-            Integer NumberFactor = getGreatestCommonFactor(NumberDenominatorSource, NumberNumeratorSource);
+            Integer NumberFactor(NumberDenominatorSource.getGreatestCommonFactor(NumberNumeratorSource));
             NumberDenominator = NumberDenominatorSource.getAbsolute().doDivision(NumberFactor);
             NumberNumerator = NumberNumeratorSource.getAbsolute().doDivision(NumberFactor);
         }

@@ -21,6 +21,9 @@ namespace eLibrary::Core {
         {ObjectSource.hashCode()} -> std::same_as<uintmax_t>;
     };
 
+    template<typename T1, typename T2>
+    concept SizeEqual = sizeof(T1) == sizeof(T2);
+
 #define doDisableCopyAssignConstruct(ClassName) constexpr ClassName(const ClassName&) noexcept = delete;ClassName &operator=(const ClassName&) noexcept = delete;
 #define doEnableCopyAssignConstruct(ClassName) ClassName(const ClassName &ObjectSource) {doAssign(ObjectSource);}ClassName &operator=(const ClassName &ObjectSource) {doAssign(ObjectSource);return *this;}
 #define doEnableCopyAssignParameterConstruct(ClassName, ParameterName) ClassName(const ParameterName &ObjectSource) {doAssign(ObjectSource);}ClassName &operator=(const ParameterName &ObjectSource) {doAssign(ObjectSource);return *this;}

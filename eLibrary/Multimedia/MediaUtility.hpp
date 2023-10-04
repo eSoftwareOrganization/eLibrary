@@ -16,6 +16,57 @@ extern "C" {
 }
 
 namespace eLibrary::Multimedia {
+    class MediaChannelLayout final {
+    private:
+        uint8_t LayoutChannelCount;
+        uint64_t LayoutChannelMask;
+    public:
+        constexpr MediaChannelLayout() noexcept : LayoutChannelCount(0), LayoutChannelMask(0) {};
+
+        constexpr MediaChannelLayout(uint8_t LayoutChannelCountSource, uint64_t LayoutChannelMaskSource) noexcept : LayoutChannelCount(LayoutChannelCountSource), LayoutChannelMask(LayoutChannelMaskSource) {}
+
+        constexpr MediaChannelLayout(const AVChannelLayout &LayoutSource) noexcept : LayoutChannelCount((uint8_t) LayoutSource.nb_channels), LayoutChannelMask(LayoutSource.u.mask) {
+            if (!LayoutChannelMask) LayoutChannelMask = AV_CH_LAYOUT_STEREO;
+        }
+
+        uint8_t getChannelCount() const noexcept {
+            return LayoutChannelCount;
+        }
+
+        uint64_t getChannelMask() const noexcept {
+            return LayoutChannelMask;
+        }
+
+        AVChannelLayout toFFMpegFormat() const noexcept {
+            return AV_CHANNEL_LAYOUT_MASK(LayoutChannelCount, LayoutChannelMask);
+        }
+
+        auto toOpenALFormat() const {
+            switch (LayoutChannelMask) {
+                case AV_CH_LAYOUT_5POINT1:
+                    return AL_FORMAT_51CHN8;
+                case AV_CH_LAYOUT_6POINT1:
+                    return AL_FORMAT_61CHN8;
+                case AV_CH_LAYOUT_7POINT1:
+                    return AL_FORMAT_71CHN8;
+                case AV_CH_LAYOUT_MONO:
+                    return AL_FORMAT_MONO8;
+                case AV_CH_LAYOUT_QUAD:
+                    return AL_FORMAT_QUAD8;
+                case AV_CH_LAYOUT_STEREO:
+                    return AL_FORMAT_STEREO8;
+            }
+            throw MediaException(String(u"MediaChannelLayout::toOpenALFormat() LayoutChannelMask"));
+        }
+    };
+
+    static MediaChannelLayout Layout51{6, AV_CH_LAYOUT_5POINT1};
+    static MediaChannelLayout Layout61{7, AV_CH_LAYOUT_6POINT1};
+    static MediaChannelLayout Layout71{8, AV_CH_LAYOUT_7POINT1};
+    static MediaChannelLayout LayoutMono{1, AV_CH_LAYOUT_MONO};
+    static MediaChannelLayout LayoutQuad{4, AV_CH_LAYOUT_QUAD};
+    static MediaChannelLayout LayoutStereo{2, AV_CH_LAYOUT_STEREO};
+
     namespace FFMpeg {
         class MediaCodec final : public Object {
         private:
@@ -357,17 +408,61 @@ namespace eLibrary::Multimedia {
             doDisableCopyAssignConstruct(MediaBuffer)
             friend class MediaSource;
         public:
-            MediaBuffer() noexcept {
+            MediaBuffer() {
                 alGenBuffers(1, &BufferIndex);
+                if (alGetError() != AL_NO_ERROR) throw MediaException(String(u"MediaBuffer::MediaBuffer() alGenBuffers"));
             }
 
-            MediaBuffer(ALenum AudioBufferFormat, const IO::ByteBuffer &AudioBuffer, ALsizei AudioSampleRate) noexcept : BufferObject(AudioBuffer) {
+            MediaBuffer(const MediaChannelLayout &AudioBufferLayout, const IO::ByteBuffer &AudioBuffer, ALsizei AudioSampleRate) : BufferObject(AudioBuffer) {
                 alGenBuffers(1, &BufferIndex);
-                alBufferData(BufferIndex, AudioBufferFormat, AudioBuffer.getBufferContainer(), BufferObject.getBufferLimit(), AudioSampleRate);
+                if (alGetError() != AL_NO_ERROR) throw MediaException(String(u"MediaSource::MediaSource(const MediaChannelLayout&, const IO::ByteBuffer&, ALsizei) alGenSources"));
+                alBufferData(BufferIndex, AudioBufferLayout.toOpenALFormat(), AudioBuffer.getBufferContainer(), BufferObject.getBufferLimit(), AudioSampleRate);
             }
 
             ~MediaBuffer() noexcept {
                 alDeleteBuffers(1, &BufferIndex);
+            }
+        };
+
+        class MediaCaptureDevice final : public Object {
+        private:
+            ALCdevice *DeviceObject;
+
+            doDisableCopyAssignConstruct(MediaCaptureDevice)
+            friend class MediaContext;
+        public:
+            MediaCaptureDevice(const String &DeviceName, ALCsizei DeviceFrequency, const MediaChannelLayout &DeviceLayout) {
+                DeviceObject = alcCaptureOpenDevice(DeviceName.isEmpty() ? nullptr : DeviceName.toU8String().c_str(), DeviceFrequency, DeviceLayout.toOpenALFormat(), 0);
+                if (!DeviceObject) throw MediaException(String(u"MediaCaptureDevice::MediaCaptureDevice(const String&) alcCaptureOpenDevice"));
+            }
+
+            ~MediaCaptureDevice() noexcept {
+                if (DeviceObject) doClose();
+            }
+
+            void doCapture() {
+                if (!DeviceObject) throw MediaException(String(u"MediaCaptureDevice::doCapture() DeviceObject"));
+                alcGetIntegerv(DeviceObject, ALC_CAPTURE_SAMPLES, 0, nullptr);
+                alcCaptureSamples(DeviceObject, nullptr, 0);
+                if (alGetError() != AL_NO_ERROR) throw MediaException(String(u"MediaCaptureDevice::doCapture() alcCaptureStop"));
+            }
+
+            void doClose() {
+                if (!DeviceObject) throw MediaException(String(u"MediaCaptureDevice::doClose() DeviceObject"));
+                alcCaptureCloseDevice(DeviceObject);
+                DeviceObject = nullptr;
+            }
+
+            void doStart() {
+                if (!DeviceObject) throw MediaException(String(u"MediaCaptureDevice::doStart() DeviceObject"));
+                alcCaptureStart(DeviceObject);
+                if (alGetError() != AL_NO_ERROR) throw MediaException(String(u"MediaCaptureDevice::doStart() alcCaptureStart"));
+            }
+
+            void doStop() {
+                if (!DeviceObject) throw MediaException(String(u"MediaCaptureDevice::doStop() DeviceObject"));
+                alcCaptureStop(DeviceObject);
+                if (alGetError() != AL_NO_ERROR) throw MediaException(String(u"MediaCaptureDevice::doStart() alcCaptureStop"));
             }
         };
 
@@ -380,15 +475,11 @@ namespace eLibrary::Multimedia {
         public:
             MediaDevice(const String &DeviceName) {
                 DeviceObject = alcOpenDevice(DeviceName.isEmpty() ? nullptr : DeviceName.toU8String().c_str());
-                if (!DeviceObject)
-                    throw MediaException(String(u"MediaDevice::MediaDevice(const String&) alcOpenDevice"));
+                if (!DeviceObject) throw MediaException(String(u"MediaDevice::MediaDevice(const String&) alcOpenDevice"));
             }
 
             ~MediaDevice() noexcept {
-                if (DeviceObject) {
-                    alcCloseDevice(DeviceObject);
-                    DeviceObject = nullptr;
-                }
+                if (DeviceObject) doClose();
             }
 
             void doClose() {
@@ -404,22 +495,29 @@ namespace eLibrary::Multimedia {
 
             doDisableCopyAssignConstruct(MediaContext)
         public:
+            enum class MediaDistanceModel : ALenum {
+                ModelExponent = AL_EXPONENT_DISTANCE,
+                ModelExponentClamped = AL_EXPONENT_DISTANCE_CLAMPED,
+                ModelInverse = AL_INVERSE_DISTANCE,
+                ModelInverseClamped = AL_INVERSE_DISTANCE_CLAMPED,
+                ModelLinear = AL_LINEAR_DISTANCE,
+                ModelLinearClamped = AL_LINEAR_DISTANCE_CLAMPED,
+                ModelNone = AL_NONE
+            };
+
             MediaContext(const MediaDevice &ContextDevice) {
                 ContextObject = alcCreateContext(ContextDevice.DeviceObject, nullptr);
-                if (!ContextObject)
-                    throw MediaException(String(u"MediaContext::MediaContext(const MediaDevice&) alcCreateContext"));
+                if (!ContextObject) throw MediaException(String(u"MediaContext::MediaContext(const MediaDevice&) alcCreateContext"));
             }
 
             ~MediaContext() noexcept {
-                if (ContextObject) {
-                    alcDestroyContext(ContextObject);
-                    ContextObject = nullptr;
-                }
+                if (ContextObject) doDestroy();
             }
 
             void doDestroy() {
                 if (!ContextObject) throw MediaException(String(u"MediaContext::doDestroy() ContextObject"));
                 alcDestroyContext(ContextObject);
+                ContextObject = nullptr;
             }
 
             void setContextCurrent() const {
@@ -429,6 +527,18 @@ namespace eLibrary::Multimedia {
             static void setContextCurrentNull() noexcept {
                 alcMakeContextCurrent(nullptr);
             }
+
+            static void setDistanceModel(MediaDistanceModel ModelType) noexcept {
+                alDistanceModel((ALenum) ModelType);
+            }
+
+            static void setDopplerFactor(float FactorValue) noexcept {
+                alDopplerFactor(FactorValue);
+            }
+
+            static void setSoundVelocity(float VelocityValue) noexcept {
+                alSpeedOfSound(VelocityValue);
+            }
         };
 
         class MediaSource final : public Object {
@@ -437,8 +547,9 @@ namespace eLibrary::Multimedia {
 
             doDisableCopyAssignConstruct(MediaSource)
         public:
-            MediaSource() noexcept {
+            MediaSource() {
                 alGenSources(1, &SourceIndex);
+                if (alGetError() != AL_NO_ERROR) throw MediaException(String(u"MediaSource::MediaSource() alGenSources"));
             }
 
             ~MediaSource() noexcept {
@@ -461,32 +572,63 @@ namespace eLibrary::Multimedia {
                 alSourceStop(SourceIndex);
             }
 
-            void setAudioGain(float OptionValue) const noexcept {
-                alSourcef(SourceIndex, AL_GAIN, OptionValue);
-            }
-
-            void setAudioPitch(float OptionValue) const noexcept {
-                alSourcef(SourceIndex, AL_PITCH, OptionValue);
-            }
-
-            void setAudioVelocity(float VelocityX, float VelocityY, float VelocityZ) const noexcept {
-                alSource3f(SourceIndex, AL_VELOCITY, VelocityX, VelocityY, VelocityZ);
-            }
-
             void setSourceBuffer(const MediaBuffer &SourceBufferSource) const noexcept {
                 alSourcei(SourceIndex, AL_BUFFER, (ALint) SourceBufferSource.BufferIndex);
             }
 
-            void setSourceDirection(float DirectionX, float DirectionY, float DirectionZ) const noexcept {
+            void setSourceDirection(float DirectionX, float DirectionY, float DirectionZ) const {
                 alSource3f(SourceIndex, AL_DIRECTION, DirectionX, DirectionY, DirectionZ);
+                if (alGetError() != AL_NO_ERROR) throw MediaException(String(u"MediaSource::setSourceDirection(float, float, float) alSource3f"));
             }
 
-            void setSourceLoop(bool OptionValue) const noexcept {
+            void setSourceDistanceMaximum(float OptionValue) const {
+                alSourcef(SourceIndex, AL_MAX_DISTANCE, OptionValue);
+                if (alGetError() != AL_NO_ERROR) throw MediaException(String(u"MediaSource::setSourceDistanceMaximum(float) alSourcef"));
+            }
+
+            void setSourceDistanceReference(float OptionValue) const {
+                alSourcef(SourceIndex, AL_REFERENCE_DISTANCE, OptionValue);
+                if (alGetError() != AL_NO_ERROR) throw MediaException(String(u"MediaSource::setSourceDistanceReference(float) alSourcef"));
+            }
+
+            void setSourceGain(float OptionValue) const {
+                alSourcef(SourceIndex, AL_GAIN, OptionValue);
+                if (alGetError() != AL_NO_ERROR) throw MediaException(String(u"MediaSource::setSourceGain(float) alSourcef"));
+            }
+
+            void setSourceGainMaximum(float OptionValue) const {
+                alSourcef(SourceIndex, AL_MAX_GAIN, OptionValue);
+                if (alGetError() != AL_NO_ERROR) throw MediaException(String(u"MediaSource::setSourceGainMaximum(float) alSourcef"));
+            }
+
+            void setSourceGainMinimum(float OptionValue) const {
+                alSourcef(SourceIndex, AL_MIN_GAIN, OptionValue);
+                if (alGetError() != AL_NO_ERROR) throw MediaException(String(u"MediaSource::setSourceGainMinimum(float) alSourcef"));
+            }
+
+            void setSourceLoop(bool OptionValue) const {
                 alSourcei(SourceIndex, AL_LOOPING, OptionValue);
+                if (alGetError() != AL_NO_ERROR) throw MediaException(String(u"MediaSource::setSourceLoop(bool) alSourcei"));
             }
 
-            void setSourceRelative(bool OptionValue) const noexcept {
+            void setSourcePitch(float OptionValue) const {
+                alSourcef(SourceIndex, AL_PITCH, OptionValue);
+                if (alGetError() != AL_NO_ERROR) throw MediaException(String(u"MediaSource::setSourcePitch(float) alSourcef"));
+            }
+
+            void setSourceRelative(bool OptionValue) const {
                 alSourcei(SourceIndex, AL_SOURCE_RELATIVE, OptionValue);
+                if (alGetError() != AL_NO_ERROR) throw MediaException(String(u"MediaSource::setSourceRelative(bool) alSourcei"));
+            }
+
+            void setSourceRolloffFactor(float OptionValue) const {
+                alSourcef(SourceIndex, AL_ROLLOFF_FACTOR, OptionValue);
+                if (alGetError() != AL_NO_ERROR) throw MediaException(String(u"MediaSource::setSourceRolloffFactor(float) alSourcef"));
+            }
+
+            void setSourceVelocity(float VelocityX, float VelocityY, float VelocityZ) const {
+                alSource3f(SourceIndex, AL_VELOCITY, VelocityX, VelocityY, VelocityZ);
+                if (alGetError() != AL_NO_ERROR) throw MediaException(String(u"MediaSource::setSourceVelocity(float, float, float) alSource3f"));
             }
         };
 

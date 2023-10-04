@@ -32,7 +32,7 @@ namespace eLibrary::Core {
         static bool isPrimeLucas(const Integer &NumberSource) noexcept {
             Integer NumberD(5);
             for (;;) {
-                Integer NumberG(getGreatestCommonFactor(NumberD.getAbsolute(), NumberSource));
+                Integer NumberG(NumberD.getAbsolute().getGreatestCommonFactor(NumberSource));
                 if (NumberG.doCompare(1) > 0 && NumberG.doCompare(NumberSource)) return false;
                 if (!getJocabiSymbol(NumberD, NumberSource).doCompare(-1)) break;
                 if (NumberD.isPositive()) NumberD = NumberD.getOpposite().doSubtraction(2);
@@ -269,17 +269,12 @@ namespace eLibrary::Core {
             return NumberSource >= 0 ? NumberSource : -NumberSource;
         }
 
-        static Integer getGreatestCommonFactor(const Integer &Number1, const Integer &Number2) noexcept {
-            if (Number2.getAbsolute().isZero()) return Number1;
-            return getGreatestCommonFactor(Number2, Number1.doModulo(Number2));
-        }
-
         static Integer getJocabiSymbol(const Integer &NumberMSource, const Integer &NumberNSource) {
             if (NumberNSource.isNegative() || NumberNSource.isEven()) throw ArithmeticException(String(u"Mathematics::getJocabiSymbol(const Integer&, const Integer&) NumberNSource"));
             Integer NumberM(NumberMSource), NumberN(NumberNSource);
             if (NumberM.isNegative() || NumberM.doCompare(NumberN) > 0) NumberM = NumberM.doModulo(NumberN);
             if (NumberM.isZero()) return !NumberNSource.doCompare(1);
-            if (Mathematics::getGreatestCommonFactor(NumberM, NumberN).doCompare(1)) return 0;
+            if (NumberM.getGreatestCommonFactor(NumberN).doCompare(1)) return 0;
             Integer NumberJ(1);
             if (NumberM.isNegative()) {
                 NumberM = NumberM.getOpposite();

@@ -30,13 +30,24 @@ Core::Mathematics
 Project Dependencies:
 + [doctest](https://github.com/doctest/doctest)
 + [ffmpeg](https://ffmpeg.org) for eLibrary::Multimedia
-+ [Libarchive](https://github.com/libarchive/libarchive) for eLibrary::IO
 + [nanobench](https://github.com/martinus/nanobench)
 + [OpenAL Soft](https://github.com/kcat/openal-soft) for eLibrary::Multimedia
 
 Project Repository: [GitHub](https://github.com/eSoftwareOrganization/eLibrary)
 
 Project Update Log:
+> eLibrary V2023.17.0
+- Core::Array Constructor<II>(II, II)(New) Constructor<ElementSourceSize(size_t)>(std::array<E, ElementSourceSize>)(Remove)
+- Core::Fraction Constructor(`Integer::getGreatestCommonFactor` Implementation)
+- Core::Integer doBitShiftLeft(New) getGreatestCommonFactor(Mathematics::getGreatestCommonFactor)
+- Core::NumberBuiltin(IntegerBuiltin)
+- Core::Objects doCompare<T(Integral)>(Remove)
+- Core::SizeEqual(New)
+- Multimedia::MediaBuffer Constructor(const MediaChannelLayout&, const IO::ByteBuffer&, ALsizei)(Constructor(ALenum, const IO::ByteBuffer&, ALsizei))
+- Multimedia::MediaCaptureDevice / doCapture / doClose / doStart / doStop(New)
+- Multimedia::MediaContext ~MediaContext(`MediaContext::doDestroy` Implementation) doDestroy(...) MediaDistanceModel / setDistanceModel / setDopplerFactor / setSoundVelocity(New)
+- Multimedia::MediaDevice ~MediaDevice(`MediaDevice::doClose` Implementation)
+- Multimedia::MediaSource setSourceDistanceMaximum / setSourceDistanceReference / setSourceGainMaximum / setSourceGainMinimum / setSourceRolloffFactor(New) setSourceGain(setAudioGain) setSourcePitch(setAudioPitch) setSourceVelocity(setAudioVelocity)
 > eLibrary V2023.16.0
 - Core::ConcurrentUtility doCompareAndExchange<T>(New) doCompareAndExchange16 / doCompareAndExchange32 / doCompareAndExchange64(doCompareAndExchange)
 - Core::TypeBase / getTypeName / isClass / isEnumeration(New)

@@ -1,6 +1,7 @@
 cmake_minimum_required(VERSION 3.17)
 
-cmake_policy(SET CMP0091 NEW)
+cmake_policy(SET CMP0003 NEW)
+cmake_policy(SET CMP0005 NEW)
 
 option(ELIBRARY_MODULE_IO "eLibrary::IO" ON)
 option(ELIBRARY_MODULE_MULTIMEDIA "eLibrary::Multimedia" OFF)
@@ -21,9 +22,10 @@ if(ELIBRARY_MODULE_NETWORK)
     add_compile_definitions(eLibraryFeature_Network=1)
 endif()
 
-project(eLibrary DESCRIPTION "An all-in-one cpp library" VERSION 2023.16)
+project(eLibrary DESCRIPTION "An all-in-one cpp library" VERSION 2023.17.0)
 
 set(CMAKE_CXX_STANDARD 23)
+set(CMAKE_CXX_STANDARD_REQUIRED TRUE)
 
 include_directories(eLibrary)
 
@@ -47,7 +49,7 @@ if(ELIBRARY_PACKAGE)
     include(CPack)
 endif()
 
+enable_testing()
 if(ELIBRARY_UNIT_TEST)
-    enable_testing()
     add_subdirectory(eLibraryTest)
 endif()

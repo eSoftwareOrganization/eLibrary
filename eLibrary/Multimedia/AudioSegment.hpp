@@ -8,57 +8,6 @@
 #include <Multimedia/MediaUtility.hpp>
 
 namespace eLibrary::Multimedia {
-    class MediaChannelLayout final {
-    private:
-        uint8_t LayoutChannelCount;
-        uint64_t LayoutChannelMask;
-    public:
-        constexpr MediaChannelLayout() noexcept : LayoutChannelCount(0), LayoutChannelMask(0) {};
-
-        constexpr MediaChannelLayout(uint8_t LayoutChannelCountSource, uint64_t LayoutChannelMaskSource) noexcept : LayoutChannelCount(LayoutChannelCountSource), LayoutChannelMask(LayoutChannelMaskSource) {}
-
-        constexpr MediaChannelLayout(const AVChannelLayout &LayoutSource) noexcept : LayoutChannelCount((uint8_t) LayoutSource.nb_channels), LayoutChannelMask(LayoutSource.u.mask) {
-            if (!LayoutChannelMask) LayoutChannelMask = AV_CH_LAYOUT_STEREO;
-        }
-
-        uint8_t getChannelCount() const noexcept {
-            return LayoutChannelCount;
-        }
-
-        uint64_t getChannelMask() const noexcept {
-            return LayoutChannelMask;
-        }
-
-        AVChannelLayout toFFMpegFormat() const noexcept {
-            return AV_CHANNEL_LAYOUT_MASK(LayoutChannelCount, LayoutChannelMask);
-        }
-
-        auto toOpenALFormat() const {
-            switch (LayoutChannelMask) {
-                case AV_CH_LAYOUT_5POINT1:
-                    return AL_FORMAT_51CHN8;
-                case AV_CH_LAYOUT_6POINT1:
-                    return AL_FORMAT_61CHN8;
-                case AV_CH_LAYOUT_7POINT1:
-                    return AL_FORMAT_71CHN8;
-                case AV_CH_LAYOUT_MONO:
-                    return AL_FORMAT_MONO8;
-                case AV_CH_LAYOUT_QUAD:
-                    return AL_FORMAT_QUAD8;
-                case AV_CH_LAYOUT_STEREO:
-                    return AL_FORMAT_STEREO8;
-            }
-            throw MediaException(String(u"MediaChannelLayout::toOpenALFormat() LayoutChannelMask"));
-        }
-    };
-
-    static MediaChannelLayout Layout51{6, AV_CH_LAYOUT_5POINT1};
-    static MediaChannelLayout Layout61{7, AV_CH_LAYOUT_6POINT1};
-    static MediaChannelLayout Layout71{8, AV_CH_LAYOUT_7POINT1};
-    static MediaChannelLayout LayoutMono{1, AV_CH_LAYOUT_MONO};
-    static MediaChannelLayout LayoutQuad{4, AV_CH_LAYOUT_QUAD};
-    static MediaChannelLayout LayoutStereo{2, AV_CH_LAYOUT_STEREO};
-
     class AudioSegment final : public Object {
     private:
         MediaChannelLayout AudioChannelLayout;
@@ -257,7 +206,7 @@ namespace eLibrary::Multimedia {
             AudioSWRContext.doInitialize();
             auto *AudioDataBuffer(AudioDataOutput.getBufferContainer());
             AudioSWRContext.doConvert((const uint8_t**) AudioData, &AudioDataBuffer, AudioDataSize);
-            return {AudioChannelLayout.toOpenALFormat(), AudioDataOutput, (ALsizei) AudioSampleRate};
+            return {AudioChannelLayout, AudioDataOutput, (ALsizei) AudioSampleRate};
         }
     };
 }

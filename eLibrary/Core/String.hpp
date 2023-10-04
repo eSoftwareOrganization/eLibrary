@@ -215,7 +215,7 @@ namespace eLibrary::Core {
             return {std::string{ObjectNameSource.data() + 69, ObjectNameSource.data() + ObjectNameSource.size()}};
 #else
 #include <typeinfo>
-            return {typeid(std::declval<T>()).name()};
+            return {typeid(T).name()};
 #endif
         }
 
@@ -235,7 +235,7 @@ namespace eLibrary::Core {
     public:
         constexpr StringStream() noexcept = default;
 
-        eLibraryAPI explicit StringStream(uintmax_t CharacterCapacitySource);
+        eLibraryAPI explicit StringStream(uintmax_t);
 
         ~StringStream() noexcept {
             doClear();

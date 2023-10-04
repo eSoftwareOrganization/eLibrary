@@ -314,10 +314,11 @@ namespace eLibrary::Core {
 
         constexpr Array() noexcept = default;
 
-        template<size_t ElementSourceSize>
-        explicit Array(const std::array<E, ElementSourceSize> &ElementSource) noexcept : ElementSize(ElementSourceSize) {
-            ElementContainer = MemoryAllocator::newArray<E>(ElementSize);
-            Arrays::doCopy(ElementSource.begin(), ElementSource.end(), ElementContainer);
+        template<typename II>
+        explicit Array(II ElementStart, II ElementStop) noexcept {
+            Arrays::doTraverse(ElementStart, ElementStop, [&](const E &ElementCurrent){
+                addElement(ElementCurrent);
+            });
         }
 
         Array(std::initializer_list<E> ElementSource) noexcept : ElementSize(ElementSource.size()) {
@@ -360,6 +361,13 @@ namespace eLibrary::Core {
         }
 
         const E &getElement(intmax_t ElementIndex) const {
+            if (ElementIndex < 0) ElementIndex += ElementSize;
+            Arrays::doCheckGE(ElementIndex, 0);
+            Arrays::doCheckL(ElementIndex, ElementSize);
+            return ElementContainer[ElementIndex];
+        }
+
+        E &getElement(intmax_t ElementIndex) {
             if (ElementIndex < 0) ElementIndex += ElementSize;
             Arrays::doCheckGE(ElementIndex, 0);
             Arrays::doCheckL(ElementIndex, ElementSize);

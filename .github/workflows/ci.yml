@@ -1,29 +1,45 @@
-name: CMake
+name: CI
 
-on:
-  push:
-    branches: [ "master" ]
-  pull_request:
-    branches: [ "master" ]
-
-env:
-  BUILD_TYPE: Release
+on: [push, pull_request]
 
 jobs:
   build:
-    runs-on: ${{ matrix.os }}
-
+    name: ${{ matrix.config.name }}
+    runs-on: ${{ matrix.config.os }}
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-latest, macos-latest, windows-latest]
-        include:
-          - os: windows-latest
-            triplet: x64-windows
-          - os: ubuntu-latest
-            triplet: x64-linux
-          - os: macos-latest
-            triplet: x64-osx
+        config:
+        - {
+            name: "Linux-Debug",
+            os: ubuntu-latest,
+            build_type: "Debug"
+        }
+        - {
+            name: "Linux Release",
+            os: ubuntu-latest,
+            build_type: "Release"
+        }
+        - {
+            name: "MacOS-Debug",
+            os: macos-latest,
+            build_type: "Debug"
+        }
+        - {
+            name: "MacOS-Release",
+            os: macos-latest,
+            build_type: "Release"
+        }
+        - {
+            name: "Windows-Debug",
+            os: windows-latest,
+            build_type: "Debug"
+        }
+        - {
+            name: "Windows-Release",
+            os: windows-latest,
+            build_type: "Release"
+        }
     steps:
       - uses: actions/checkout@v3
 
@@ -33,15 +49,18 @@ jobs:
       - name: VCPKG Setup
         uses: lukka/run-vcpkg@v11
         with:
-          vcpkgGitCommitId: a86e61b9609dfda9c5c8e45db91bfe11bd49b20d
+          vcpkgGitCommitId: 768619a21ef7fb6c5d029a7b141bb7fcef579336
 
       - name: LCOV Setup
         uses: hrishikesh-kadam/setup-lcov@v1
 
+      - name: CMake Setup
+        run: |
+          cmake -DCMAKE_BUILD_TYPE=${{ matrix.config.build_type }} -DCMAKE_TOOLCHAIN_FILE=./vcpkg/scripts/buildsystems/vcpkg.cmake -DELIBRARY_UNIT_TEST=ON -S . -B build
+
       - name: CMake Build
         run: |
-          cmake -DCMAKE_TOOLCHAIN_FILE=./vcpkg/scripts/buildsystems/vcpkg.cmake -DELIBRARY_UNIT_TEST=ON -S . -B build
-          cmake --build build
+          cmake --build build --config ${{ matrix.config.build_type }}
 
       - name: Codecov Uploading
         uses: codecov/codecov-action@v3

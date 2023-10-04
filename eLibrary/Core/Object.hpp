@@ -35,13 +35,6 @@ namespace eLibrary::Core {
             if constexpr (sizeof...(Fs)) doCall(FunctionList...);
         }
 
-        template<std::integral T>
-        static intmax_t doCompare(T Object1, T Object2) noexcept {
-            if (Object1 > Object2) return 1;
-            if (Object1 < Object2) return -1;
-            return 0;
-        }
-
         template<Comparable T>
         static intmax_t doCompare(const T &Object1, const T &Object2) {
             return Object1.doCompare(Object2);
