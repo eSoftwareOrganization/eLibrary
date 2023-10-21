@@ -2,6 +2,9 @@
 using namespace eLibrary;
 using namespace eLibrary::Core;
 
+#undef max
+#undef min
+
 #define DOCTEST_CONFIG_IMPLEMENT
 #include "3rd_party/doctest.h"
 #define ANKERL_NANOBENCH_IMPLEMENT
@@ -12,13 +15,13 @@ using namespace eLibrary::Core;
 #define doGenerateSigned() (RandomEngine() & 1 ? RandomEngine() : -intmax_t(RandomEngine()))
 
 ankerl::nanobench::Bench TestBench;
-std::mt19937 RandomEngine;
-std::mt19937_64 RandomEngine64;
-std::random_device RandomDevice;
+::std::mt19937 RandomEngine;
+::std::mt19937_64 RandomEngine64;
+::std::random_device RandomDevice;
 
 TEST_SUITE("Container") {
     TEST_CASE("ArrayList") {
-        ArrayList<uintmax_t> NumberList;
+        ArrayList<Integer> NumberList;
         for (uintmax_t NumberIndex = 0;NumberIndex < 10000;++NumberIndex)
             NumberList.addElement(RandomEngine() % Objects::getMaximum(NumberList.getElementSize(), 1), RandomEngine());
         CHECK_EQ(NumberList.getElementSize(), 10000);

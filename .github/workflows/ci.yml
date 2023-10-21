@@ -41,7 +41,7 @@ jobs:
             build_type: "Release"
         }
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
 
       - name: Nasm Setup
         uses: ilammy/setup-nasm@v1
@@ -49,7 +49,7 @@ jobs:
       - name: VCPKG Setup
         uses: lukka/run-vcpkg@v11
         with:
-          vcpkgGitCommitId: 768619a21ef7fb6c5d029a7b141bb7fcef579336
+          vcpkgGitCommitId: 5731e5bb8045ec33045b7247819cf68aef554a9f
 
       - name: LCOV Setup
         uses: hrishikesh-kadam/setup-lcov@v1
@@ -63,7 +63,7 @@ jobs:
           cmake --build build --config ${{ matrix.config.build_type }}
 
       - name: Codecov Uploading
-        uses: codecov/codecov-action@v3
+        uses: codecov/codecov-action@v4
         env:
           file: coverage.info
           token: ${{secrets.CODECOV_TOKEN}}

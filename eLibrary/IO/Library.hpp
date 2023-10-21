@@ -20,13 +20,11 @@ namespace eLibrary::IO {
     /**
      * Support for loading libraries at runtime
      */
-    class Library final : public Object {
+    class Library final : public Object, public NonCopyable {
     private:
         LibraryHandleType LibraryHandle;
 
         constexpr Library(LibraryHandleType LibraryHandleSource) noexcept : LibraryHandle(LibraryHandleSource) {}
-
-        doDisableCopyAssignConstruct(Library)
     public:
         ~Library() noexcept {
             if (LibraryHandle) {

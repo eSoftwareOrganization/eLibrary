@@ -68,12 +68,10 @@ namespace eLibrary::Network {
         OptionSendTimeout = SO_SNDTIMEO,
     };
 
-    class DatagramSocket final : public Object {
+    class DatagramSocket final : public Object, public NonCopyable {
     private:
         NetworkSocketDescriptor SocketDescriptor;
         NetworkSocketAddress SocketAddress;
-
-        doDisableCopyAssignConstruct(DatagramSocket)
     public:
         explicit DatagramSocket(const NetworkSocketAddress &AddressSource) : SocketAddress(AddressSource) {
             if (AddressSource.getSocketAddress().getAddressProtocol() == NetworkAddress::NetworkAddressProtocol::ProtocolUnknown)
@@ -130,15 +128,13 @@ namespace eLibrary::Network {
 #endif
     };
 
-    class StreamSocket final : public Object {
+    class StreamSocket final : public Object, public NonCopyable {
     private:
         bool SocketConnected = false;
         NetworkSocketDescriptor SocketDescriptor;
         NetworkSocketAddress SocketAddress;
 
         StreamSocket(NetworkSocketDescriptor SocketDescriptorSource, NetworkSocketAddress AddressSource) noexcept : SocketConnected(true), SocketDescriptor(Objects::doMove(SocketDescriptorSource)), SocketAddress(Objects::doMove(AddressSource)) {}
-
-        doDisableCopyAssignConstruct(StreamSocket)
 
         friend class SocketInputStream;
         friend class SocketOutputStream;
@@ -196,13 +192,11 @@ namespace eLibrary::Network {
         }
     };
 
-    class StreamSocketServer final : public Object {
+    class StreamSocketServer final : public Object, public NonCopyable {
     private:
         bool SocketBound = false;
         NetworkSocketDescriptor SocketDescriptor;
         NetworkSocketAddress SocketAddress;
-
-        doDisableCopyAssignConstruct(StreamSocketServer)
     public:
         explicit StreamSocketServer(const NetworkSocketAddress &AddressSource) : SocketAddress(AddressSource) {
             if (AddressSource.getSocketAddress().getAddressProtocol() == NetworkAddress::NetworkAddressProtocol::ProtocolUnknown)
@@ -278,8 +272,6 @@ namespace eLibrary::Network {
         const NetworkSocketDescriptor *SocketDescriptor;
 
         SocketInputStream(const StreamSocket &SocketSource) noexcept : SocketDescriptor(&SocketSource.SocketDescriptor) {}
-
-        doDisableCopyAssignConstruct(SocketInputStream)
     public:
         void doClose() override {
             SocketDescriptor = nullptr;
@@ -316,8 +308,6 @@ namespace eLibrary::Network {
         const NetworkSocketDescriptor *SocketDescriptor;
 
         SocketOutputStream(const StreamSocket &SocketSource) noexcept : SocketDescriptor(&SocketSource.SocketDescriptor) {}
-
-        doDisableCopyAssignConstruct(SocketOutputStream)
     public:
         void doClose() noexcept override {
             SocketDescriptor = nullptr;

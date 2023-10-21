@@ -9,7 +9,7 @@
 #include <Network/Exception.hpp>
 
 #if eLibrarySystem(Windows)
-#include <winsock2.h>
+#include <ws2tcpip.h>
 
 typedef SOCKET SocketHandleType;
 #else
@@ -45,7 +45,7 @@ namespace eLibrary::Network {
 
         explicit NetworkAddress(const in6_addr &AddressSource) : AddressProtocol(NetworkAddressProtocol::ProtocolIPv6) {
             AddressFieldList.doAssign(Array<uint8_t>::doAllocate(16));
-            Arrays::doCopy(AddressSource.s6_addr, 16, AddressFieldList.begin());
+            Collections::doCopy(AddressSource.s6_addr, 16, AddressFieldList.begin());
         }
 
         auto getAddressFamily() const noexcept {
@@ -118,7 +118,7 @@ namespace eLibrary::Network {
         auto toAddressIn6() const {
             if (AddressProtocol == NetworkAddressProtocol::ProtocolIPv6) {
                 in6_addr AddressResult{};
-                Arrays::doCopy(AddressFieldList.begin(), 16, AddressResult.s6_addr);
+                Collections::doCopy(AddressFieldList.begin(), 16, AddressResult.s6_addr);
                 return AddressResult;
             }
             throw NetworkException(String(u"NetworkAddress::toAddressIn6() AddressProtocol"));
@@ -147,8 +147,6 @@ namespace eLibrary::Network {
     };
 
     class NetworkSocketDescriptor final : public IO::FileDescriptor {
-    private:
-        doDisableCopyAssignConstruct(NetworkSocketDescriptor)
     public:
         doEnableMoveAssignConstruct(NetworkSocketDescriptor)
 

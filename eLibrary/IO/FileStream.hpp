@@ -24,8 +24,6 @@ namespace eLibrary::IO {
         static int getOpenOption(FileOption OptionCurrent, Os ...OptionList) noexcept {
             return (int) OptionCurrent | getOpenOption(OptionList...);
         }
-
-        doDisableCopyAssignConstruct(FileInputStream)
     public:
         constexpr FileInputStream() noexcept = default;
 
@@ -38,7 +36,7 @@ namespace eLibrary::IO {
             if (isAvailable()) throw IOException(String(u"FileInputStream::doOpen<Os...>(const String&, Os...) isAvailable"));
             int StreamOption = O_RDONLY;
             if constexpr (sizeof...(StreamOptionList) > 0) StreamOption |= getOpenOption(StreamOptionList...);
-            StreamDescriptor.doAssign(::open(StreamPath.toU8String().c_str(), StreamOption));
+            StreamDescriptor.doAssign(::open(StreamPath.toU8String().c_str(), StreamOption, 0777));
             if (!isAvailable()) throw IOException(String(u"FileInputStream::doOpen<Os...>(const String&, Os...) isAvailable"));
         }
 
@@ -84,8 +82,6 @@ namespace eLibrary::IO {
         static int getOpenOption(FileOption OptionCurrent, Os ...OptionList) noexcept {
             return (int) OptionCurrent | getOpenOption(OptionList...);
         }
-
-        doDisableCopyAssignConstruct(FileOutputStream)
     public:
         constexpr FileOutputStream() noexcept = default;
 
@@ -102,7 +98,7 @@ namespace eLibrary::IO {
             if (isAvailable()) throw IOException(String(u"FileOutputStream::doOpen<Os...>(const String&, Os...) isAvailable"));
             int StreamOption = O_WRONLY;
             if constexpr (sizeof...(StreamOptionList) > 0) StreamOption |= getOpenOption(StreamOptionList...);
-            StreamDescriptor.doAssign(::open(StreamPath.toU8String().c_str(), StreamOption));
+            StreamDescriptor.doAssign(::open(StreamPath.toU8String().c_str(), StreamOption, 0777));
             if (!isAvailable()) throw IOException(String(u"FileOutputStream::doOpen<Os...>(const String&, Os...) isAvailable"));
         }
 

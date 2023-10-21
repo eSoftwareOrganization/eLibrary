@@ -14,7 +14,7 @@ namespace eLibrary::Core {
             E NodeValue;
             DoubleLinkedNode *NodeNext = nullptr, *NodePrevious = nullptr;
 
-            constexpr explicit DoubleLinkedNode(const E &NodeValueSource) noexcept(std::is_nothrow_copy_constructible_v<E>) : NodeValue(NodeValueSource) {}
+            constexpr explicit DoubleLinkedNode(const E &NodeValueSource) : NodeValue(NodeValueSource) {}
         };
 
         template<typename E>
@@ -22,7 +22,7 @@ namespace eLibrary::Core {
             E NodeValue;
             SingleLinkedNode *NodeNext = nullptr;
 
-            constexpr explicit SingleLinkedNode(const E &NodeValueSource) noexcept(std::is_nothrow_copy_constructible_v<E>) : NodeValue(NodeValueSource) {}
+            constexpr explicit SingleLinkedNode(const E &NodeValueSource) : NodeValue(NodeValueSource) {}
         };
     }
 
@@ -33,7 +33,7 @@ namespace eLibrary::Core {
         };
 
         void *AnyValue = nullptr;
-        const std::type_info *AnyType = nullptr;
+        const ::std::type_info *AnyType = nullptr;
         void (*AnyFunction)(AnyOperation, Any*, void*) = nullptr;
 
         template<typename T>
@@ -43,7 +43,7 @@ namespace eLibrary::Core {
                     ManagerObject->AnyValue = MemoryAllocator::newObject<T>(* (const T*) ManagerSource);
                     break;
                 case AnyOperation::OperationDestroy:
-                    delete (const T*) ManagerObject->AnyValue;
+                    MemoryAllocator::deleteObject((const T*) ManagerObject->AnyValue);
                     break;
                 case AnyOperation::OperationMove:
                     ManagerObject->AnyValue = MemoryAllocator::newObject<T>(Objects::doMove(* (const T*) ManagerSource));
@@ -67,7 +67,7 @@ namespace eLibrary::Core {
         }
 
         template<typename T, typename ...Ts>
-        Any(std::in_place_t, Ts &&...ParameterList) noexcept(std::is_nothrow_constructible_v<T, Ts...>) {
+        Any(::std::in_place_t, Ts &&...ParameterList) {
             doAssign(T(Objects::doForward<Ts>(ParameterList)...));
         }
 
@@ -95,7 +95,7 @@ namespace eLibrary::Core {
         }
 
         template<typename T>
-        void doAssign(const T &AnySource) noexcept(std::is_nothrow_copy_constructible<T>::value) {
+        void doAssign(const T &AnySource) {
             doReset();
             AnyFunction = &doExecute<T>;
             AnyType = &typeid(T);
@@ -103,7 +103,7 @@ namespace eLibrary::Core {
         }
 
         template<typename T>
-        void doAssign(T &&AnySource) noexcept(std::is_nothrow_move_constructible<T>::value) {
+        void doAssign(T &&AnySource) {
             doReset();
             AnyFunction = &doExecute<T>;
             AnyType = &typeid(T);
@@ -123,8 +123,10 @@ namespace eLibrary::Core {
 
         template<typename T>
         auto getValue() const {
-            if (&typeid(T) != AnyType) throw TypeException(String(u"Any::getValue<T>()"));
-            if (!hasValue()) throw Exception(String(u"Any::getValue<T>() hasValue"));
+            if (&typeid(T) != AnyType) [[unlikely]]
+                throw TypeException(String(u"Any::getValue<T>()"));
+            if (!hasValue()) [[unlikely]]
+                throw Exception(String(u"Any::getValue<T>() hasValue"));
             return *((T*) AnyValue);
         }
 
@@ -137,28 +139,28 @@ namespace eLibrary::Core {
         }
     };
 
-    class Arrays final : public Object {
+    class Collections final : public Object {
     public:
-        constexpr Arrays() noexcept = delete;
+        constexpr Collections() noexcept = delete;
 
         static void doCheckG(auto IndexSource, auto IndexStart) {
-            if (IndexSource <= IndexStart)
-                throw IndexException(String(u"Arrays::doCheckG(auto, auto) IndexSource"));
+            if (IndexSource <= IndexStart) [[unlikely]]
+                throw IndexException(String(u"Collections::doCheckG(auto, auto) IndexSource"));
         }
 
         static void doCheckGE(auto IndexSource, auto IndexStart) {
-            if (IndexSource < IndexStart)
-                throw IndexException(String(u"Arrays::doCheckStartGE(auto, auto) IndexSource"));
+            if (IndexSource < IndexStart) [[unlikely]]
+                throw IndexException(String(u"Collections::doCheckStartGE(auto, auto) IndexSource"));
         }
 
         static void doCheckL(auto IndexSource, auto IndexStop) {
-            if (IndexSource >= IndexStop)
-                throw IndexException(String(u"Arrays::doCheckL(auto, auto) IndexSource"));
+            if (IndexSource >= IndexStop) [[unlikely]]
+                throw IndexException(String(u"Collections::doCheckL(auto, auto) IndexSource"));
         }
 
         static void doCheckLE(auto IndexSource, auto IndexStop) {
-            if (IndexSource > IndexStop)
-                throw IndexException(String(u"Arrays::doCheckLE(auto, auto) IndexSource"));
+            if (IndexSource > IndexStop) [[unlikely]]
+                throw IndexException(String(u"Collections::doCheckLE(auto, auto) IndexSource"));
         }
 
         template<typename II, typename OI>
@@ -239,7 +241,7 @@ namespace eLibrary::Core {
         E *ElementCurrent;
     public:
         using difference_type = intmax_t;
-        using iterator_category = std::contiguous_iterator_tag;
+        using iterator_category = ::std::contiguous_iterator_tag;
         using value_type = E;
 
         constexpr ArrayIterator() noexcept : ElementCurrent(nullptr) {}
@@ -315,15 +317,15 @@ namespace eLibrary::Core {
         constexpr Array() noexcept = default;
 
         template<typename II>
-        explicit Array(II ElementStart, II ElementStop) noexcept {
-            Arrays::doTraverse(ElementStart, ElementStop, [&](const E &ElementCurrent){
+        Array(II ElementStart, II ElementStop) noexcept {
+            Collections::doTraverse(ElementStart, ElementStop, [&](const E &ElementCurrent){
                 addElement(ElementCurrent);
             });
         }
 
-        Array(std::initializer_list<E> ElementSource) noexcept : ElementSize(ElementSource.size()) {
+        Array(::std::initializer_list<E> ElementSource) noexcept : ElementSize(ElementSource.size()) {
             ElementContainer = MemoryAllocator::newArray<E>(ElementSize);
-            Arrays::doCopy(ElementSource.begin(), ElementSource.end(), ElementContainer);
+            Collections::doCopy(ElementSource.begin(), ElementSource.end(), ElementContainer);
         }
 
         template<typename ...Es>
@@ -353,7 +355,7 @@ namespace eLibrary::Core {
             if (Objects::getAddress(ElementSource) == this) return;
             MemoryAllocator::deleteArray(ElementContainer);
             ElementContainer = MemoryAllocator::newArray<E>(ElementSize = ElementSource.ElementSize);
-            Arrays::doCopy(ElementSource.ElementContainer, ElementSize, ElementContainer);
+            Collections::doCopy(ElementSource.ElementContainer, ElementSize, ElementContainer);
         }
 
         const char *getClassName() const noexcept override {
@@ -362,15 +364,15 @@ namespace eLibrary::Core {
 
         const E &getElement(intmax_t ElementIndex) const {
             if (ElementIndex < 0) ElementIndex += ElementSize;
-            Arrays::doCheckGE(ElementIndex, 0);
-            Arrays::doCheckL(ElementIndex, ElementSize);
+            Collections::doCheckGE(ElementIndex, 0);
+            Collections::doCheckL(ElementIndex, ElementSize);
             return ElementContainer[ElementIndex];
         }
 
         E &getElement(intmax_t ElementIndex) {
             if (ElementIndex < 0) ElementIndex += ElementSize;
-            Arrays::doCheckGE(ElementIndex, 0);
-            Arrays::doCheckL(ElementIndex, ElementSize);
+            Collections::doCheckGE(ElementIndex, 0);
+            Collections::doCheckL(ElementIndex, ElementSize);
             return ElementContainer[ElementIndex];
         }
 
@@ -384,8 +386,8 @@ namespace eLibrary::Core {
 
         void setElement(intmax_t ElementIndex, const E &ElementSource) {
             if (ElementIndex < 0) ElementIndex += ElementSize;
-            Arrays::doCheckGE(ElementIndex, 0);
-            Arrays::doCheckL(ElementIndex, ElementSize);
+            Collections::doCheckGE(ElementIndex, 0);
+            Collections::doCheckL(ElementIndex, ElementSize);
             ElementContainer[ElementIndex] = ElementSource;
         }
 
@@ -402,15 +404,15 @@ namespace eLibrary::Core {
      * Support for operating dynamic arrays
      */
     template<typename E>
-    class ArrayList final : public Object {
-    private:
+    class ArrayList : public Object {
+    protected:
         intmax_t ElementCapacity = 0, ElementSize = 0;
         E *ElementContainer = nullptr;
 
         ArrayList(E *ElementSource, intmax_t ElementSourceSize) noexcept : ElementCapacity(1), ElementSize(ElementSourceSize) {
             while (ElementCapacity < ElementSourceSize) ElementCapacity <<= 1;
             ElementContainer = MemoryAllocator::newArray<E>(ElementCapacity);
-            Arrays::doCopy(ElementSource, ElementSource + ElementSourceSize, ElementContainer);
+            Collections::doCopy(ElementSource, ElementSource + ElementSourceSize, ElementContainer);
         }
 
         template<typename ...Es>
@@ -418,6 +420,9 @@ namespace eLibrary::Core {
             ElementContainer[ElementSize++] = ElementCurrent;
             if constexpr (sizeof...(ElementList)) doInitialize(ElementList...);
         }
+
+        template<typename>
+        friend class ArraySet;
     public:
         doEnableCopyAssignConstruct(ArrayList)
         doEnableMoveAssignConstruct(ArrayList)
@@ -427,7 +432,7 @@ namespace eLibrary::Core {
         explicit ArrayList(const Array<E> &ElementSource) noexcept : ElementCapacity(1), ElementSize(ElementSource.getElementSize()) {
             while (ElementCapacity < ElementSize) ElementCapacity <<= 1;
             ElementContainer = MemoryAllocator::newArray<E>(ElementCapacity);
-            Arrays::doCopy(ElementSource.ElementContainer, ElementSize, ElementContainer);
+            Collections::doCopy(ElementSource.ElementContainer, ElementSize, ElementContainer);
         }
 
         template<typename ...Es>
@@ -437,16 +442,16 @@ namespace eLibrary::Core {
             doInitialize(ElementList...);
         }
 
-        ArrayList(std::initializer_list<E> ElementList) noexcept : ElementCapacity(1), ElementSize((intmax_t) ElementList.size()) {
+        ArrayList(::std::initializer_list<E> ElementList) noexcept : ElementCapacity(1), ElementSize((intmax_t) ElementList.size()) {
             while (ElementCapacity < ElementSize)
                 ElementCapacity <<= 1;
             ElementContainer = MemoryAllocator::newArray<E>(ElementCapacity);
-            Arrays::doCopy(ElementList.begin(), ElementList.end(), ElementContainer);
+            Collections::doCopy(ElementList.begin(), ElementList.end(), ElementContainer);
         }
 
         template<typename II>
         ArrayList(II ElementStart, II ElementStop) noexcept {
-            Arrays::doTraverse(ElementStart, ElementStop, [&](const E &ElementCurrent){
+            Collections::doTraverse(ElementStart, ElementStop, [&](const E &ElementCurrent){
                 addElement(ElementCurrent);
             });
         }
@@ -459,10 +464,10 @@ namespace eLibrary::Core {
             if (!ElementCapacity) ElementContainer = MemoryAllocator::newArray<E>(ElementCapacity = 1);
             if (ElementSize == ElementCapacity) {
                 E *ElementBuffer = MemoryAllocator::newArray<E>(ElementSize);
-                Arrays::doMove(ElementContainer, ElementSize, ElementBuffer);
+                Collections::doMove(ElementContainer, ElementSize, ElementBuffer);
                 MemoryAllocator::deleteArray(ElementContainer);
                 ElementContainer = MemoryAllocator::newArray<E>(ElementCapacity <<= 1);
-                Arrays::doMove(ElementBuffer, ElementSize, ElementContainer);
+                Collections::doMove(ElementBuffer, ElementSize, ElementContainer);
                 MemoryAllocator::deleteArray(ElementBuffer);
             }
             ElementContainer[ElementSize++] = ElementSource;
@@ -470,18 +475,18 @@ namespace eLibrary::Core {
 
         void addElement(intmax_t ElementIndex, const E &ElementSource) {
             if (ElementIndex < 0) ElementIndex += ElementSize + 1;
-            Arrays::doCheckGE(ElementIndex, 0);
-            Arrays::doCheckLE(ElementIndex, ElementSize);
+            Collections::doCheckGE(ElementIndex, 0);
+            Collections::doCheckLE(ElementIndex, ElementSize);
             if (!ElementCapacity) ElementContainer = MemoryAllocator::newArray<E>(ElementCapacity = 1);
             if (ElementSize == ElementCapacity) {
                 E *ElementBuffer = MemoryAllocator::newArray<E>(ElementSize);
-                Arrays::doMove(ElementContainer, ElementContainer + ElementSize, ElementBuffer);
+                Collections::doMove(ElementContainer, ElementContainer + ElementSize, ElementBuffer);
                 MemoryAllocator::deleteArray(ElementContainer);
                 ElementContainer = MemoryAllocator::newArray<E>(ElementCapacity <<= 1);
-                Arrays::doMove(ElementBuffer, ElementBuffer + ElementSize, ElementContainer);
+                Collections::doMove(ElementBuffer, ElementBuffer + ElementSize, ElementContainer);
                 MemoryAllocator::deleteArray(ElementBuffer);
             }
-            Arrays::doMoveBackward(ElementContainer + ElementIndex, ElementContainer + ElementSize, ElementContainer + ElementSize + 1);
+            Collections::doMoveBackward(ElementContainer + ElementIndex, ElementContainer + ElementSize, ElementContainer + ElementSize + 1);
             ElementContainer[ElementIndex] = ElementSource;
             ++ElementSize;
         }
@@ -501,7 +506,7 @@ namespace eLibrary::Core {
             if (Objects::getAddress(ElementSource) == this) return;
             MemoryAllocator::deleteArray(ElementContainer);
             if (ElementCapacity) ElementContainer = MemoryAllocator::newArray<E>(ElementCapacity = ElementSource.ElementCapacity);
-            Arrays::doCopy(ElementSource.ElementContainer, (ElementSize = ElementSource.ElementSize), ElementContainer);
+            Collections::doCopy(ElementSource.ElementContainer, (ElementSize = ElementSource.ElementSize), ElementContainer);
         }
 
         void doClear() noexcept {
@@ -513,15 +518,15 @@ namespace eLibrary::Core {
 
         ArrayList<E> doConcat(const ArrayList<E> &ElementSource) const noexcept {
             E *ElementBuffer = MemoryAllocator::newArray<E>(ElementSize + ElementSource.ElementSize);
-            Arrays::doCopy(ElementContainer, ElementSize, ElementBuffer);
-            Arrays::doCopy(ElementSource.ElementContainer, ElementSource.ElementSize, ElementBuffer + ElementSize);
+            Collections::doCopy(ElementContainer, ElementSize, ElementBuffer);
+            Collections::doCopy(ElementSource.ElementContainer, ElementSource.ElementSize, ElementBuffer + ElementSize);
             return {ElementBuffer, ElementSize + ElementSource.ElementSize};
         }
 
         void doReverse() noexcept {
             E *ElementBuffer = MemoryAllocator::newArray<E>(ElementSize);
-            Arrays::doMove(ElementContainer, ElementSize, ElementBuffer);
-            Arrays::doMoveReverse(ElementBuffer, ElementBuffer + ElementSize, ElementContainer);
+            Collections::doMove(ElementContainer, ElementSize, ElementBuffer);
+            Collections::doMoveReverse(ElementBuffer, ElementBuffer + ElementSize, ElementContainer);
             MemoryAllocator::deleteArray(ElementBuffer);
         }
 
@@ -531,8 +536,15 @@ namespace eLibrary::Core {
 
         const E &getElement(intmax_t ElementIndex) const {
             if (ElementIndex < 0) ElementIndex += ElementSize;
-            Arrays::doCheckGE(ElementIndex, 0);
-            Arrays::doCheckL(ElementIndex, ElementSize);
+            Collections::doCheckGE(ElementIndex, 0);
+            Collections::doCheckL(ElementIndex, ElementSize);
+            return ElementContainer[ElementIndex];
+        }
+
+        E &getElement(intmax_t ElementIndex) {
+            if (ElementIndex < 0) ElementIndex += ElementSize;
+            Collections::doCheckGE(ElementIndex, 0);
+            Collections::doCheckL(ElementIndex, ElementSize);
             return ElementContainer[ElementIndex];
         }
 
@@ -558,30 +570,30 @@ namespace eLibrary::Core {
 
         void removeElement(const E &ElementSource) {
             intmax_t ElementIndex = indexOf(ElementSource);
-            Arrays::doCheckGE(ElementIndex, 0);
+            Collections::doCheckGE(ElementIndex, 0);
             removeIndex(ElementIndex);
         }
 
         void removeIndex(intmax_t ElementIndex) {
             if (ElementIndex < 0) ElementIndex += ElementSize;
-            Arrays::doCheckGE(ElementIndex, 0);
-            Arrays::doCheckL(ElementIndex, ElementSize);
-            Arrays::doMove(ElementContainer + ElementIndex + 1, ElementContainer + ElementSize, ElementContainer + ElementIndex);
+            Collections::doCheckGE(ElementIndex, 0);
+            Collections::doCheckL(ElementIndex, ElementSize);
+            Collections::doMove(ElementContainer + ElementIndex + 1, ElementContainer + ElementSize, ElementContainer + ElementIndex);
             if (ElementCapacity == 1) doClear();
             else if (--ElementSize <= ElementCapacity >> 1) {
                 E *ElementBuffer = MemoryAllocator::newArray<E>(ElementSize);
-                Arrays::doMove(ElementContainer, ElementSize, ElementBuffer);
+                Collections::doMove(ElementContainer, ElementSize, ElementBuffer);
                 MemoryAllocator::deleteArray(ElementContainer);
                 ElementContainer = MemoryAllocator::newArray<E>(ElementCapacity >>= 1);
-                Arrays::doMove(ElementBuffer, ElementSize, ElementContainer);
+                Collections::doMove(ElementBuffer, ElementSize, ElementContainer);
                 MemoryAllocator::deleteArray(ElementBuffer);
             }
         }
 
         void setElement(intmax_t ElementIndex, const E &ElementSource) {
             if (ElementIndex < 0) ElementIndex += ElementSize;
-            Arrays::doCheckGE(ElementIndex, 0);
-            Arrays::doCheckL(ElementIndex, ElementSize);
+            Collections::doCheckGE(ElementIndex, 0);
+            Collections::doCheckL(ElementIndex, ElementSize);
             ElementContainer[ElementIndex] = ElementSource;
         }
 
@@ -610,10 +622,7 @@ namespace eLibrary::Core {
      * Support for continuous storage of unique objects
      */
     template<typename E>
-    class ArraySet final : public Object {
-    private:
-        uintmax_t ElementCapacity = 0, ElementSize = 0;
-        E *ElementContainer = nullptr;
+    class ArraySet final : protected ArrayList<E> {
     public:
         doEnableCopyAssignConstruct(ArraySet)
         doEnableMoveAssignConstruct(ArraySet)
@@ -622,63 +631,46 @@ namespace eLibrary::Core {
 
         explicit ArraySet(const ArrayList<E> &ElementSource) noexcept {
             for (intmax_t ElementIndex = 0;ElementIndex < ElementSource.getElementSize();++ElementIndex)
-                addElement(ElementSource.getElement(ElementIndex));
+                addElement(ElementSource.ElementContainer[ElementIndex]);
         }
 
         ~ArraySet() noexcept {
             doClear();
         }
 
-        void addElement(const E &ElementSource) noexcept {
-            if (isContains(ElementSource)) return;
-            if (!ElementCapacity) ElementContainer = MemoryAllocator::newArray<E>(ElementCapacity = 1);
-            if (ElementSize == ElementCapacity) {
-                E *ElementBuffer = MemoryAllocator::newArray<E>(ElementSize);
-                Arrays::doMove(ElementContainer, ElementContainer + ElementSize, ElementBuffer);
-                MemoryAllocator::deleteArray(ElementContainer);
-                ElementContainer = MemoryAllocator::newArray<E>(ElementCapacity <<= 1);
-                Arrays::doMove(ElementBuffer, ElementBuffer + ElementSize, ElementContainer);
-                MemoryAllocator::deleteArray(ElementBuffer);
-            }
-            ElementContainer[ElementSize++] = ElementSource;
-        }
+        using ArrayList<E>::addElement;
 
         void doAssign(ArraySet &&SetSource) noexcept {
             if (Objects::getAddress(SetSource) == this) return;
-            MemoryAllocator::deleteArray(ElementContainer);
-            ElementCapacity = SetSource.ElementCapacity;
-            ElementContainer = SetSource.ElementContainer;
-            ElementSize = SetSource.ElementSize;
+            MemoryAllocator::deleteArray(this->ElementContainer);
+            this->ElementCapacity = SetSource.ElementCapacity;
+            this->ElementContainer = SetSource.ElementContainer;
+            this->ElementSize = SetSource.ElementSize;
             SetSource.ElementCapacity = SetSource.ElementSize = 0;
             SetSource.ElementContainer = nullptr;
         }
 
         void doAssign(const ArraySet &SetSource) noexcept {
             if (Objects::getAddress(SetSource) == this) return;
-            MemoryAllocator::deleteArray(ElementContainer);
-            ElementCapacity = SetSource.ElementCapacity;
-            if (ElementCapacity) ElementContainer = MemoryAllocator::newArray<E>(ElementCapacity);
-            Arrays::doCopy(SetSource.ElementContainer, SetSource.ElementContainer + (ElementSize = SetSource.ElementSize), ElementContainer);
+            MemoryAllocator::deleteArray(this->ElementContainer);
+            this->ElementCapacity = SetSource.ElementCapacity;
+            if (this->ElementCapacity) this->ElementContainer = MemoryAllocator::newArray<E>(this->ElementCapacity);
+            Collections::doCopy(SetSource.ElementContainer, SetSource.ElementContainer + (this->ElementSize = SetSource.ElementSize), this->ElementContainer);
         }
 
-        void doClear() noexcept {
-            ElementCapacity = 0;
-            ElementSize = 0;
-            MemoryAllocator::deleteArray(ElementContainer);
-            ElementContainer = nullptr;
-        }
+        using ArrayList<E>::doClear;
 
         ArraySet doDifference(const ArraySet &SetSource) const noexcept {
             ArraySet SetResult;
-            for (uintmax_t ElementIndex = 0; ElementIndex < ElementSize; ++ElementIndex)
-                if (!SetSource.isContains(ElementContainer[ElementIndex])) SetResult.addElement(ElementContainer[ElementIndex]);
+            for (uintmax_t ElementIndex = 0; ElementIndex < this->ElementSize; ++ElementIndex)
+                if (!SetSource.isContains(this->ElementContainer[ElementIndex])) SetResult.addElement(this->ElementContainer[ElementIndex]);
             return SetResult;
         }
 
         ArraySet doIntersection(const ArraySet &SetSource) const noexcept {
             ArraySet SetResult;
-            for (uintmax_t ElementIndex = 0; ElementIndex < ElementSize; ++ElementIndex)
-                if (SetSource.isContains(ElementContainer[ElementIndex])) SetResult.addElement(ElementContainer[ElementIndex]);
+            for (uintmax_t ElementIndex = 0; ElementIndex < this->ElementSize; ++ElementIndex)
+                if (SetSource.isContains(this->ElementContainer[ElementIndex])) SetResult.addElement(this->ElementContainer[ElementIndex]);
             return SetResult;
         }
 
@@ -693,63 +685,36 @@ namespace eLibrary::Core {
             return "ArraySet";
         }
 
-        intmax_t getElementSize() const noexcept {
-            return ElementSize;
-        }
+        using ArrayList<E>::getElementSize;
 
-        bool isContains(const E &ElementSource) const noexcept {
-            for (uintmax_t ElementIndex = 0; ElementIndex < ElementSize; ++ElementIndex)
-                if (!Objects::doCompare(ElementContainer[ElementIndex], ElementSource)) return true;
-            return false;
-        }
+        using ArrayList<E>::isContains;
 
-        bool isEmpty() const noexcept {
-            return !ElementSize;
-        }
+        using ArrayList<E>::isEmpty;
 
-        void removeElement(const E &ElementSource) {
-            uintmax_t ElementIndex = 0;
-            for (; ElementIndex < ElementSize; ++ElementIndex)
-                if (!Objects::doCompare(ElementContainer[ElementIndex], ElementSource)) break;
-            Arrays::doCheckL(ElementIndex, ElementSize);
-            Arrays::doMove(ElementContainer + ElementIndex + 1, ElementContainer + ElementSize, ElementContainer + ElementIndex);
-            if (ElementCapacity == 1) doClear();
-            else if (--ElementSize <= ElementCapacity >> 1) {
-                E *ElementBuffer = MemoryAllocator::newArray<E>(ElementSize);
-                Arrays::doMove(ElementContainer, ElementContainer + ElementSize, ElementBuffer);
-                MemoryAllocator::deleteArray(ElementContainer);
-                ElementContainer = MemoryAllocator::newArray<E>(ElementCapacity >>= 1);
-                Arrays::doMove(ElementBuffer, ElementBuffer + ElementSize, ElementContainer);
-                MemoryAllocator::deleteArray(ElementBuffer);
-            }
-        }
+        using ArrayList<E>::removeElement;
 
         ArrayList<E> toArrayList() const noexcept {
             ArrayList<E> ListResult;
-            for (uintmax_t ElementIndex = 0; ElementIndex < ElementSize;++ElementIndex)
-                ListResult.addElement(ElementContainer[ElementIndex]);
+            for (uintmax_t ElementIndex = 0; ElementIndex < this->ElementSize;++ElementIndex)
+                ListResult.addElement(this->ElementContainer[ElementIndex]);
             return ListResult;
         }
 
         String toString() const noexcept override {
             StringStream CharacterStream;
             CharacterStream.addCharacter(u'{');
-            for (uintmax_t ElementIndex = 0; ElementIndex + 1 < ElementSize; ++ElementIndex) {
-                CharacterStream.addString(String::valueOf(ElementContainer[ElementIndex]));
+            for (uintmax_t ElementIndex = 0; ElementIndex + 1 < this->ElementSize; ++ElementIndex) {
+                CharacterStream.addString(String::valueOf(this->ElementContainer[ElementIndex]));
                 CharacterStream.addCharacter(u',');
             }
-            if (ElementSize) CharacterStream.addString(String::valueOf(ElementContainer[ElementSize - 1]));
+            if (!isEmpty()) CharacterStream.addString(String::valueOf(this->ElementContainer[this->ElementSize - 1]));
             CharacterStream.addCharacter(u'}');
             return CharacterStream.toString();
         }
 
-        ArrayIterator<E> begin() const noexcept {
-            return {ElementContainer};
-        }
+        using ArrayList<E>::begin;
 
-        ArrayIterator<E> end() const noexcept {
-            return {ElementContainer + ElementSize};
-        }
+        using ArrayList<E>::end;
     };
 
     template<typename E, typename C>
@@ -794,6 +759,10 @@ namespace eLibrary::Core {
             return ElementContainer.getElement(-1);
         }
 
+        E &getBack() {
+            return ElementContainer.getElement(-1);
+        }
+
         const char *getClassName() const noexcept override {
             return "ContainerQueue";
         }
@@ -803,6 +772,10 @@ namespace eLibrary::Core {
         }
 
         const E &getFront() const {
+            return ElementContainer.getElement(0);
+        }
+
+        E &getFront() {
             return ElementContainer.getElement(0);
         }
 
@@ -865,6 +838,10 @@ namespace eLibrary::Core {
             return ElementContainer.getElement(0);
         }
 
+        E &getElement() {
+            return ElementContainer.getElement(0);
+        }
+
         intmax_t getElementSize() const noexcept {
             return ElementContainer.getElementSize();
         }
@@ -889,7 +866,7 @@ namespace eLibrary::Core {
         LinkedNode *NodeCurrent;
     public:
         using difference_type = ptrdiff_t;
-        using iterator_category = std::bidirectional_iterator_tag;
+        using iterator_category = ::std::bidirectional_iterator_tag;
         using value_type = E;
 
         constexpr DoubleLinkedIterator() noexcept : NodeCurrent(nullptr) {}
@@ -960,13 +937,13 @@ namespace eLibrary::Core {
             doInitialize(ElementList...);
         }
 
-        DoubleLinkedList(std::initializer_list<E> ElementList) noexcept : NodeSize(ElementList.size()) {
+        DoubleLinkedList(::std::initializer_list<E> ElementList) noexcept : NodeSize(ElementList.size()) {
             for (const E &ElementCurrent : ElementList) addElement(ElementCurrent);
         }
 
         template<typename II>
         DoubleLinkedList(II ElementStart, II ElementStop) noexcept {
-            Arrays::doTraverse(ElementStart, ElementStop, [&](const E &ElementCurrent){
+            Collections::doTraverse(ElementStart, ElementStop, [&](const E &ElementCurrent){
                 addElement(ElementCurrent);
             });
         }
@@ -988,8 +965,8 @@ namespace eLibrary::Core {
 
         void addElement(intmax_t ElementIndex, const E &ElementSource) {
             if (ElementIndex < 0) ElementIndex += NodeSize + 1;
-            Arrays::doCheckGE(ElementIndex, 0);
-            Arrays::doCheckLE(ElementIndex, NodeSize);
+            Collections::doCheckGE(ElementIndex, 0);
+            Collections::doCheckLE(ElementIndex, NodeSize);
             if (ElementIndex == NodeSize) {
                 addElement(ElementSource);
                 return;
@@ -1070,8 +1047,24 @@ namespace eLibrary::Core {
 
         const E &getElement(intmax_t ElementIndex) const {
             if (ElementIndex < 0) ElementIndex += NodeSize;
-            Arrays::doCheckGE(ElementIndex, 0);
-            Arrays::doCheckL(ElementIndex, NodeSize);
+            Collections::doCheckGE(ElementIndex, 0);
+            Collections::doCheckL(ElementIndex, NodeSize);
+            LinkedNode *NodeCurrent;
+            if (ElementIndex < (NodeSize >> 1)) {
+                NodeCurrent = NodeHead;
+                while (ElementIndex--) NodeCurrent = NodeCurrent->NodeNext;
+            } else {
+                ElementIndex = NodeSize - ElementIndex - 1;
+                NodeCurrent = NodeTail;
+                while (ElementIndex--) NodeCurrent = NodeCurrent->NodePrevious;
+            }
+            return NodeCurrent->NodeValue;
+        }
+
+        E &getElement(intmax_t ElementIndex) {
+            if (ElementIndex < 0) ElementIndex += NodeSize;
+            Collections::doCheckGE(ElementIndex, 0);
+            Collections::doCheckL(ElementIndex, NodeSize);
             LinkedNode *NodeCurrent;
             if (ElementIndex < (NodeSize >> 1)) {
                 NodeCurrent = NodeHead;
@@ -1111,14 +1104,14 @@ namespace eLibrary::Core {
 
         void removeElement(const E &ElementSource) {
             intmax_t ElementIndex = indexOf(ElementSource);
-            Arrays::doCheckGE(ElementIndex, 0);
+            Collections::doCheckGE(ElementIndex, 0);
             removeIndex(ElementIndex);
         }
 
         void removeIndex(intmax_t ElementIndex) {
             if (ElementIndex < 0) ElementIndex += NodeSize;
-            Arrays::doCheckGE(ElementIndex, 0);
-            Arrays::doCheckL(ElementIndex, NodeSize);
+            Collections::doCheckGE(ElementIndex, 0);
+            Collections::doCheckL(ElementIndex, NodeSize);
             LinkedNode *NodeCurrent;
             if (NodeSize == 1) {
                 MemoryAllocator::deleteObject(NodeHead);
@@ -1150,8 +1143,8 @@ namespace eLibrary::Core {
 
         void setElement(intmax_t ElementIndex, const E &ElementSource) {
             if (ElementIndex < 0) ElementIndex += NodeSize;
-            Arrays::doCheckGE(ElementIndex, 0);
-            Arrays::doCheckL(ElementIndex, NodeSize);
+            Collections::doCheckGE(ElementIndex, 0);
+            Collections::doCheckL(ElementIndex, NodeSize);
             LinkedNode *NodeCurrent;
             if (ElementIndex < (NodeSize >> 1)) {
                 NodeCurrent = NodeHead;
@@ -1318,7 +1311,7 @@ namespace eLibrary::Core {
             intmax_t ElementIndex = 0;
             LinkedNode *NodeCurrent = NodeHead;
             while (NodeCurrent && Objects::doCompare(NodeCurrent->NodeValue, ElementSource)) NodeCurrent = NodeCurrent->NodeNext, ++ElementIndex;
-            Arrays::doCheckL(ElementIndex, NodeSize);
+            Collections::doCheckL(ElementIndex, NodeSize);
             if (ElementIndex == 0) {
                 NodeHead = NodeHead->NodeNext;
                 if (NodeHead->NodePrevious) MemoryAllocator::deleteObject(NodeHead->NodePrevious);
@@ -1379,6 +1372,90 @@ namespace eLibrary::Core {
         }
     };
 
+    template<typename>
+    class Function final : public Object {};
+
+    template<typename Tr, typename ...Ts>
+    class Function<Tr(Ts...)> final : public Object {
+    private:
+        struct FunctionDescriptorBase {
+        public:
+            virtual ~FunctionDescriptorBase() noexcept = default;
+
+            virtual Tr doCall(Ts...) = 0;
+
+            virtual FunctionDescriptorBase *doClone() const = 0;
+        } *DescriptorHandle = nullptr;
+
+        template<typename F>
+        struct FunctionDescriptor : public FunctionDescriptorBase {
+        private:
+            F DescriptorHandle;
+        public:
+            constexpr FunctionDescriptor(F DescriptorHandleSource) noexcept : DescriptorHandle(DescriptorHandleSource) {}
+
+            Tr doCall(Ts ...ParameterList) override {
+                return DescriptorHandle(Objects::doForward<Ts>(ParameterList)...);
+            }
+
+            FunctionDescriptorBase *doClone() const override {
+                return MemoryAllocator::newObject<FunctionDescriptor<F>>(DescriptorHandle);
+            }
+        };
+    public:
+        doEnableCopyAssignConstruct(Function)
+        doEnableMoveAssignConstruct(Function)
+
+        template<typename F> requires std::is_invocable_r_v<Tr, F, Ts...>
+        Function(F FunctionObject) noexcept : DescriptorHandle(MemoryAllocator::newObject<FunctionDescriptor<F>>(FunctionObject)) {}
+
+        ~Function() noexcept {
+            if (DescriptorHandle) {
+                MemoryAllocator::deleteObject(DescriptorHandle);
+                DescriptorHandle = nullptr;
+            }
+        }
+
+        void doAssign(const Function<Tr(Ts...)> &FunctionSource) {
+            if (Objects::getAddress(FunctionSource) == this) return;
+            MemoryAllocator::deleteObject(DescriptorHandle);
+            if (FunctionSource.DescriptorHandle) DescriptorHandle = FunctionSource.DescriptorHandle->doClone();
+            else DescriptorHandle = nullptr;
+        }
+
+        void doAssign(Function<Tr(Ts...)> &&FunctionSource) noexcept {
+            if (Objects::getAddress(FunctionSource) == this) return;
+            DescriptorHandle = FunctionSource.DescriptorHandle;
+            FunctionSource.DescriptorHandle = nullptr;
+        }
+
+        Tr doCall(Ts ...ParameterList) {
+            if (!DescriptorHandle) [[unlikely]]
+                throw Exception(String(u"Function<Tr(Ts...)>::doCall(Ts...) DescriptorHandle"));
+            return DescriptorHandle->doCall(Objects::doForward<Ts>(ParameterList)...);
+        }
+
+        const char *getClassName() const noexcept override {
+            return "Function";
+        }
+
+        Tr operator()(Ts &&...FunctionParameter) {
+            doCall(Objects::doForward<Ts>(FunctionParameter)...);
+        }
+    };
+
+    class Functions final : public Object {
+    public:
+        constexpr Functions() noexcept = delete;
+
+        template<typename F, typename ...Ts>
+        static auto doBind(F &&FunctionSource, Ts &&...FunctionParameter) {
+            return std::bind(FunctionSource, Objects::doForward<Ts>(FunctionParameter)...);
+        }
+    };
+
+    class IteratorAdapter {};
+
     template<typename T>
     class Optional final : public Object {
     private:
@@ -1386,7 +1463,7 @@ namespace eLibrary::Core {
         bool OptionalValue = false;
 
         template<typename ...Ts>
-        void doCreate(Ts &&...ParameterList) noexcept(std::is_nothrow_constructible<T, Ts...>::value){
+        void doCreate(Ts &&...ParameterList) {
             new (OptionalData) T(Objects::doForward<Ts>(ParameterList)...);
             OptionalValue = true;
         }
@@ -1399,7 +1476,7 @@ namespace eLibrary::Core {
         constexpr Optional() noexcept = default;
 
         template<typename ...Ts>
-        Optional(std::in_place_t, Ts &&...ParameterList) noexcept(std::is_nothrow_constructible_v<T, Ts...>) {
+        Optional(::std::in_place_t, Ts &&...ParameterList) {
             doAssign(T(Objects::doForward<Ts>(ParameterList)...));
         }
 
@@ -1407,12 +1484,12 @@ namespace eLibrary::Core {
             doReset();
         }
 
-        void doAssign(const T &OptionalSource) noexcept(std::is_nothrow_copy_constructible<T>::value) {
+        void doAssign(const T &OptionalSource) {
             doReset();
             doCreate(OptionalSource);
         }
 
-        void doAssign(T &&OptionalSource) noexcept(std::is_nothrow_move_constructible<T>::value) {
+        void doAssign(T &&OptionalSource) {
             doReset();
             doCreate(Objects::doMove(OptionalSource));
         }
@@ -1430,7 +1507,7 @@ namespace eLibrary::Core {
             }
         }
 
-        void doReset() noexcept(std::is_nothrow_destructible<T>::value) {
+        void doReset() {
             if (hasValue()) {
                 OptionalValue = false;
                 ((T*) OptionalData)->~T();
@@ -1441,8 +1518,9 @@ namespace eLibrary::Core {
             return "Optional";
         }
 
-        const T &getValue() const {
-            if (!hasValue()) throw Exception(String(u"Optional<T>::getValue() hasValue"));
+        T getValue() const {
+            if (!hasValue()) [[unlikely]]
+                throw Exception(String(u"Optional<T>::getValue() hasValue"));
             return *((T*) OptionalData);
         }
 
@@ -1481,7 +1559,7 @@ namespace eLibrary::Core {
         } *NodeRoot = nullptr;
 
         template<typename OperationType>
-        static void doOrderCore(RedBlackNode *NodeCurrent, OperationType Operation) noexcept(std::is_nothrow_invocable<OperationType, K, V>::value) {
+        static void doOrderCore(RedBlackNode *NodeCurrent, OperationType Operation) {
             if (!NodeCurrent) return;
             Operation(NodeCurrent->NodeKey, NodeCurrent->NodeValue);
             doOrderCore(NodeCurrent->NodeChildLeft, Operation);
@@ -1633,7 +1711,7 @@ namespace eLibrary::Core {
         }
 
         template<typename OperationType>
-        void doOrder(const OperationType &Operation) noexcept(std::is_nothrow_invocable<OperationType, K, V>::value) {
+        void doOrder(const OperationType &Operation) {
             doOrderCore(NodeRoot, Operation);
         }
 
@@ -1761,7 +1839,7 @@ namespace eLibrary::Core {
         LinkedNode *NodeCurrent;
     public:
         using difference_type = ptrdiff_t;
-        using iterator_category = std::forward_iterator_tag;
+        using iterator_category = ::std::forward_iterator_tag;
         using value_type = E;
 
         constexpr SingleLinkedIterator() noexcept : NodeCurrent(nullptr) {}
@@ -1821,13 +1899,13 @@ namespace eLibrary::Core {
             doInitialize(ElementList...);
         }
 
-        SingleLinkedList(std::initializer_list<E> ElementList) noexcept : NodeSize(ElementList.size()) {
+        SingleLinkedList(::std::initializer_list<E> ElementList) noexcept : NodeSize(ElementList.size()) {
             for (const E &ElementCurrent : ElementList) addElement(ElementCurrent);
         }
 
         template<typename II>
         SingleLinkedList(II ElementStart, II ElementStop) noexcept {
-            Arrays::doTraverse(ElementStart, ElementStop, [&](const E &ElementCurrent){
+            Collections::doTraverse(ElementStart, ElementStop, [&](const E &ElementCurrent){
                 addElement(ElementCurrent);
             });
         }
@@ -1848,8 +1926,8 @@ namespace eLibrary::Core {
 
         void addElement(intmax_t ElementIndex, const E &ElementSource) {
             if (ElementIndex < 0) ElementIndex += NodeSize + 1;
-            Arrays::doCheckGE(ElementIndex, 0);
-            Arrays::doCheckLE(ElementIndex, NodeSize);
+            Collections::doCheckGE(ElementIndex, 0);
+            Collections::doCheckLE(ElementIndex, NodeSize);
             if (ElementIndex == NodeSize) {
                 addElement(ElementSource);
                 return;
@@ -1907,8 +1985,18 @@ namespace eLibrary::Core {
 
         const E &getElement(intmax_t ElementIndex) const {
             if (ElementIndex < 0) ElementIndex += NodeSize;
-            Arrays::doCheckGE(ElementIndex, 0);
-            Arrays::doCheckL(ElementIndex, NodeSize);
+            Collections::doCheckGE(ElementIndex, 0);
+            Collections::doCheckL(ElementIndex, NodeSize);
+            if (ElementIndex == NodeSize - 1) return NodeTail->NodeValue;
+            LinkedNode *NodeCurrent = NodeHead;
+            while (ElementIndex--) NodeCurrent = NodeCurrent->NodeNext;
+            return NodeCurrent->NodeValue;
+        }
+
+        E &getElement(intmax_t ElementIndex) {
+            if (ElementIndex < 0) ElementIndex += NodeSize;
+            Collections::doCheckGE(ElementIndex, 0);
+            Collections::doCheckL(ElementIndex, NodeSize);
             if (ElementIndex == NodeSize - 1) return NodeTail->NodeValue;
             LinkedNode *NodeCurrent = NodeHead;
             while (ElementIndex--) NodeCurrent = NodeCurrent->NodeNext;
@@ -1942,14 +2030,14 @@ namespace eLibrary::Core {
 
         void removeElement(const E &ElementSource) {
             intmax_t ElementIndex = indexOf(ElementSource);
-            Arrays::doCheckGE(ElementIndex, 0);
+            Collections::doCheckGE(ElementIndex, 0);
             removeIndex(ElementIndex);
         }
 
         void removeIndex(intmax_t ElementIndex) {
             if (ElementIndex < 0) ElementIndex += NodeSize;
-            Arrays::doCheckGE(ElementIndex, 0);
-            Arrays::doCheckL(ElementIndex, NodeSize);
+            Collections::doCheckGE(ElementIndex, 0);
+            Collections::doCheckL(ElementIndex, NodeSize);
             LinkedNode *NodeCurrent = NodeHead;
             if (ElementIndex == 0) {
                 NodeHead = NodeHead->NodeNext;
@@ -1969,8 +2057,8 @@ namespace eLibrary::Core {
 
         void setElement(intmax_t ElementIndex, const E &ElementSource) {
             if (ElementIndex < 0) ElementIndex += NodeSize;
-            Arrays::doCheckGE(ElementIndex, 0);
-            Arrays::doCheckL(ElementIndex, NodeSize);
+            Collections::doCheckGE(ElementIndex, 0);
+            Collections::doCheckL(ElementIndex, NodeSize);
             LinkedNode *NodeCurrent = NodeHead;
             while (ElementIndex--) NodeCurrent = NodeCurrent->NodeNext;
             NodeCurrent->NodeValue = ElementSource;
@@ -2131,7 +2219,7 @@ namespace eLibrary::Core {
             intmax_t ElementIndex = 0;
             LinkedNode *NodeCurrent = NodeHead;
             while (NodeCurrent && Objects::doCompare(NodeCurrent->NodeValue, ElementSource)) NodeCurrent = NodeCurrent->NodeNext, ++ElementIndex;
-            Arrays::doCheckL(ElementIndex, NodeSize);
+            Collections::doCheckL(ElementIndex, NodeSize);
             NodeCurrent = NodeHead;
             if (ElementIndex == 0) {
                 NodeHead = NodeHead->NodeNext;
@@ -2193,7 +2281,8 @@ namespace eLibrary::Core {
 
         const V &getElement(const K &MapKey) const {
             auto *MapNode = this->doSearchCore(this->NodeRoot, MapKey);
-            if (!MapNode) throw IndexException(String(u"TreeMap<K, V>::getElement(const K&) doSearchCore"));
+            if (!MapNode) [[unlikely]]
+                throw IndexException(String(u"TreeMap<K, V>::getElement(const K&) doSearchCore"));
             return MapNode->NodeValue;
         }
 
@@ -2218,7 +2307,7 @@ namespace eLibrary::Core {
         }
 
         void removeMapping(const K &MapKey) {
-            if (!this->doSearchCore(this->NodeRoot, MapKey))
+            if (!this->doSearchCore(this->NodeRoot, MapKey)) [[unlikely]]
                 throw IndexException(String(u"TreeMap<K(Comparable),V>::removeMapping(const K&) MapKey"));
             this->doRemove(MapKey);
         }
@@ -2231,9 +2320,9 @@ namespace eLibrary::Core {
     };
 
     template<typename E>
-    class TreeSet final : protected RedBlackTree<E, std::nullptr_t> {
+    class TreeSet final : protected RedBlackTree<E, ::std::nullptr_t> {
     private:
-        static void toString(const typename RedBlackTree<E, std::nullptr_t>::RedBlackNode *NodeCurrent, StringStream &CharacterStream) noexcept {
+        static void toString(const typename RedBlackTree<E, ::std::nullptr_t>::RedBlackNode *NodeCurrent, StringStream &CharacterStream) noexcept {
             if (!NodeCurrent) return;
             CharacterStream.addString(String::valueOf(NodeCurrent->NodeKey));
             CharacterStream.addCharacter(u' ');
@@ -2242,12 +2331,12 @@ namespace eLibrary::Core {
         }
     public:
         void addElement(const E &ElementSource) noexcept {
-            this->doInsert(ElementSource, std::nullptr_t());
+            this->doInsert(ElementSource, nullptr);
         }
 
         TreeSet doDifference(const TreeSet &SetSource) const noexcept {
             TreeSet SetResult;
-            this->doOrderCore(this->NodeRoot, [&](const E &ElementSource, std::nullptr_t){
+            this->doOrderCore(this->NodeRoot, [&](const E &ElementSource, ::std::nullptr_t){
                 if (!SetSource.isContains(ElementSource)) SetResult.addElement(ElementSource);
             });
             return SetResult;
@@ -2255,7 +2344,7 @@ namespace eLibrary::Core {
 
         TreeSet doIntersection(const TreeSet &SetSource) const noexcept {
             TreeSet SetResult;
-            this->doOrderCore(this->NodeRoot, [&](const E &ElementSource, std::nullptr_t){
+            this->doOrderCore(this->NodeRoot, [&](const E &ElementSource, ::std::nullptr_t){
                 if (SetSource.isContains(ElementSource)) SetResult.addElement(ElementSource);
             });
             return SetResult;
@@ -2263,10 +2352,10 @@ namespace eLibrary::Core {
 
         TreeSet doUnion(const TreeSet &SetSource) const noexcept {
             TreeSet SetResult;
-            this->doOrderCore(this->NodeRoot, [&](const E &ElementSource, std::nullptr_t){
+            this->doOrderCore(this->NodeRoot, [&](const E &ElementSource, ::std::nullptr_t){
                 SetResult.addElement(ElementSource);
             });
-            SetSource.doOrderCore(SetSource.NodeRoot, [&](const E &ElementSource, std::nullptr_t){
+            SetSource.doOrderCore(SetSource.NodeRoot, [&](const E &ElementSource, ::std::nullptr_t){
                 SetResult.addElement(ElementSource);
             });
             return SetResult;
@@ -2289,7 +2378,8 @@ namespace eLibrary::Core {
         }
 
         void removeElement(const E &ElementSource) {
-            if (!isContains(ElementSource)) throw IndexException(String(u"TreeObject::removeElement(const E&) isContains"));
+            if (!isContains(ElementSource)) [[unlikely]]
+                throw IndexException(String(u"TreeObject::removeElement(const E&) isContains"));
             this->doRemove(ElementSource);
         }
 
@@ -2314,17 +2404,17 @@ namespace eLibrary::Core {
 
         template<typename T, typename ...Ts>
         struct VariantUtility<T, Ts...> {
-            static void doCopy(const std::type_info *VariantType, void *VariantDataSource, void *VariantDataDestination) {
+            static void doCopy(const ::std::type_info *VariantType, void *VariantDataSource, void *VariantDataDestination) {
                 if (VariantType == &typeid(T)) new (VariantDataDestination) T(*((T*) VariantDataSource));
                 else VariantUtility<Ts...>::doCopy(VariantType, VariantDataSource, VariantDataDestination);
             }
 
-            static void doDestroy(const std::type_info *VariantType, void *VariantData) {
+            static void doDestroy(const ::std::type_info *VariantType, void *VariantData) {
                 if (VariantType == &typeid(T)) ((T*) VariantData)->~T();
                 else VariantUtility<Ts...>::doDestroy(VariantType, VariantData);
             }
 
-            static void doMove(const std::type_info *VariantType, void *VariantDataSource, void *VariantDataDestination) {
+            static void doMove(const ::std::type_info *VariantType, void *VariantDataSource, void *VariantDataDestination) {
                 if (VariantType == &typeid(T)) new (VariantDataDestination) T(Objects::doMove(*((T*) VariantDataSource)));
                 else VariantUtility<Ts...>::doMove(VariantType, VariantDataSource, VariantDataDestination);
             }
@@ -2332,18 +2422,18 @@ namespace eLibrary::Core {
 
         template<>
         struct VariantUtility<> {
-            static void doCopy(const std::type_info *VariantType, void *VariantDataSource, void *VariantDataDestination) {}
+            static void doCopy(const ::std::type_info*, void*, void*) {}
 
-            static void doDestroy(const std::type_info *VariantType, void *VariantData) {}
+            static void doDestroy(const ::std::type_info*, void*) {}
 
-            static void doMove(const std::type_info *VariantType, void *VariantDataSource, void *VariantDataDestination) {}
+            static void doMove(const ::std::type_info*, void*, void*) {}
         };
 
         template<typename T, typename ...Ts>
         constexpr bool isContainsType = true;
 
         template<typename T, typename T1, typename ...T2>
-        constexpr bool isContainsType<T, T1, T2...> = std::is_same_v<T, T1> || isContainsType<T, T2...>;
+        constexpr bool isContainsType<T, T1, T2...> = ::std::is_same_v<T, T1> || isContainsType<T, T2...>;
 
         template<typename T>
         constexpr bool isContainsType<T> = false;
@@ -2356,7 +2446,7 @@ namespace eLibrary::Core {
     class Variant final : public Object {
     private:
         alignas(getMaximumInteger<alignof(Ts)...>) uint8_t VariantData[getMaximumInteger<sizeof(Ts)...>]{};
-        const std::type_info *VariantType = nullptr;
+        const ::std::type_info *VariantType = nullptr;
         bool VariantValue = false;
     public:
         doEnableCopyAssignConstruct(Variant)
@@ -2401,7 +2491,7 @@ namespace eLibrary::Core {
 
         template<typename T>
         auto getValue() {
-            if (&typeid(T) != VariantType)
+            if (&typeid(T) != VariantType) [[unlikely]]
                 throw TypeException(String(u"Variant::getValue<T>() T"));
             return *((T*) VariantData);
         }

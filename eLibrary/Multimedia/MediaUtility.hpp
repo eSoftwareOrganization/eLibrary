@@ -16,7 +16,7 @@ extern "C" {
 }
 
 namespace eLibrary::Multimedia {
-    class MediaChannelLayout final {
+    class MediaChannelLayout final : public Object {
     private:
         uint8_t LayoutChannelCount;
         uint64_t LayoutChannelMask;
@@ -35,6 +35,10 @@ namespace eLibrary::Multimedia {
 
         uint64_t getChannelMask() const noexcept {
             return LayoutChannelMask;
+        }
+
+        const char *getClassName() const noexcept override {
+            return "MediaChannelLayout";
         }
 
         AVChannelLayout toFFMpegFormat() const noexcept {
@@ -60,21 +64,20 @@ namespace eLibrary::Multimedia {
         }
     };
 
-    static MediaChannelLayout Layout51{6, AV_CH_LAYOUT_5POINT1};
-    static MediaChannelLayout Layout61{7, AV_CH_LAYOUT_6POINT1};
-    static MediaChannelLayout Layout71{8, AV_CH_LAYOUT_7POINT1};
-    static MediaChannelLayout LayoutMono{1, AV_CH_LAYOUT_MONO};
-    static MediaChannelLayout LayoutQuad{4, AV_CH_LAYOUT_QUAD};
-    static MediaChannelLayout LayoutStereo{2, AV_CH_LAYOUT_STEREO};
+    static const MediaChannelLayout Layout51{6, AV_CH_LAYOUT_5POINT1};
+    static const MediaChannelLayout Layout61{7, AV_CH_LAYOUT_6POINT1};
+    static const MediaChannelLayout Layout71{8, AV_CH_LAYOUT_7POINT1};
+    static const MediaChannelLayout LayoutMono{1, AV_CH_LAYOUT_MONO};
+    static const MediaChannelLayout LayoutQuad{4, AV_CH_LAYOUT_QUAD};
+    static const MediaChannelLayout LayoutStereo{2, AV_CH_LAYOUT_STEREO};
 
     namespace FFMpeg {
-        class MediaCodec final : public Object {
+        class MediaCodec final : public Object, public NonCopyable {
         private:
             const AVCodec *CodecObject = nullptr;
 
             constexpr MediaCodec(const AVCodec *CodecSource) noexcept: CodecObject(CodecSource) {}
 
-            doDisableCopyAssignConstruct(MediaCodec)
             friend class MediaCodecContext;
         public:
             doEnableMoveAssignConstruct(MediaCodec)
@@ -103,6 +106,10 @@ namespace eLibrary::Multimedia {
                 return {CodecObject};
             }
 
+            const char *getClassName() const noexcept override {
+                return "MediaCodec";
+            }
+
             explicit operator const AVCodec*() const noexcept {
                 return CodecObject;
             }
@@ -116,13 +123,12 @@ namespace eLibrary::Multimedia {
             }
         };
 
-        class MediaFrame final : public Object {
+        class MediaFrame final : public Object, public NonCopyable {
         private:
             AVFrame *FrameObject = nullptr;
 
             constexpr MediaFrame(AVFrame *FrameSource) noexcept: FrameObject(FrameSource) {}
 
-            doDisableCopyAssignConstruct(MediaFrame)
             friend class MediaCodecContext;
         public:
             doEnableMoveAssignConstruct(MediaFrame)
@@ -160,13 +166,12 @@ namespace eLibrary::Multimedia {
             }
         };
 
-        class MediaPacket final : public Object {
+        class MediaPacket final : public Object, public NonCopyable {
         private:
             AVPacket *PacketObject = nullptr;
 
             constexpr MediaPacket(AVPacket *PacketSource) noexcept: PacketObject(PacketSource) {}
 
-            doDisableCopyAssignConstruct(MediaPacket)
             friend class MediaCodecContext;
             friend class MediaFormatContext;
         public:
@@ -200,13 +205,11 @@ namespace eLibrary::Multimedia {
             }
         };
 
-        class MediaSWRContext final : public Object {
+        class MediaSWRContext final : public Object, public NonCopyable {
         private:
             SwrContext *ContextObject = nullptr;
 
             constexpr MediaSWRContext(SwrContext *ContextSource) noexcept: ContextObject(ContextSource) {}
-
-            doDisableCopyAssignConstruct(MediaSWRContext)
         public:
             doEnableMoveAssignConstruct(MediaSWRContext)
 
@@ -245,13 +248,11 @@ namespace eLibrary::Multimedia {
             }
         };
 
-        class MediaCodecContext final : public Object {
+        class MediaCodecContext final : public Object, public NonCopyable {
         private:
             AVCodecContext *ContextObject = nullptr;
 
             constexpr MediaCodecContext(AVCodecContext *ContextSource) noexcept: ContextObject(ContextSource) {}
-
-            doDisableCopyAssignConstruct(MediaCodecContext)
         public:
             doEnableMoveAssignConstruct(MediaCodecContext)
 
@@ -312,13 +313,11 @@ namespace eLibrary::Multimedia {
             }
         };
 
-        class MediaFormatContext final : public Object {
+        class MediaFormatContext final : public Object, public NonCopyable {
         private:
             AVFormatContext *ContextObject = nullptr;
 
             constexpr MediaFormatContext(AVFormatContext *ContextSource) noexcept: ContextObject(ContextSource) {}
-
-            doDisableCopyAssignConstruct(MediaFormatContext)
         public:
             doEnableMoveAssignConstruct(MediaFormatContext)
 
@@ -400,12 +399,11 @@ namespace eLibrary::Multimedia {
     }
 
     namespace OpenAL {
-        class MediaBuffer final : public Object {
+        class MediaBuffer final : public Object, public NonCopyable {
         private:
             ALuint BufferIndex;
             IO::ByteBuffer BufferObject;
 
-            doDisableCopyAssignConstruct(MediaBuffer)
             friend class MediaSource;
         public:
             MediaBuffer() {
@@ -424,11 +422,10 @@ namespace eLibrary::Multimedia {
             }
         };
 
-        class MediaCaptureDevice final : public Object {
+        class MediaCaptureDevice final : public Object, public NonCopyable {
         private:
             ALCdevice *DeviceObject;
 
-            doDisableCopyAssignConstruct(MediaCaptureDevice)
             friend class MediaContext;
         public:
             MediaCaptureDevice(const String &DeviceName, ALCsizei DeviceFrequency, const MediaChannelLayout &DeviceLayout) {
@@ -466,11 +463,10 @@ namespace eLibrary::Multimedia {
             }
         };
 
-        class MediaDevice final : public Object {
+        class MediaDevice final : public Object, public NonCopyable {
         private:
             ALCdevice *DeviceObject;
 
-            doDisableCopyAssignConstruct(MediaDevice)
             friend class MediaContext;
         public:
             MediaDevice(const String &DeviceName) {
@@ -489,11 +485,9 @@ namespace eLibrary::Multimedia {
             }
         };
 
-        class MediaContext final : public Object {
+        class MediaContext final : public Object, public NonCopyable {
         private:
             ALCcontext *ContextObject;
-
-            doDisableCopyAssignConstruct(MediaContext)
         public:
             enum class MediaDistanceModel : ALenum {
                 ModelExponent = AL_EXPONENT_DISTANCE,
@@ -541,11 +535,9 @@ namespace eLibrary::Multimedia {
             }
         };
 
-        class MediaSource final : public Object {
+        class MediaSource final : public Object, public NonCopyable {
         private:
             ALuint SourceIndex;
-
-            doDisableCopyAssignConstruct(MediaSource)
         public:
             MediaSource() {
                 alGenSources(1, &SourceIndex);

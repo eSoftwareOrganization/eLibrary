@@ -19,7 +19,7 @@ namespace eLibrary::Multimedia {
             AudioData = MemoryAllocator::newArray<uint8_t*>(AudioDataSource.size());
             for (uint8_t AudioChannel = 0;AudioChannel < AudioChannelLayout.getChannelCount();++AudioChannel) {
                 AudioData[AudioChannel] = MemoryAllocator::newArray<uint8_t>(AudioDataSource[AudioChannel].size());
-                Arrays::doCopy(AudioDataSource[AudioChannel].begin(), AudioDataSource[AudioChannel].end(), AudioData[AudioChannel]);
+                Collections::doCopy(AudioDataSource[AudioChannel].begin(), AudioDataSource[AudioChannel].end(), AudioData[AudioChannel]);
             }
         }
 
@@ -27,7 +27,7 @@ namespace eLibrary::Multimedia {
             AudioData = MemoryAllocator::newArray<uint8_t*>(AudioChannelLayoutSource.getChannelCount());
             for (uint8_t AudioChannel = 0;AudioChannel < AudioChannelLayout.getChannelCount();++AudioChannel) {
                 AudioData[AudioChannel] = MemoryAllocator::newArray<uint8_t>(AudioDataSourceSize);
-                Arrays::doCopy(AudioDataSource[AudioChannel], AudioDataSize, AudioData[AudioChannel]);
+                Collections::doCopy(AudioDataSource[AudioChannel], AudioDataSize, AudioData[AudioChannel]);
             }
             for (uint8_t AudioChannel = 0;AudioChannel < AudioChannelLayout.getChannelCount();++AudioChannel)
                 MemoryAllocator::deleteArray(AudioDataSource[AudioChannel]);
@@ -58,7 +58,7 @@ namespace eLibrary::Multimedia {
             AudioSampleRate = AudioSource.AudioSampleRate;
             for (uint8_t AudioChannel = 0;AudioChannel < AudioChannelLayout.getChannelCount();++AudioChannel) {
                 AudioData[AudioChannel] = MemoryAllocator::newArray<uint8_t>(AudioDataSize);
-                Arrays::doCopy(AudioSource.AudioData[AudioChannel], AudioDataSize, AudioData[AudioChannel]);
+                Collections::doCopy(AudioSource.AudioData[AudioChannel], AudioDataSize, AudioData[AudioChannel]);
             }
         }
 

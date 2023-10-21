@@ -205,33 +205,17 @@ namespace eLibrary::Core {
             return std::to_string(ObjectSource);
         }
 
-        template<typename T>
-        static String valueOf() noexcept {
-#ifdef __PRETTY_FUNCTION
-            constexpr std::string_view ObjectNameSource = __PRETTY_FUNCTION__;
-            return {std::string{ObjectNameSource.data() + 74, ObjectNameSource.data() + ObjectNameSource.size() - 1}};
-#elifdef __FUNCSIG__
-            constexpr std::string_view ObjectNameSource = __FUNCSIG__;
-            return {std::string{ObjectNameSource.data() + 69, ObjectNameSource.data() + ObjectNameSource.size()}};
-#else
-#include <typeinfo>
-            return {typeid(T).name()};
-#endif
-        }
-
-        template<ObjectDerived T>
+        template<StringConvertible T>
         static String valueOf(const T &ObjectSource) noexcept {
             return ObjectSource.toString();
         }
     };
 
-    class StringStream final : public Object {
+    class StringStream final : public Object, public NonCopyable {
     private:
         uintmax_t CharacterCapacity = 0;
         uintmax_t CharacterSize = 0;
         Character *CharacterContainer = nullptr;
-
-        doDisableCopyAssignConstruct(StringStream)
     public:
         constexpr StringStream() noexcept = default;
 
@@ -241,9 +225,9 @@ namespace eLibrary::Core {
             doClear();
         }
 
-        eLibraryAPI void addCharacter(const Character&);
+        eLibraryAPI void addCharacter(const Character&) noexcept;
 
-        eLibraryAPI void addString(const String &StringSource);
+        eLibraryAPI void addString(const String &StringSource) noexcept;
 
         eLibraryAPI void doClear() noexcept;
 
@@ -258,7 +242,7 @@ namespace eLibrary::Core {
 #if __has_include(<format>) && !eLibraryCompiler(AppleClang)
 #include <format>
 
-template<eLibrary::Core::ObjectDerived ObjectT, typename CharacterT>
+template<eLibrary::Core::StringConvertible ObjectT, typename CharacterT>
 struct std::formatter<ObjectT, CharacterT> : public std::formatter<std::string, CharacterT> {
 public:
     template<typename ContextT>

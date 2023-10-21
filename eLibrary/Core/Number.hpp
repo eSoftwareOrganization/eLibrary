@@ -58,7 +58,7 @@ namespace eLibrary::Core {
 
         Integer doMultiplicationAbsolute(const Integer &NumberOther) const {
             auto *NumberProduct = MemoryAllocator::newArray<uintmax_t>(NumberList.size() + NumberOther.NumberList.size());
-            Arrays::doFill(NumberProduct, NumberProduct + NumberList.size() + NumberOther.NumberList.size(), 0);
+            Collections::doFill(NumberProduct, NumberProduct + NumberList.size() + NumberOther.NumberList.size(), 0);
             for (uintmax_t NumberDigit1 = 0; NumberDigit1 < NumberList.size(); ++NumberDigit1)
                 for (uintmax_t NumberDigit2 = 0; NumberDigit2 < NumberOther.NumberList.size(); ++NumberDigit2)
                     NumberProduct[NumberDigit1 + NumberDigit2] += NumberList[NumberDigit1] * NumberOther.NumberList[NumberDigit2];
@@ -77,13 +77,33 @@ namespace eLibrary::Core {
         }
 
         friend class Fraction;
+
+        friend Integer operator%(const Integer &Number1, const Integer &Number2) {
+            return Number1.doModulo(Number2);
+        }
+
+        friend Integer operator*(const Integer &Number1, const Integer &Number2) noexcept {
+            return Number1.doMultiplication(Number2);
+        }
+
+        friend Integer operator+(const Integer &Number1, const Integer &Number2) noexcept {
+            return Number1.doAddition(Number2);
+        }
+
+        friend Integer operator-(const Integer &Number1, const Integer &Number2) noexcept {
+            return Number1.doSubtraction(Number2);
+        }
+
+        friend Integer operator-(const Integer &NumberSource) noexcept {
+            return NumberSource.getOpposite();
+        }
+
+        friend Integer operator/(const Integer &Number1, const Integer &Number2) {
+            return Number1.doDivision(Number2);
+        }
     public:
         Integer() noexcept : NumberSignature(true) {
             NumberList.push_back(0);
-        }
-
-        Integer(bool NumberValue) noexcept : NumberSignature(true) {
-            NumberList.push_back(NumberValue);
         }
 
         template<std::integral T>
@@ -106,7 +126,7 @@ namespace eLibrary::Core {
 
         Integer(const String &NumberValue, uint8_t NumberRadix) : NumberSignature(true) {
             if (NumberRadix < 2 || NumberRadix > 36)
-                throw Exception(String(u"Integer::Integer(const String&, uint8_t) NumberRadix"));
+                throw ArithmeticException(String(u"Integer::Integer(const String&, uint8_t) NumberRadix"));
             if (NumberValue.isEmpty())
                 throw Exception(String(u"Integer::Integer(const String&, uint8_t) NumberValue"));
             Integer IntegerRadix(NumberRadix);
@@ -219,7 +239,7 @@ namespace eLibrary::Core {
 
         Integer doMultiplication(const Integer &NumberOther) const {
             auto *NumberProduct = MemoryAllocator::newArray<uintmax_t>(NumberList.size() + NumberOther.NumberList.size());
-            Arrays::doFill(NumberProduct, NumberProduct + NumberList.size() + NumberOther.NumberList.size(), 0);
+            Collections::doFill(NumberProduct, NumberProduct + NumberList.size() + NumberOther.NumberList.size(), 0);
             for (uintmax_t NumberDigit1 = 0; NumberDigit1 < NumberList.size(); ++NumberDigit1)
                 for (uintmax_t NumberDigit2 = 0; NumberDigit2 < NumberOther.NumberList.size(); ++NumberDigit2)
                     NumberProduct[NumberDigit1 + NumberDigit2] += NumberList[NumberDigit1] * NumberOther.NumberList[NumberDigit2];
@@ -293,6 +313,7 @@ namespace eLibrary::Core {
             return "Integer";
         }
 
+        // TODO: Replace with Stein algorithm(Binary GCD)
         Integer getGreatestCommonFactor(const Integer &NumberSource) const noexcept {
             if (NumberSource.getAbsolute().isZero()) return *this;
             return NumberSource.getGreatestCommonFactor(doModulo(NumberSource));
@@ -339,7 +360,7 @@ namespace eLibrary::Core {
         }
 
         String toString(uint8_t NumberRadix) const {
-            if (NumberRadix < 2 || NumberRadix > 36) throw Exception(String(u"Integer::toString(uint8_t) NumberRadix"));
+            if (NumberRadix < 2 || NumberRadix > 36) throw ArithmeticException(String(u"Integer::toString(uint8_t) NumberRadix"));
             StringStream CharacterStream;
             Integer NumberCurrent(getAbsolute()), NumberRadixInteger(NumberRadix);
             if (isZero()) return {u"0"};
@@ -404,6 +425,26 @@ namespace eLibrary::Core {
             Integer NumberFactor(NumberDenominatorSource.getGreatestCommonFactor(NumberNumeratorSource));
             NumberDenominator = NumberDenominatorSource.doDivision(NumberFactor);
             NumberNumerator = NumberNumeratorSource.doDivision(NumberFactor);
+        }
+
+        friend Fraction operator*(const Fraction &Number1, const Fraction &Number2) noexcept {
+            return Number1.doMultiplication(Number2);
+        }
+
+        friend Fraction operator+(const Fraction &Number1, const Fraction &Number2) noexcept {
+            return Number1.doAddition(Number2);
+        }
+
+        friend Fraction operator-(const Fraction &Number1, const Fraction &Number2) noexcept {
+            return Number1.doSubtraction(Number2);
+        }
+
+        friend Fraction operator-(const Fraction &NumberSource) noexcept {
+            return NumberSource.getOpposite();
+        }
+
+        friend Fraction operator/(const Fraction &Number1, const Fraction &Number2) {
+            return Number1.doDivision(Number2);
         }
     public:
         Fraction(const Integer &NumberValueSource) noexcept : NumberDenominator(1), NumberNumerator(NumberValueSource), NumberSignature(NumberValueSource.NumberSignature) {}
@@ -482,6 +523,10 @@ namespace eLibrary::Core {
 
         bool isPositive() const noexcept {
             return NumberSignature && !NumberNumerator.isZero();
+        }
+
+        Integer toInteger() const noexcept {
+            return NumberNumerator.doDivision(NumberDenominator);
         }
 
         String toString() const noexcept override {

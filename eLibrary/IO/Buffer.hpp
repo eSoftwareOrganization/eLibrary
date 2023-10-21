@@ -95,11 +95,11 @@ namespace eLibrary::IO {
             BufferPosition = BufferSource.BufferPosition;
             MemoryAllocator::deleteArray(BufferContainer);
             BufferContainer = MemoryAllocator::newArray<uint8_t>(BufferCapacity = BufferSource.BufferCapacity);
-            Arrays::doCopy(BufferSource.BufferContainer, BufferLimit = BufferSource.BufferLimit, BufferContainer);
+            Collections::doCopy(BufferSource.BufferContainer, BufferLimit = BufferSource.BufferLimit, BufferContainer);
         }
 
         void doCompact() noexcept {
-            Arrays::doCopyBackward(BufferContainer + BufferPosition, BufferContainer + BufferPosition + getRemaining(), BufferContainer);
+            Collections::doCopyBackward(BufferContainer + BufferPosition, BufferContainer + BufferPosition + getRemaining(), BufferContainer);
             BufferPosition = getRemaining();
             BufferLimit = BufferCapacity;
         }

@@ -7,7 +7,7 @@
 #define eLibraryToString(ObjectSource) eLibraryToStringImplement(ObjectSource)
 
 #define eLibraryVersionMajor 2023
-#define eLibraryVersionMinor 17
+#define eLibraryVersionMinor 18
 #define eLibraryVersionPatch 0
 #define eLibraryVersionNumber (eLibraryVersionMajor * 10000 + eLibraryVersionMinor * 100 + eLibraryVersionPatch)
 #define eLibraryVersionString (eLibraryToString(eLibraryVersionMajor) "." eLibraryToString(eLibraryVersionMinor) "." eLibraryToString(eLibraryVersionPatch))
@@ -15,8 +15,7 @@
 #include <Core/Global.hpp>
 
 #if eLibrarySystem(Windows)
-#include <ws2tcpip.h>
-#include <Windows.h>
+#define WIN32_LEAN_AND_MEAN
 #endif
 
 #include <Core/Concurrent.hpp>
@@ -39,12 +38,12 @@
 #endif
 
 namespace eLibrary {
-    namespace Core {
-        static void doInitializeCore() {
-#define doDefineType(TypeMode, TypeName, ...) auto *TypeName##TypeMode(Core::MemoryAllocator::newObject<Core::Type##TypeMode>(#TypeName, ##__VA_ARGS__));
-#define doDefineRegisterType(TypeMode, TypeName, ...) doDefineType(TypeMode, TypeName, ##__VA_ARGS__)Core::TypeManager::getInstance()->doRegister##TypeMode(TypeName##TypeMode)
+#define doDefineType(TypeMode, TypeName, ...) auto *TypeName##Type(Core::MemoryAllocator::newObject<Core::Type##TypeMode>(#TypeName, ##__VA_ARGS__));
+#define doDefineRegisterType(TypeMode, TypeName, ...) doDefineType(TypeMode, TypeName, ##__VA_ARGS__)Core::TypeManager::getInstance()->doRegisterType(TypeName##Type)
 #define doDefineRegisterClass(TypeName, ...) doDefineRegisterType(Class, TypeName, ##__VA_ARGS__)
 
+    namespace Core {
+        static void doInitializeCore() {
             doDefineRegisterClass(Array, "Object");
             doDefineRegisterClass(ArrayList, "Object");
             doDefineRegisterClass(ArraySet, "Object");

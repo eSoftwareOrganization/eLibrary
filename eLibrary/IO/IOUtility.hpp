@@ -16,11 +16,9 @@
 #endif
 
 namespace eLibrary::IO {
-    class File : public Object {
+    class File : public Object, public NonCopyable {
     private:
         String FilePath;
-
-        doDisableCopyAssignConstruct(File)
     public:
         explicit File(const String &FilePathSource) noexcept : FilePath(FilePathSource) {}
 
@@ -73,11 +71,9 @@ namespace eLibrary::IO {
         }
     };
 
-    class FileDescriptor : public Object {
+    class FileDescriptor : public Object, public NonCopyable {
     protected:
         int DescriptorHandle = -1;
-
-        doDisableCopyAssignConstruct(FileDescriptor)
     public:
         doEnableMoveAssignConstruct(FileDescriptor)
 

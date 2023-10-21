@@ -16,6 +16,8 @@
 #include <unistd.h>
 #endif
 
+#include <utility>
+
 namespace eLibrary::Core {
     class ConcurrentUtility final : public Object {
     public:
@@ -149,7 +151,7 @@ namespace eLibrary::Core {
     /**
      * Support for multithreading
      */
-    class Thread : public Object {
+    class Thread : public Object, public NonCopyable {
     private:
         ThreadHandleType ThreadHandle;
         volatile bool ThreadFinish;
@@ -175,8 +177,6 @@ namespace eLibrary::Core {
             pthread_attr_destroy(&ThreadAttribute);
 #endif
         }
-
-        doDisableCopyAssignConstruct(Thread)
     public:
         constexpr Thread() noexcept : ThreadHandle(ThreadHandleType()), ThreadFinish(false), ThreadInterrupt(false) {}
 
@@ -251,8 +251,6 @@ namespace eLibrary::Core {
     private:
         F ThreadFunction;
         std::tuple<Ts...> ThreadParameter;
-
-        doDisableCopyAssignConstruct(FunctionThread)
     public:
         constexpr explicit FunctionThread(F ThreadFunctionSource, Ts ...ThreadParameterSource) noexcept : ThreadFunction(ThreadFunctionSource), ThreadParameter(std::make_tuple(ThreadParameterSource...)) {}
 
@@ -266,8 +264,6 @@ namespace eLibrary::Core {
     };
 
     class ReentrantThread : public Thread {
-    private:
-        doDisableCopyAssignConstruct(ReentrantThread)
     public:
         constexpr ReentrantThread() noexcept = default;
 
@@ -285,8 +281,6 @@ namespace eLibrary::Core {
     private:
         F ThreadFunction;
         std::tuple<Ts...> ThreadParameter;
-
-        doDisableCopyAssignConstruct(ReentrantFunctionThread)
     public:
         constexpr explicit ReentrantFunctionThread(F ThreadFunctionSource, Ts ...ThreadParameterSource) noexcept : ThreadFunction(ThreadFunctionSource), ThreadParameter(std::make_tuple(ThreadParameterSource...)) {}
 

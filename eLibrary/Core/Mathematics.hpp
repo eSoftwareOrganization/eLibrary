@@ -9,20 +9,23 @@
 namespace eLibrary::Core {
     class MathematicsContext final : public Object {
     private:
-        static Integer FunctionPrecision;
+        Integer FunctionPrecision{10000000};
     public:
-        constexpr MathematicsContext() noexcept = delete;
+        MathematicsContext() noexcept = default;
 
-        static Integer getFunctionPrecision() noexcept {
+        static MathematicsContext getDefault() noexcept {
+            static MathematicsContext ContextObject;
+            return ContextObject;
+        }
+
+        Integer getFunctionPrecision() const noexcept {
             return FunctionPrecision;
         }
 
-        static void setFunctionPrecision(const Integer &FunctionPrecisionSource) noexcept {
+        void setFunctionPrecision(const Integer &FunctionPrecisionSource) noexcept {
             FunctionPrecision = FunctionPrecisionSource;
         }
     };
-
-    Integer MathematicsContext::FunctionPrecision{10000000};
 
     /**
      * Support for mathematical operations
@@ -143,14 +146,15 @@ namespace eLibrary::Core {
             return NumberN.doFactorial().doDivision(NumberM.doFactorial().doMultiplication(NumberN.doSubtraction(NumberM).doFactorial()));
         }
 
-        static Fraction doCosecantFraction(const Fraction &NumberSource) noexcept {
-            return Fraction(1).doDivision(doSineFraction(NumberSource));
+        static Fraction doCosecantFraction(const Fraction &NumberSource, const MathematicsContext &NumberContext) noexcept {
+            return Fraction(1).doDivision(doSineFraction(NumberSource, NumberContext));
         }
 
-        static Fraction doCosineFraction(const Fraction &NumberSource) noexcept {
+        static Fraction doCosineFraction(const Fraction &NumberSourceSource, const MathematicsContext &NumberContext) noexcept {
+            Fraction NumberSource(NumberSourceSource.doSubtraction(Fraction(NumberSourceSource.doDivision(NumberPi.doAddition(NumberPi)).toInteger()).doMultiplication(2).doMultiplication(NumberPi)));
             Fraction NumberResult(1), NumberTerminate(1);
             unsigned short NumberDigit = 2;
-            while (NumberTerminate.getAbsolute().doCompare({1, MathematicsContext::getFunctionPrecision()}) > 0) {
+            while (NumberTerminate.getAbsolute().doCompare({1, NumberContext.getFunctionPrecision()}) > 0) {
                 NumberTerminate = NumberTerminate.doMultiplication(NumberSource.doMultiplication(NumberSource).doDivision(Integer(NumberDigit * (NumberDigit - 1))).getOpposite());
                 NumberResult = NumberResult.doAddition(NumberTerminate);
                 NumberDigit += 2;
@@ -158,18 +162,18 @@ namespace eLibrary::Core {
             return NumberResult;
         }
 
-        static Fraction doCotangentFraction(const Fraction &NumberSource) noexcept {
-            return doCosineFraction(NumberSource).doDivision(doSineFraction(NumberSource));
+        static Fraction doCotangentFraction(const Fraction &NumberSource, const MathematicsContext &NumberContext) noexcept {
+            return doCosineFraction(NumberSource, NumberContext).doDivision(doSineFraction(NumberSource, NumberContext));
         }
 
-        static Fraction doEvolutionFraction(const Fraction &NumberBase, const Fraction &NumberPower) noexcept {
-            return doPowerFraction(NumberBase, Fraction(1, 1).doDivision(NumberPower));
+        static Fraction doEvolutionFraction(const Fraction &NumberBase, const Fraction &NumberPower, const MathematicsContext &NumberContext) noexcept {
+            return doPowerFraction(NumberBase, Fraction(1, 1).doDivision(NumberPower), NumberContext);
         }
 
-        static Fraction doExponentFraction(const Fraction &NumberSource) noexcept {
+        static Fraction doExponentFraction(const Fraction &NumberSource, const MathematicsContext &NumberContext) noexcept {
             Fraction NumberDenominator(1), NumberNumerator = NumberSource, NumberResult(1), NumberTerminate = NumberSource;
             unsigned short NumberDigit = 1;
-            while (NumberTerminate.getAbsolute().doCompare({1, MathematicsContext::getFunctionPrecision()}) > 0) {
+            while (NumberTerminate.getAbsolute().doCompare({1, NumberContext.getFunctionPrecision()}) > 0) {
                 NumberResult = NumberResult.doAddition(NumberTerminate);
                 NumberNumerator = NumberNumerator.doMultiplication(NumberSource);
                 NumberDenominator = NumberDenominator.doMultiplication(Integer(++NumberDigit));
@@ -187,22 +191,22 @@ namespace eLibrary::Core {
             return (NumberSource + 1) >> 1;
         }
 
-        static Fraction doHyperbolicCosineFraction(const Fraction &NumberSource) noexcept {
-            return doExponentFraction(NumberSource).doAddition(doExponentFraction(NumberSource.getOpposite())).doDivision(Integer(2));
+        static Fraction doHyperbolicCosineFraction(const Fraction &NumberSource, const MathematicsContext &NumberContext) noexcept {
+            return doExponentFraction(NumberSource, NumberContext).doAddition(doExponentFraction(NumberSource.getOpposite(), NumberContext)).doDivision(Integer(2));
         }
 
-        static Fraction doHyperbolicSineFraction(const Fraction &NumberSource) noexcept {
-            return doExponentFraction(NumberSource).doSubtraction(doExponentFraction(NumberSource.getOpposite())).doDivision(Integer(2));
+        static Fraction doHyperbolicSineFraction(const Fraction &NumberSource, const MathematicsContext &NumberContext) noexcept {
+            return doExponentFraction(NumberSource, NumberContext).doSubtraction(doExponentFraction(NumberSource.getOpposite(), NumberContext)).doDivision(Integer(2));
         }
 
-        static Fraction doHyperbolicTangentFraction(const Fraction &NumberSource) noexcept {
-            return doHyperbolicSineFraction(NumberSource).doDivision(doHyperbolicCosineFraction(NumberSource));
+        static Fraction doHyperbolicTangentFraction(const Fraction &NumberSource, const MathematicsContext &NumberContext) noexcept {
+            return doHyperbolicSineFraction(NumberSource, NumberContext).doDivision(doHyperbolicCosineFraction(NumberSource, NumberContext));
         }
 
-        static Fraction doInverseHyperbolicTangentFraction(const Fraction &NumberDegree) noexcept {
+        static Fraction doInverseHyperbolicTangentFraction(const Fraction &NumberDegree, const MathematicsContext &NumberContext) noexcept {
             Fraction NumberNumerator(NumberDegree), NumberResult(0), NumberTerminate(NumberDegree);
             unsigned short NumberDigit = 1;
-            while (NumberTerminate.getAbsolute().doCompare({1, MathematicsContext::getFunctionPrecision()}) > 0) {
+            while (NumberTerminate.getAbsolute().doCompare({1, NumberContext.getFunctionPrecision()}) > 0) {
                 NumberResult = NumberResult.doAddition(NumberTerminate);
                 NumberNumerator = NumberNumerator.doMultiplication(NumberDegree.doMultiplication(NumberDegree));
                 NumberDigit += 2;
@@ -211,8 +215,8 @@ namespace eLibrary::Core {
             return NumberResult;
         }
 
-        static Fraction doLogarithmEFraction(const Fraction &NumberSource) noexcept {
-            return doInverseHyperbolicTangentFraction(NumberSource.doSubtraction(Integer(1)).doDivision(NumberSource.doAddition(Integer(1)))).doMultiplication(Integer(2));
+        static Fraction doLogarithmEFraction(const Fraction &NumberSource, const MathematicsContext &NumberContext) noexcept {
+            return doInverseHyperbolicTangentFraction(NumberSource.doSubtraction(Integer(1)).doDivision(NumberSource.doAddition(Integer(1))), NumberContext).doMultiplication(Integer(2));
         }
 
         template<std::integral T>
@@ -237,19 +241,19 @@ namespace eLibrary::Core {
             return NumberResult;
         }
 
-        static Fraction doPowerFraction(const Fraction &NumberBase, const Fraction &NumberExponent) noexcept {
-            return doExponentFraction(doLogarithmEFraction(NumberBase).doMultiplication(NumberExponent));
+        static Fraction doPowerFraction(const Fraction &NumberBase, const Fraction &NumberExponent, const MathematicsContext &NumberContext) noexcept {
+            return doExponentFraction(doLogarithmEFraction(NumberBase, NumberContext).doMultiplication(NumberExponent), NumberContext);
         }
 
-        static Fraction doSecantFraction(const Fraction &NumberSource) noexcept {
-            return Fraction(1, 1).doDivision(doCosineFraction(NumberSource));
+        static Fraction doSecantFraction(const Fraction &NumberSource, const MathematicsContext &NumberContext) noexcept {
+            return Fraction(1, 1).doDivision(doCosineFraction(NumberSource, NumberContext));
         }
 
-        static Fraction doSineFraction(const Fraction &NumberSourceSource) noexcept {
-            Fraction NumberSource(NumberSourceSource.doSubtraction(NumberSourceSource.doDivision(NumberPi.doAddition(NumberPi)).doMultiplication(2).doMultiplication(NumberPi)));
+        static Fraction doSineFraction(const Fraction &NumberSourceSource, const MathematicsContext &NumberContext) noexcept {
+            Fraction NumberSource(NumberSourceSource.doSubtraction(Fraction(NumberSourceSource.doDivision(NumberPi.doAddition(NumberPi)).toInteger()).doMultiplication(2).doMultiplication(NumberPi)));
             Fraction NumberDenominator(1), NumberNumerator(NumberSource), NumberResult(0), NumberSignature(1), NumberTerminate(NumberSource);
             unsigned short NumberDigit = 1;
-            while (NumberTerminate.getAbsolute().doCompare({1, MathematicsContext::getFunctionPrecision()}) > 0) {
+            while (NumberTerminate.getAbsolute().doCompare({1, NumberContext.getFunctionPrecision()}) > 0) {
                 NumberResult = NumberResult.doAddition(NumberTerminate);
                 ++NumberDigit;
                 NumberSignature = NumberSignature.getOpposite();
@@ -260,8 +264,8 @@ namespace eLibrary::Core {
             return NumberResult;
         }
 
-        static Fraction doTangentFraction(const Fraction &NumberSource) noexcept {
-            return doSineFraction(NumberSource).doDivision(doCosineFraction(NumberSource));
+        static Fraction doTangentFraction(const Fraction &NumberSource, const MathematicsContext &NumberContext) noexcept {
+            return doSineFraction(NumberSource, NumberContext).doDivision(doCosineFraction(NumberSource, NumberContext));
         }
 
         template<Arithmetic T>
@@ -351,9 +355,17 @@ namespace eLibrary::Core {
             return 180. / std::numbers::pi * NumberSource;
         }
 
+        static Fraction toDegreesFraction(const Fraction &NumberSource) noexcept {
+            return Fraction(180).doDivision(NumberPi).doMultiplication(NumberSource);
+        }
+
         template<Arithmetic T>
         static T toRadians(T NumberSource) noexcept {
             return std::numbers::pi / 180. * NumberSource;
+        }
+
+        static Fraction toRadiansFraction(const Fraction &NumberSource) noexcept {
+            return NumberPi.doDivision({180}).doMultiplication(NumberSource);
         }
     };
 

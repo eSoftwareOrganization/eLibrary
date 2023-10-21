@@ -22,9 +22,6 @@ namespace eLibrary::Core {
         eLibraryAPI virtual String toString() const noexcept;
     };
 
-    template<typename T>
-    concept ObjectDerived = std::derived_from<T, Object>;
-
     class Objects final : public Object {
     public:
         constexpr Objects() noexcept = delete;
@@ -46,33 +43,38 @@ namespace eLibrary::Core {
         }
 
         template<typename T>
-        static constexpr T &&doForward(std::remove_reference_t<T> &ObjectSource) noexcept {
+        static constexpr typename ::std::decay_t<T> doCopy(T &&ObjectSource) {
             return static_cast<T&&>(ObjectSource);
         }
 
         template<typename T>
-        static constexpr T &&doForward(std::remove_reference_t<T> &&ObjectSource) noexcept {
+        static constexpr T &&doForward(::std::remove_reference_t<T> &ObjectSource) noexcept {
             return static_cast<T&&>(ObjectSource);
         }
 
         template<typename T>
-        static constexpr std::remove_reference_t<T>&& doMove(T &&ObjectSource) noexcept {
-            return static_cast<std::remove_reference_t<T>&&>(ObjectSource);
+        static constexpr T &&doForward(::std::remove_reference_t<T> &&ObjectSource) noexcept {
+            return static_cast<T&&>(ObjectSource);
         }
 
         template<typename T>
-        static void doSwap(T &Object1, T &Object2) noexcept(std::is_nothrow_move_constructible_v<T> && std::is_nothrow_move_assignable_v<T>) {
+        static constexpr ::std::remove_reference_t<T>&& doMove(T &&ObjectSource) noexcept {
+            return static_cast<::std::remove_reference_t<T>&&>(ObjectSource);
+        }
+
+        template<typename T>
+        static void doSwap(T &Object1, T &Object2) {
             T ObjectBuffer = doMove(Object1);
             Object1 = doMove(Object2);
             Object2 = doMove(ObjectBuffer);
         }
 
-        template<typename T> requires std::is_object_v<T>
+        template<typename T> requires ::std::is_object_v<T>
         static T *getAddress(T &ObjectSource) noexcept {
             return (T*) &((char&) ObjectSource);
         }
 
-        template<typename T> requires (!std::is_object_v<T>)
+        template<typename T> requires (!::std::is_object_v<T>)
         static T *getAddress(T &ObjectSource) noexcept {
             return &ObjectSource;
         }
@@ -100,7 +102,7 @@ namespace eLibrary::Core {
 }
 
 template<eLibrary::Core::Comparable T>
-struct std::equal_to<T> {
+struct ::std::equal_to<T> {
 public:
     bool operator()(const T &Object1, const T &Object2) const noexcept {
         return !Object1.doCompare(Object2);
@@ -108,7 +110,7 @@ public:
 };
 
 template<eLibrary::Core::Comparable T>
-struct std::greater<T> {
+struct ::std::greater<T> {
 public:
     bool operator()(const T &Object1, const T &Object2) const noexcept {
         return Object1.doCompare(Object2) > 0;
@@ -116,7 +118,7 @@ public:
 };
 
 template<eLibrary::Core::Comparable T>
-struct std::greater_equal<T> {
+struct ::std::greater_equal<T> {
 public:
     bool operator()(const T &Object1, const T &Object2) const noexcept {
         return Object1.doCompare(Object2) >= 0;
@@ -124,7 +126,7 @@ public:
 };
 
 template<eLibrary::Core::Hashable T>
-struct std::hash<T> {
+struct ::std::hash<T> {
 public:
     auto operator()(const T &ObjectSource) const noexcept {
         return ObjectSource.hashCode();
@@ -132,7 +134,7 @@ public:
 };
 
 template<eLibrary::Core::Comparable T>
-struct std::less<T> {
+struct ::std::less<T> {
 public:
     bool operator()(const T &Object1, const T &Object2) const noexcept {
         return Object1.doCompare(Object2) < 0;
@@ -140,7 +142,7 @@ public:
 };
 
 template<eLibrary::Core::Comparable T>
-struct std::less_equal<T> {
+struct ::std::less_equal<T> {
 public:
     bool operator()(const T &Object1, const T &Object2) const noexcept {
         return Object1.doCompare(Object2) <= 0;
@@ -148,7 +150,7 @@ public:
 };
 
 template<eLibrary::Core::Comparable T>
-struct std::not_equal_to<T> {
+struct ::std::not_equal_to<T> {
 public:
     bool operator()(const T &Object1, const T &Object2) const noexcept {
         return Object1.doCompare(Object2);

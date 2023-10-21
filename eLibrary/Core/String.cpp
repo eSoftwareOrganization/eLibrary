@@ -4,7 +4,7 @@
 
 namespace eLibrary::Core {
     uint8_t Character::toNumber(uint8_t NumberRadix) const {
-        if (NumberRadix < 2 || NumberRadix > 36) throw Exception(String(u"Character::toNumber(uint8_t) NumberRadix"));
+        if (NumberRadix < 2 || NumberRadix > 36) throw ArithmeticException(String(u"Character::toNumber(uint8_t) NumberRadix"));
         if (isDigit()) {
             if (CharacterValue - 48 >= NumberRadix)
                 throw Exception(String(u"Character::toNumber(uint8_t) NumberRadix"));
@@ -20,7 +20,7 @@ namespace eLibrary::Core {
     }
 
     Character Character::valueOf(uint8_t NumberSource, uint8_t NumberRadix) {
-        if (NumberRadix < 2 || NumberRadix > 36) throw Exception(String(u"Character::valueOf(uint8_t, uint8_t) NumberRadix"));
+        if (NumberRadix < 2 || NumberRadix > 36) throw ArithmeticException(String(u"Character::valueOf(uint8_t, uint8_t) NumberRadix"));
         if (NumberSource >= NumberRadix) throw Exception(String(u"Character::valueOf(uint8_t, uint8_t) NumberSource"));
         if (NumberSource <= 10) return {char16_t(NumberSource + 48)};
         return {char16_t(NumberSource + 55)};
@@ -35,13 +35,13 @@ namespace eLibrary::Core {
     String::String(const std::string &StringSource) noexcept {
         std::u16string String16Source = std::wstring_convert<std::codecvt_utf8_utf16<char16_t>, char16_t>().from_bytes(StringSource);
         CharacterContainer = MemoryAllocator::newArray<Character>((CharacterSize = (intmax_t) String16Source.size()) + 1);
-        Arrays::doCopy(String16Source.begin(), String16Source.end(), CharacterContainer);
+        Collections::doCopy(String16Source.begin(), String16Source.end(), CharacterContainer);
         CharacterContainer[CharacterSize] = Character();
     }
 
     String::String(const std::u16string &StringSource) noexcept : CharacterSize((intmax_t) StringSource.size()) {
         CharacterContainer = MemoryAllocator::newArray<Character>(StringSource.size() + 1);
-        Arrays::doCopy(StringSource.begin(), StringSource.end(), CharacterContainer);
+        Collections::doCopy(StringSource.begin(), StringSource.end(), CharacterContainer);
         CharacterContainer[CharacterSize] = Character();
     }
 
@@ -49,20 +49,20 @@ namespace eLibrary::Core {
         std::string String8Source(std::wstring_convert<std::codecvt_utf16<char32_t>, char32_t>().to_bytes(StringSource));
         std::u16string String16Source(reinterpret_cast<const char16_t*>(String8Source.c_str()), String8Source.size() / sizeof(char16_t));
         CharacterContainer = MemoryAllocator::newArray<Character>((CharacterSize = (intmax_t) String16Source.size()) + 1);
-        Arrays::doCopy(String16Source.begin(), String16Source.end(), CharacterContainer);
+        Collections::doCopy(String16Source.begin(), String16Source.end(), CharacterContainer);
         CharacterContainer[CharacterSize] = Character();
     }
 
     String::String(const std::wstring &StringSource) noexcept {
         if constexpr (sizeof(std::wstring::value_type) == sizeof(char16_t)) {
             CharacterContainer = MemoryAllocator::newArray<Character>((CharacterSize = (intmax_t) StringSource.size()) + 1);
-            Arrays::doCopy(StringSource.begin(), StringSource.end(), CharacterContainer);
+            Collections::doCopy(StringSource.begin(), StringSource.end(), CharacterContainer);
             CharacterContainer[CharacterSize] = Character();
         } else if constexpr (sizeof(std::wstring::value_type) == sizeof(char32_t)) {
             std::string String8Source(std::wstring_convert<std::codecvt_utf16<char32_t>, char32_t>().to_bytes({StringSource.begin(), StringSource.end()}));
             std::u16string String16Source(reinterpret_cast<const char16_t*>(String8Source.c_str()), String8Source.size() / sizeof(char16_t));
             CharacterContainer = MemoryAllocator::newArray<Character>((CharacterSize = (intmax_t) String16Source.size()) + 1);
-            Arrays::doCopy(String16Source.begin(), String16Source.end(), CharacterContainer);
+            Collections::doCopy(String16Source.begin(), String16Source.end(), CharacterContainer);
             CharacterContainer[CharacterSize] = Character();
         }
     }
@@ -79,7 +79,7 @@ namespace eLibrary::Core {
         if (Objects::getAddress(StringSource) == this) return;
         MemoryAllocator::deleteArray(CharacterContainer);
         CharacterContainer = MemoryAllocator::newArray<Character>((CharacterSize = StringSource.CharacterSize) + 1);
-        Arrays::doCopy(StringSource.CharacterContainer, CharacterSize, CharacterContainer);
+        Collections::doCopy(StringSource.CharacterContainer, CharacterSize, CharacterContainer);
         CharacterContainer[CharacterSize] = Character();
     }
 
@@ -144,12 +144,12 @@ namespace eLibrary::Core {
 
     String String::doTruncate(intmax_t CharacterStart, intmax_t CharacterStop) const {
         if (CharacterStart < 0) CharacterStart += CharacterSize;
-        Arrays::doCheckGE(CharacterStart, 0);
-        Arrays::doCheckL(CharacterStart, CharacterSize);
+        Collections::doCheckGE(CharacterStart, 0);
+        Collections::doCheckL(CharacterStart, CharacterSize);
         if (CharacterStop < 0) CharacterStop += CharacterSize + 1;
-        Arrays::doCheckGE(CharacterStop, 0);
-        Arrays::doCheckLE(CharacterStop, CharacterSize);
-        Arrays::doCheckLE(CharacterStart, CharacterStop);
+        Collections::doCheckGE(CharacterStop, 0);
+        Collections::doCheckLE(CharacterStop, CharacterSize);
+        Collections::doCheckLE(CharacterStart, CharacterStop);
         StringStream CharacterStream(CharacterStop - CharacterStart);
         for (intmax_t CharacterIndex = CharacterStart;CharacterIndex < CharacterStop;++CharacterIndex)
             CharacterStream.addCharacter(CharacterContainer[CharacterIndex]);
@@ -158,8 +158,8 @@ namespace eLibrary::Core {
 
     Character String::getCharacter(intmax_t CharacterIndex) const {
         if (CharacterIndex < 0) CharacterIndex += CharacterSize;
-        Arrays::doCheckGE(CharacterIndex, 0);
-        Arrays::doCheckL(CharacterIndex, CharacterSize);
+        Collections::doCheckGE(CharacterIndex, 0);
+        Collections::doCheckL(CharacterIndex, CharacterSize);
         return CharacterContainer[CharacterIndex];
     }
 
@@ -211,31 +211,31 @@ namespace eLibrary::Core {
         CharacterContainer = MemoryAllocator::newArray<Character>(CharacterCapacity);
     }
 
-    void StringStream::addCharacter(const Character &CharacterSource) {
+    void StringStream::addCharacter(const Character &CharacterSource) noexcept {
         if (!CharacterCapacity) CharacterContainer = MemoryAllocator::newArray<Character>(CharacterCapacity = 1);
         if (CharacterSize == CharacterCapacity) {
             auto *ElementBuffer = MemoryAllocator::newArray<Character>(CharacterSize);
-            Arrays::doMove(CharacterContainer, CharacterSize, ElementBuffer);
+            Collections::doMove(CharacterContainer, CharacterSize, ElementBuffer);
             MemoryAllocator::deleteArray(CharacterContainer);
             CharacterContainer = MemoryAllocator::newArray<Character>(CharacterCapacity <<= 1);
-            Arrays::doMove(ElementBuffer, CharacterSize, CharacterContainer);
+            Collections::doMove(ElementBuffer, CharacterSize, CharacterContainer);
             MemoryAllocator::deleteArray(ElementBuffer);
         }
         CharacterContainer[CharacterSize++] = CharacterSource;
     }
 
-    void StringStream::addString(const String &StringSource) {
+    void StringStream::addString(const String &StringSource) noexcept {
         if (!CharacterCapacity) CharacterContainer = MemoryAllocator::newArray<Character>(CharacterCapacity = 1);
         if (CharacterSize + StringSource.CharacterSize >= CharacterCapacity) {
             auto *ElementBuffer = MemoryAllocator::newArray<Character>(CharacterSize);
-            Arrays::doMove(CharacterContainer, CharacterSize, ElementBuffer);
+            Collections::doMove(CharacterContainer, CharacterSize, ElementBuffer);
             MemoryAllocator::deleteArray(CharacterContainer);
             while (CharacterCapacity <= CharacterSize + StringSource.CharacterSize) CharacterCapacity <<= 1;
             CharacterContainer = MemoryAllocator::newArray<Character>(CharacterCapacity);
-            Arrays::doMove(ElementBuffer, CharacterSize, CharacterContainer);
+            Collections::doMove(ElementBuffer, CharacterSize, CharacterContainer);
             MemoryAllocator::deleteArray(ElementBuffer);
         }
-        Arrays::doCopy(StringSource.CharacterContainer, StringSource.CharacterSize, CharacterContainer + CharacterSize);
+        Collections::doCopy(StringSource.CharacterContainer, StringSource.CharacterSize, CharacterContainer + CharacterSize);
         CharacterSize += StringSource.CharacterSize;
     }
 

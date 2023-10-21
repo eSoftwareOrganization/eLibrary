@@ -9,7 +9,7 @@
 #include <IO/Exception.hpp>
 
 namespace eLibrary::IO {
-    class InputStream : public Object {
+    class InputStream : public Object, public NonCopyable {
     public:
         virtual void doClose() {}
 
@@ -32,7 +32,7 @@ namespace eLibrary::IO {
         }
     };
 
-    class OutputStream : public Object {
+    class OutputStream : public Object, public NonCopyable {
     public:
         virtual void doClose() {}
 

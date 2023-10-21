@@ -9,11 +9,9 @@
 #include <string>
 
 namespace eLibrary::Core {
-    class TypeBase : public Object {
+    class TypeBase : public Object, public NonCopyable {
     protected:
         std::string TypeName;
-
-        doDisableCopyAssignConstruct(TypeBase)
     public:
         TypeBase(const std::string &TypeNameSource) noexcept : TypeName(TypeNameSource) {}
 
@@ -55,8 +53,6 @@ namespace eLibrary::Core {
     private:
         std::string ClassParent;
         std::map<std::string, const TypePropertyBase*> ClassPropertyMap;
-
-        doDisableCopyAssignConstruct(TypeClass)
     public:
         TypeClass(const std::string &TypeNameSource, const std::string &ClassParentSource) noexcept : TypeBase(TypeNameSource), ClassParent(ClassParentSource) {}
 
@@ -66,7 +62,9 @@ namespace eLibrary::Core {
             return this;
         }
 
-        eLibraryAPI const TypeClass *getClassParent() const noexcept;
+        std::string getClassParent() const noexcept {
+            return ClassParent;
+        }
 
         const TypePropertyBase *getClassProperty(const std::string &PropertyName) noexcept {
             auto *PropertyResult = ClassPropertyMap[PropertyName];
@@ -81,8 +79,6 @@ namespace eLibrary::Core {
 
     class TypeEnumeration final : public TypeBase {
     private:
-        doDisableCopyAssignConstruct(TypeEnumeration)
-
         std::map<std::string, const TypePropertyBase*> EnumerationPropertyMap;
     public:
         TypeEnumeration(const std::string &TypeNameSource, ...) noexcept : TypeBase(TypeNameSource) {}
@@ -104,39 +100,26 @@ namespace eLibrary::Core {
         }
     };
 
-    class TypeManager final : public Object {
+    class TypeManager final : public Object, public NonCopyable {
     private:
         std::map<std::string, const TypeBase*> ManagerMap;
 
         TypeManager() noexcept = default;
-
-        doDisableCopyAssignConstruct(TypeManager)
     public:
         ~TypeManager() noexcept {
             for (auto &TypeEntry : ManagerMap) MemoryAllocator::deleteObject(TypeEntry.second);
             ManagerMap.clear();
         }
 
-        const TypeClass *doQueryClass(const std::string &TypeName) {
-            auto *TypeResult = ManagerMap[TypeName];
-            if (!TypeResult->isClass()) return nullptr;
-            return (TypeClass*) TypeResult;
+        template<typename T>
+        const TypeBase *doQueryType() {}
+
+        const TypeBase *doQueryType(const std::string &TypeName) noexcept {
+            return ManagerMap[TypeName];
         }
 
-        TypeManager *doRegisterBase(const TypeBase *TypeSource) {
+        TypeManager *doRegisterType(const TypeBase *TypeSource) noexcept {
             if (!TypeSource) return this;
-            ManagerMap[TypeSource->getTypeName()] = TypeSource;
-            return this;
-        }
-
-        TypeManager *doRegisterClass(const TypeBase *TypeSource) {
-            if (!TypeSource || !TypeSource->isClass()) return this;
-            ManagerMap[TypeSource->getTypeName()] = TypeSource;
-            return this;
-        }
-
-        TypeManager *doRegisterEnumeration(const TypeBase *TypeSource) {
-            if (!TypeSource || !TypeSource->isEnumeration()) return this;
             ManagerMap[TypeSource->getTypeName()] = TypeSource;
             return this;
         }
@@ -150,10 +133,6 @@ namespace eLibrary::Core {
             return &ManagerInstance;
         }
     };
-
-    const TypeClass *TypeClass::getClassParent() const noexcept {
-        return TypeManager::getInstance()->doQueryClass(ClassParent);
-    }
 }
 
 #endif
