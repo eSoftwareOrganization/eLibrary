@@ -19,8 +19,6 @@ ankerl::nanobench::Bench TestBench;
 ::std::mt19937_64 RandomEngine64;
 ::std::random_device RandomDevice;
 
-#include <bits/stdc++.h>
-
 TEST_SUITE("Container") {
     TEST_CASE("ArrayList") {
         ArrayList<NumberBuiltin<uintmax_t>> NumberList;
