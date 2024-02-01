@@ -3,7 +3,7 @@
 #ifndef eLibraryHeaderCoreString
 #define eLibraryHeaderCoreString
 
-#include <Core/Object.hpp>
+#include <Core/Memory.hpp>
 #include <cwctype>
 #include <string>
 
@@ -75,6 +75,7 @@ namespace eLibrary::Core {
     private:
         intmax_t CharacterSize = 0;
         Character *CharacterContainer = nullptr;
+        mutable MemoryAllocator<Character> CharacterAllocator;
 
         friend class StringStream;
     public:
@@ -85,13 +86,13 @@ namespace eLibrary::Core {
 
         eLibraryAPI String(const Character&) noexcept;
 
-        eLibraryAPI String(const std::string&) noexcept;
+        eLibraryAPI String(const ::std::string&) noexcept;
 
-        eLibraryAPI String(const std::u16string&) noexcept;
+        eLibraryAPI String(const ::std::u16string&) noexcept;
 
-        eLibraryAPI String(const std::u32string&) noexcept;
+        eLibraryAPI String(const ::std::u32string&) noexcept;
 
-        eLibraryAPI String(const std::wstring&) noexcept;
+        eLibraryAPI String(const ::std::wstring&) noexcept;
 
         eLibraryAPI ~String() noexcept;
 
@@ -192,17 +193,17 @@ namespace eLibrary::Core {
             return *this;
         }
 
-        eLibraryAPI std::string toU8String() const noexcept;
+        eLibraryAPI ::std::string toU8String() const noexcept;
 
-        eLibraryAPI std::u16string toU16String() const noexcept;
+        eLibraryAPI ::std::u16string toU16String() const noexcept;
 
-        eLibraryAPI std::u32string toU32String() const noexcept;
+        eLibraryAPI ::std::u32string toU32String() const noexcept;
 
-        eLibraryAPI std::wstring toWString() const noexcept;
+        eLibraryAPI ::std::wstring toWString() const noexcept;
 
         template<Arithmetic T>
         static String valueOf(T ObjectSource) noexcept {
-            return std::to_string(ObjectSource);
+            return ::std::to_string(ObjectSource);
         }
 
         template<StringConvertible T>
@@ -216,6 +217,7 @@ namespace eLibrary::Core {
         uintmax_t CharacterCapacity = 0;
         uintmax_t CharacterSize = 0;
         Character *CharacterContainer = nullptr;
+        mutable MemoryAllocator<Character> CharacterAllocator;
     public:
         constexpr StringStream() noexcept = default;
 
@@ -243,11 +245,11 @@ namespace eLibrary::Core {
 #include <format>
 
 template<eLibrary::Core::StringConvertible ObjectT, typename CharacterT>
-struct std::formatter<ObjectT, CharacterT> : public std::formatter<std::string, CharacterT> {
+struct std::formatter<ObjectT, CharacterT> : public ::std::formatter<std::string, CharacterT> {
 public:
     template<typename ContextT>
     auto format(const ObjectT &ObjectSource, ContextT &ObjectContext) const noexcept {
-        return std::formatter<std::string, CharacterT>::format(ObjectSource.toString().toU8String(), ObjectContext);
+        return ::std::formatter<std::string, CharacterT>::format(ObjectSource.toString().toU8String(), ObjectContext);
     }
 };
 #endif

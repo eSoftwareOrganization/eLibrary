@@ -6,7 +6,6 @@
 #if eLibraryFeature(IO)
 
 #include <IO/Exception.hpp>
-#include <cstring>
 
 namespace eLibrary::IO {
     class Buffer : public Object {
@@ -66,71 +65,59 @@ namespace eLibrary::IO {
 
     class ByteBuffer : public Buffer {
     protected:
-        uint8_t *BufferContainer = nullptr;
+        Array<uint8_t> BufferContainer;
 
-        constexpr ByteBuffer(uint8_t *BufferContainerSource, uintmax_t BufferCapacitySource) noexcept : BufferContainer(BufferContainerSource) {
-            BufferCapacity = BufferLimit = BufferCapacitySource;
+        ByteBuffer(const Array<uint8_t> &BufferContainerSource) noexcept : BufferContainer(BufferContainerSource) {
+            BufferCapacity = BufferLimit = BufferContainerSource.getElementSize();
         }
 
+        friend class FileInputStream;
         friend class FileOutputStream;
     public:
-        doEnableCopyAssignConstruct(ByteBuffer)
-
         constexpr ByteBuffer() noexcept = default;
 
         ~ByteBuffer() noexcept {
             BufferCapacity = 0;
             BufferLimit = 0;
             BufferPosition = 0;
-            MemoryAllocator::deleteArray(BufferContainer);
-            BufferContainer = nullptr;
         }
 
         static ByteBuffer doAllocate(uintmax_t BufferCapacitySource) noexcept {
-            return {MemoryAllocator::newArray<uint8_t>(BufferCapacitySource), BufferCapacitySource};
-        }
-
-        void doAssign(const ByteBuffer &BufferSource) noexcept {
-            if (Objects::getAddress(BufferSource) == this) return;
-            BufferPosition = BufferSource.BufferPosition;
-            MemoryAllocator::deleteArray(BufferContainer);
-            BufferContainer = MemoryAllocator::newArray<uint8_t>(BufferCapacity = BufferSource.BufferCapacity);
-            Collections::doCopy(BufferSource.BufferContainer, BufferLimit = BufferSource.BufferLimit, BufferContainer);
+            return {Array<uint8_t>(BufferCapacitySource)};
         }
 
         void doCompact() noexcept {
-            Collections::doCopyBackward(BufferContainer + BufferPosition, BufferContainer + BufferPosition + getRemaining(), BufferContainer);
+            Collections::doCopyBackward(BufferContainer.begin() + BufferPosition, BufferContainer.begin() + BufferPosition + getRemaining(), BufferContainer.begin());
             BufferPosition = getRemaining();
             BufferLimit = BufferCapacity;
         }
 
         intmax_t doCompare(const ByteBuffer &BufferSource) const noexcept {
-            if (BufferCapacity != BufferSource.BufferCapacity) return Numbers::doCompare(BufferCapacity, BufferSource.BufferCapacity);
-            return ::memcmp(BufferContainer, BufferSource.BufferContainer, sizeof(uint8_t) * BufferCapacity);
+            return Collections::doCompare(BufferContainer.begin() + BufferPosition, BufferContainer.begin() + BufferLimit, BufferSource.BufferContainer.begin() + BufferSource.BufferPosition, BufferSource.BufferContainer.begin() + BufferSource.BufferLimit);
         }
 
-        uint8_t *getBufferContainer() const noexcept {
+        Array<uint8_t> getBufferContainer() const noexcept {
             return BufferContainer;
         }
 
         uint8_t getValue() const {
             if (BufferPosition >= BufferLimit) throw IOException(String(u"ByteBuffer::setValue(uint8_t) BufferPosition"));
-            return BufferContainer[BufferPosition++];
+            return BufferContainer.getElement(BufferPosition++);
         }
 
         uint8_t getValue(uintmax_t ValueIndex) const {
             if (ValueIndex >= BufferLimit) throw IOException(String(u"ByteBuffer::getValue(uintmax_t) ValueIndex"));
-            return BufferContainer[ValueIndex];
+            return BufferContainer.getElement(ValueIndex);
         }
 
         void setValue(uint8_t ValueSource) {
             if (BufferPosition >= BufferLimit) throw IOException(String(u"ByteBuffer::setValue(uint8_t) BufferPosition"));
-            BufferContainer[BufferPosition++] = ValueSource;
+            BufferContainer.getElement(BufferPosition++) = ValueSource;
         }
 
         void setValue(uint8_t ValueSource, uintmax_t ValueIndex) {
             if (ValueIndex >= BufferLimit) throw IOException(String(u"ByteBuffer::setValue(uint8_t, uintmax_t)"));
-            BufferContainer[ValueIndex] = ValueSource;
+            BufferContainer.getElement(ValueIndex) = ValueSource;
         }
     };
 }

@@ -21,14 +21,42 @@ namespace eLibrary::Core {
         {ObjectSource.hashCode()} -> ::std::same_as<uintmax_t>;
     };
 
-    class NonCopyable {
-    protected:
-        constexpr NonCopyable() noexcept = default;
+    class NonConstructable {
     public:
-        constexpr NonCopyable(const NonCopyable&) noexcept = delete;
-
-        NonCopyable &operator=(const NonCopyable&) noexcept = delete;
+        constexpr NonConstructable() noexcept = delete;
     };
+
+    class NonCopyAssignable {
+    protected:
+        constexpr NonCopyAssignable() noexcept = default;
+    public:
+        NonCopyAssignable &operator=(const NonCopyAssignable&) noexcept = delete;
+    };
+
+    class NonCopyConstructable {
+    protected:
+        constexpr NonCopyConstructable() noexcept = default;
+    public:
+        constexpr NonCopyConstructable(const NonCopyConstructable&) noexcept = delete;
+    };
+
+    class NonCopyable : public NonCopyAssignable, public NonCopyConstructable {};
+
+    class NonMoveAssignable {
+    protected:
+        constexpr NonMoveAssignable() noexcept = default;
+    public:
+        NonMoveAssignable &operator=(NonMoveAssignable&&) noexcept = delete;
+    };
+
+    class NonMoveConstructable {
+    protected:
+        constexpr NonMoveConstructable() noexcept = default;
+    public:
+        constexpr NonMoveConstructable(NonMoveConstructable&&) noexcept = delete;
+    };
+
+    class NonMovable : public NonMoveAssignable, public NonMoveConstructable {};
 
     template<typename T1, typename T2>
     concept SizeEqual = sizeof(T1) == sizeof(T2);

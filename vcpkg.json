@@ -14,6 +14,10 @@
   ],
   "default-features": ["module-multimedia"],
   "features": {
+    "module-extension-geoip": {
+      "description": "eLibrary::Extension::GeoIP",
+      "dependencies": ["libmaxminddb"]
+    },
     "module-multimedia": {
       "description": "eLibrary::Multimedia",
       "dependencies": ["ffmpeg", "openal-soft"]

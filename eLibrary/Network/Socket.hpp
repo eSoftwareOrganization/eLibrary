@@ -88,11 +88,11 @@ namespace eLibrary::Network {
             int SocketSize;
             if (SocketAddress.getSocketAddress().getAddressProtocol() == NetworkAddress::NetworkAddressProtocol::ProtocolIPv4) {
                 auto SocketAddressIn = SocketAddress.toAddressIn4();
-                if ((SocketSize = ::recvfrom((int) SocketDescriptor, (char*) SocketBuffer.getBufferContainer() + SocketBuffer.getBufferPosition(), SocketBuffer.getRemaining(), 0, (sockaddr*) &SocketAddressIn, nullptr)) < 0)
+                if ((SocketSize = ::recvfrom((int) SocketDescriptor, (char*) SocketBuffer.getBufferContainer().getElementContainer() + SocketBuffer.getBufferPosition(), SocketBuffer.getRemaining(), 0, (sockaddr*) &SocketAddressIn, nullptr)) < 0)
                     throw NetworkException(String(u"DatagramSocket::doReceive(ByteBuffer&) recvfrom"));
             } else {
                 auto SocketAddressIn = SocketAddress.toAddressIn6();
-                if ((SocketSize = ::recvfrom((int) SocketDescriptor, (char*) SocketBuffer.getBufferContainer() + SocketBuffer.getBufferPosition(), SocketBuffer.getRemaining(), 0, (sockaddr*) &SocketAddressIn, nullptr)) < 0)
+                if ((SocketSize = ::recvfrom((int) SocketDescriptor, (char*) SocketBuffer.getBufferContainer().getElementContainer() + SocketBuffer.getBufferPosition(), SocketBuffer.getRemaining(), 0, (sockaddr*) &SocketAddressIn, nullptr)) < 0)
                     throw NetworkException(String(u"DatagramSocket::doReceive(ByteBuffer&) recvfrom"));
             }
             SocketBuffer.setBufferPosition(SocketBuffer.getBufferPosition() + SocketSize);
@@ -101,11 +101,11 @@ namespace eLibrary::Network {
         void doSend(IO::ByteBuffer &SocketBuffer) {
             if (SocketAddress.getSocketAddress().getAddressProtocol() == NetworkAddress::NetworkAddressProtocol::ProtocolIPv4) {
                 auto SocketAddressIn = SocketAddress.toAddressIn4();
-                if (::sendto((int) SocketDescriptor, (char*) SocketBuffer.getBufferContainer() + SocketBuffer.getBufferPosition(), SocketBuffer.getRemaining(), 0, (sockaddr*) &SocketAddressIn, sizeof(sockaddr_in)) < 0)
+                if (::sendto((int) SocketDescriptor, (char*) SocketBuffer.getBufferContainer().getElementContainer() + SocketBuffer.getBufferPosition(), SocketBuffer.getRemaining(), 0, (sockaddr*) &SocketAddressIn, sizeof(sockaddr_in)) < 0)
                     throw NetworkException(String(u"DatagramSocket::doSend(ByteBuffer&) sendto"));
             } else {
                 auto SocketAddressIn = SocketAddress.toAddressIn6();
-                if (::sendto((int) SocketDescriptor, (char*) SocketBuffer.getBufferContainer() + SocketBuffer.getBufferPosition(), SocketBuffer.getRemaining(), 0, (sockaddr*) &SocketAddressIn, sizeof(sockaddr_in6)) < 0)
+                if (::sendto((int) SocketDescriptor, (char*) SocketBuffer.getBufferContainer().getElementContainer() + SocketBuffer.getBufferPosition(), SocketBuffer.getRemaining(), 0, (sockaddr*) &SocketAddressIn, sizeof(sockaddr_in6)) < 0)
                     throw NetworkException(String(u"DatagramSocket::doSend(ByteBuffer&) sendto"));
             }
             SocketBuffer.setBufferPosition(SocketBuffer.getBufferLimit());
@@ -288,7 +288,7 @@ namespace eLibrary::Network {
         void doRead(IO::ByteBuffer &SocketBuffer) override {
             if (!isAvailable()) throw NetworkException(String(u"SocketInputStream::doRead(ByteBuffer&) isAvailable"));
             int SocketSizeReceived;
-            if ((SocketSizeReceived = ::recv((int) *SocketDescriptor, (char*) SocketBuffer.getBufferContainer() + SocketBuffer.getBufferPosition(), SocketBuffer.getRemaining(), 0)) < 0)
+            if ((SocketSizeReceived = ::recv((int) *SocketDescriptor, (char*) SocketBuffer.getBufferContainer().getElementContainer() + SocketBuffer.getBufferPosition(), SocketBuffer.getRemaining(), 0)) < 0)
                 throw NetworkException(String(u"SocketInputStream::doRead(ByteBuffer&) recv"));
             SocketBuffer.setBufferPosition(SocketBuffer.getBufferPosition() + SocketSizeReceived);
         }
@@ -321,7 +321,7 @@ namespace eLibrary::Network {
 
         void doWrite(const IO::ByteBuffer &SocketBuffer) override {
             if (!isAvailable()) throw NetworkException(String(u"SocketOutputStream::doWrite(const ByteBuffer&) isAvailable"));
-            if (::send((int) *SocketDescriptor, (char*) SocketBuffer.getBufferContainer() + SocketBuffer.getBufferPosition(), SocketBuffer.getRemaining(), 0) < 0)
+            if (::send((int) *SocketDescriptor, (char*) SocketBuffer.getBufferContainer().getElementContainer() + SocketBuffer.getBufferPosition(), SocketBuffer.getRemaining(), 0) < 0)
                 throw NetworkException(String(u"SocketOutputStream::doWrite(const ByteBuffer&) send"));
             SocketBuffer.setBufferPosition(SocketBuffer.getBufferLimit());
         }

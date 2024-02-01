@@ -10,9 +10,9 @@ namespace eLibrary::Core {
     /**
      * Support for handling exceptions
      */
-    class Exception : public Object, public std::exception {
+    class Exception : public Object, public ::std::exception {
     private:
-        mutable std::string ExceptionDetail;
+        mutable ::std::string ExceptionDetail;
         String ExceptionMessage;
     public:
         explicit Exception(const String &ExceptionMessageSource) noexcept : ExceptionMessage(ExceptionMessageSource) {}

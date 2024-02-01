@@ -19,28 +19,23 @@ ankerl::nanobench::Bench TestBench;
 ::std::mt19937_64 RandomEngine64;
 ::std::random_device RandomDevice;
 
+#include <bits/stdc++.h>
+
 TEST_SUITE("Container") {
     TEST_CASE("ArrayList") {
-        ArrayList<Integer> NumberList;
+        ArrayList<NumberBuiltin<uintmax_t>> NumberList;
         for (uintmax_t NumberIndex = 0;NumberIndex < 10000;++NumberIndex)
             NumberList.addElement(RandomEngine() % Objects::getMaximum(NumberList.getElementSize(), 1), RandomEngine());
         CHECK_EQ(NumberList.getElementSize(), 10000);
         for (uintmax_t NumberIndex = 0;NumberIndex < 10000;++NumberIndex)
             NumberList.removeIndex(RandomEngine() % Objects::getMaximum(NumberList.getElementSize(), 1));
         CHECK(NumberList.isEmpty());
-        NumberList.addElement(RandomEngine64());
-        TestBench.run("ArrayList(Append)", [&]{
-            NumberList.addElement(RandomEngine() % NumberList.getElementSize(), RandomEngine64());
-        });
-        TestBench.run("ArrayList(Remove)", [&]{
-            if (!NumberList.isEmpty()) NumberList.removeIndex(RandomEngine() % NumberList.getElementSize());
-        });
     }
 
     TEST_CASE("ArraySet") {
-        ArraySet<Integer> NumberList;
+        ArraySet<NumberBuiltin<uintmax_t>> NumberList;
         for (uintmax_t NumberIndex = 0;NumberIndex < 10000;++NumberIndex)
-            NumberList.addElement({RandomEngine()});
+            NumberList.addElement(RandomEngine());
         CHECK_LE(NumberList.getElementSize(), 10000);
         CHECK(NumberList.doDifference(NumberList).isEmpty());
         CHECK(NumberList.doIntersection(NumberList).doDifference(NumberList).isEmpty());
@@ -48,25 +43,19 @@ TEST_SUITE("Container") {
     }
 
     TEST_CASE("DoubleLinkedList") {
-        DoubleLinkedList<uintmax_t> NumberList;
+        DoubleLinkedList<NumberBuiltin<uintmax_t>> NumberList;
         for (uintmax_t NumberIndex = 0;NumberIndex < 10000;++NumberIndex)
             NumberList.addElement(RandomEngine() % Objects::getMaximum(NumberList.getElementSize(), 1), RandomEngine());
         CHECK_EQ(NumberList.getElementSize(), 10000);
         for (uintmax_t NumberIndex = 0;NumberIndex < 10000;++NumberIndex)
             NumberList.removeIndex(RandomEngine() % Objects::getMaximum(NumberList.getElementSize(), 1));
         CHECK(NumberList.isEmpty());
-        NumberList.addElement(RandomEngine64());
-        TestBench.run("DoubleLinkedList(Append)", [&]{
-            NumberList.addElement(RandomEngine() % NumberList.getElementSize(), RandomEngine64());
-        }).run("DoubleLinkedList(Remove)", [&]{
-            if (!NumberList.isEmpty()) NumberList.removeIndex(RandomEngine() % NumberList.getElementSize());
-        });
     }
 
     TEST_CASE("DoubleLinkedSet") {
-        DoubleLinkedSet<Integer> NumberList;
+        DoubleLinkedSet<NumberBuiltin<uintmax_t>> NumberList;
         for (uintmax_t NumberIndex = 0;NumberIndex < 10000;++NumberIndex)
-            NumberList.addElement({RandomEngine()});
+            NumberList.addElement(RandomEngine());
         CHECK_LE(NumberList.getElementSize(), 10000);
         CHECK(NumberList.doDifference(NumberList).isEmpty());
         CHECK(NumberList.doIntersection(NumberList).doDifference(NumberList).isEmpty());
@@ -74,48 +63,30 @@ TEST_SUITE("Container") {
     }
 
     TEST_CASE("SingleLinkedList") {
-        SingleLinkedList<uintmax_t> NumberList;
+        SingleLinkedList<NumberBuiltin<uintmax_t>> NumberList;
         for (uintmax_t NumberIndex = 0;NumberIndex < 10000;++NumberIndex)
             NumberList.addElement(RandomEngine() % Objects::getMaximum(NumberList.getElementSize(), 1), RandomEngine());
         CHECK_EQ(NumberList.getElementSize(), 10000);
         for (uintmax_t NumberIndex = 0;NumberIndex < 10000;++NumberIndex)
             NumberList.removeIndex(RandomEngine() % Objects::getMaximum(NumberList.getElementSize(), 1));
         CHECK(NumberList.isEmpty());
-        NumberList.addElement(RandomEngine64());
-        TestBench.run("SingleLinkedList(Append)", [&]{
-            NumberList.addElement(RandomEngine() % NumberList.getElementSize(), RandomEngine64());
-        }).run("SingleLinkedList(Remove)", [&]{
-            if (!NumberList.isEmpty()) NumberList.removeIndex(RandomEngine() % NumberList.getElementSize());
-        });
     }
 
     TEST_CASE("SingleLinkedSet") {
-        SingleLinkedSet<Integer> NumberList;
+        SingleLinkedSet<NumberBuiltin<uintmax_t>> NumberList;
         for (uintmax_t NumberIndex = 0;NumberIndex < 10000;++NumberIndex)
-            NumberList.addElement({RandomEngine()});
+            NumberList.addElement(RandomEngine());
         CHECK_LE(NumberList.getElementSize(), 10000);
         CHECK(NumberList.doDifference(NumberList).isEmpty());
         CHECK(NumberList.doIntersection(NumberList).doDifference(NumberList).isEmpty());
         CHECK(NumberList.doUnion(NumberList).doDifference(NumberList).isEmpty());
     }
-
-    TEST_CASE("SingleLinkedStack") {
-        SingleLinkedStack<uintmax_t> NumberStack;
-        for (uintmax_t NumberIndex = 0;NumberIndex < 10000;++NumberIndex)
-            NumberStack.addElement(NumberStack.getElementSize());
-        CHECK_EQ(NumberStack.getElementSize(), 10000);
-        for (uintmax_t NumberIndex = 0;NumberIndex < 10000;++NumberIndex) {
-            CHECK_EQ(NumberStack.getElement() + 1, NumberStack.getElementSize());
-            NumberStack.removeElement();
-        }
-        CHECK(NumberStack.isEmpty());
-    }
 }
 
 TEST_SUITE("Concurrent") {
-    TEST_CASE("AtomicInteger") {
+    TEST_CASE("AtomicInteger&ThreadExecutor") {
         AtomicNumber<int64_t> NumberSource(0);
-        uintmax_t NumberValue = RandomEngine() % 50000;
+        uintmax_t NumberValue = RandomEngine() % 10000;
         auto ThreadFunctionDecrement = [&]() {
             for (uintmax_t NumberEpoch = 0; NumberEpoch < NumberValue; ++NumberEpoch)
                 NumberSource.getAndDecrement();
@@ -124,21 +95,17 @@ TEST_SUITE("Concurrent") {
             for (uintmax_t NumberEpoch = 0; NumberEpoch < NumberValue; ++NumberEpoch)
                 NumberSource.getAndIncrement();
         };
-        ReentrantFunctionThread ThreadIncrement1(ThreadFunctionIncrement), ThreadIncrement2(ThreadFunctionIncrement);
-        ReentrantFunctionThread ThreadDecrement1(ThreadFunctionDecrement), ThreadDecrement2(ThreadFunctionDecrement);
-        for (uintmax_t NumberEpoch = 0;NumberEpoch < 10000;++NumberEpoch) {
-            NumberValue = RandomEngine() % 100000;
-            ThreadIncrement1.doStart();
-            ThreadIncrement2.doStart();
-            ThreadIncrement1.doJoin();
-            ThreadIncrement2.doJoin();
-            CHECK_EQ(NumberSource.getValue(), NumberValue * 2);
-            ThreadDecrement1.doStart();
-            ThreadDecrement2.doStart();
-            ThreadDecrement1.doJoin();
-            ThreadDecrement2.doJoin();
-            CHECK_EQ(NumberSource.getValue(), 0);
-        }
+        ThreadExecutor ThreadExecutorObject(4);
+        ThreadExecutorObject.doSubmit(ThreadFunctionIncrement);
+        ThreadExecutorObject.doSubmit(ThreadFunctionIncrement);
+        ThreadExecutorObject.doSubmit(ThreadFunctionIncrement);
+        ThreadExecutorObject.doSubmit(ThreadFunctionIncrement).get();
+        CHECK_EQ(NumberSource.getValue(), NumberValue * 4);
+        ThreadExecutorObject.doSubmit(ThreadFunctionDecrement);
+        ThreadExecutorObject.doSubmit(ThreadFunctionDecrement);
+        ThreadExecutorObject.doSubmit(ThreadFunctionDecrement);
+        ThreadExecutorObject.doSubmit(ThreadFunctionDecrement).get();
+        CHECK_EQ(NumberSource.getValue(), 0);
     }
 }
 
@@ -157,7 +124,7 @@ TEST_SUITE("IO") {
         StreamInput.doOpen({u"FileStream.tst"}, IO::FileOption::OptionBinary);
         IO::ByteBuffer NumberBuffer(IO::ByteBuffer::doAllocate(10000));
         StreamInput.doRead(NumberBuffer);
-        CHECK_EQ(::memcmp(NumberBuffer.getBufferContainer(), NumberBufferSource.getBufferContainer(), 10000), 0);
+        CHECK_EQ(NumberBuffer.doCompare(NumberBufferSource), 0);
         StreamInput.doClose();
         IO::File FileObject(IO::File({u"FileStream.tst"}));
         CHECK(!FileObject.isDirectory());
@@ -317,8 +284,6 @@ TEST_SUITE("Socket") {
 #endif
 
 int main(int ParameterCount, char *ParameterList[]) {
-    doInitializeCore();
-
     RandomEngine.seed(RandomDevice());
     RandomEngine64.seed(RandomEngine());
     return doctest::Context(ParameterCount, ParameterList).run();

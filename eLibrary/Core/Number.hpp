@@ -3,7 +3,7 @@
 #ifndef eLibraryHeaderCoreNumber
 #define eLibraryHeaderCoreNumber
 
-#include <Core/Container.hpp>
+#include <Core/Exception.hpp>
 #include <limits>
 #include <vector>
 
@@ -11,13 +11,11 @@
 #undef min
 
 namespace eLibrary::Core {
-    class Numbers final : public Object {
+    class Numbers final : public Object, public NonConstructable {
     public:
-        constexpr Numbers() noexcept = delete;
-
         template<std::floating_point T>
         static intmax_t doCompare(T Number1, T Number2) noexcept {
-            if (Number1 - Number2 > std::numeric_limits<T>::epsilon()) return 1;
+            if (Number1 - Number2 > ::std::numeric_limits<T>::epsilon()) return 1;
             if (Number1 - Number2 < -std::numeric_limits<T>::epsilon()) return -1;
             return 0;
         }
@@ -36,7 +34,7 @@ namespace eLibrary::Core {
     class Integer final : public Object {
     private:
         bool NumberSignature;
-        std::vector<uintmax_t> NumberList;
+        ::std::vector<uintmax_t> NumberList;
 
         static Integer doFactorialCore(const Integer &NumberStart, const Integer &NumberCount) noexcept {
             if (NumberCount.doCompare(8) < 0) {
@@ -54,15 +52,14 @@ namespace eLibrary::Core {
             return NumberSource >= 0 ? NumberSource : -NumberSource;
         }
 
-        Integer(const std::vector<uintmax_t> &NumberListSource, bool NumberSignatureSource) noexcept : NumberSignature(NumberSignatureSource), NumberList(NumberListSource) {}
+        Integer(const ::std::vector<uintmax_t> &NumberListSource, bool NumberSignatureSource) noexcept : NumberSignature(NumberSignatureSource), NumberList(NumberListSource) {}
 
         Integer doMultiplicationAbsolute(const Integer &NumberOther) const {
-            auto *NumberProduct = MemoryAllocator::newArray<uintmax_t>(NumberList.size() + NumberOther.NumberList.size());
-            Collections::doFill(NumberProduct, NumberProduct + NumberList.size() + NumberOther.NumberList.size(), 0);
+            ::std::vector<uintmax_t> NumberProduct(NumberList.size() + NumberOther.NumberList.size(), 0);
             for (uintmax_t NumberDigit1 = 0; NumberDigit1 < NumberList.size(); ++NumberDigit1)
                 for (uintmax_t NumberDigit2 = 0; NumberDigit2 < NumberOther.NumberList.size(); ++NumberDigit2)
                     NumberProduct[NumberDigit1 + NumberDigit2] += NumberList[NumberDigit1] * NumberOther.NumberList[NumberDigit2];
-            std::vector<uintmax_t> NumberResult;
+            ::std::vector<uintmax_t> NumberResult;
             NumberResult.reserve(NumberList.size() + NumberOther.NumberList.size());
             uintmax_t NumberCarry = 0;
             for (uintmax_t NumberPart = 0;; ++NumberPart) {
@@ -142,7 +139,7 @@ namespace eLibrary::Core {
         Integer doAddition(const Integer &NumberOther) const noexcept {
             if (NumberSignature && !NumberOther.NumberSignature) return doSubtraction(NumberOther.getAbsolute());
             if (!NumberSignature && NumberOther.NumberSignature) return NumberOther.doSubtraction(getAbsolute());
-            std::vector<uintmax_t> NumberResult;
+            ::std::vector<uintmax_t> NumberResult;
             NumberResult.reserve(Objects::getMaximum(NumberList.size(), NumberOther.NumberList.size()));
             uintmax_t NumberCarry = 0;
             for (uintmax_t NumberPart = 0;; ++NumberPart) {
@@ -158,7 +155,7 @@ namespace eLibrary::Core {
         }
 
         Integer doBitShiftLeft(uintmax_t NumberOther) const {
-            std::vector<uintmax_t> NumberResult;
+            ::std::vector<uintmax_t> NumberResult;
             NumberResult.reserve(NumberList.size());
             uintmax_t NumberCarry = 0;
             for (uintmax_t NumberPart = 0;;++NumberPart) {
@@ -185,7 +182,7 @@ namespace eLibrary::Core {
         Integer doDivision(const Integer &NumberOther) const {
             if (NumberOther.isZero()) throw ArithmeticException(String(u"Integer::doDivision(const Integer&) Divide By 0"));
             Integer NumberRemainder;
-            std::vector<uintmax_t> NumberResult(NumberList);
+            ::std::vector<uintmax_t> NumberResult(NumberList);
             for (auto NumberPart = intmax_t(NumberList.size() - 1); NumberPart >= 0; --NumberPart) {
                 NumberRemainder.NumberList = NumberRemainder.doMultiplication(10000000).doAddition(NumberList[NumberPart]).NumberList;
                 uintmax_t NumberMiddle, NumberStart = 0, NumberStop = 9999999U;
@@ -219,7 +216,7 @@ namespace eLibrary::Core {
         Integer doModulo(const Integer &NumberOther) const {
             if (NumberOther.isZero()) throw ArithmeticException(String(u"Integer::doModulo(const Integer&) Modulo By 0"));
             Integer NumberRemainder;
-            std::vector<uintmax_t> NumberResult(NumberList);
+            ::std::vector<uintmax_t> NumberResult(NumberList);
             for (auto NumberPart = intmax_t(NumberList.size() - 1); NumberPart >= 0; --NumberPart) {
                 NumberRemainder.NumberList = NumberRemainder.doMultiplication(10000000).doAddition(NumberList[NumberPart]).NumberList;
                 uintmax_t NumberMiddle, NumberStart = 0, NumberStop = 9999999U;
@@ -238,12 +235,11 @@ namespace eLibrary::Core {
         }
 
         Integer doMultiplication(const Integer &NumberOther) const {
-            auto *NumberProduct = MemoryAllocator::newArray<uintmax_t>(NumberList.size() + NumberOther.NumberList.size());
-            Collections::doFill(NumberProduct, NumberProduct + NumberList.size() + NumberOther.NumberList.size(), 0);
+            ::std::vector<uintmax_t> NumberProduct(NumberList.size() + NumberOther.NumberList.size(), 0);
             for (uintmax_t NumberDigit1 = 0; NumberDigit1 < NumberList.size(); ++NumberDigit1)
                 for (uintmax_t NumberDigit2 = 0; NumberDigit2 < NumberOther.NumberList.size(); ++NumberDigit2)
                     NumberProduct[NumberDigit1 + NumberDigit2] += NumberList[NumberDigit1] * NumberOther.NumberList[NumberDigit2];
-            std::vector<uintmax_t> NumberResult;
+            ::std::vector<uintmax_t> NumberResult;
             NumberResult.reserve(NumberList.size() + NumberOther.NumberList.size());
             uintmax_t NumberCarry = 0;
             for (uintmax_t NumberPart = 0;; ++NumberPart) {
@@ -284,7 +280,7 @@ namespace eLibrary::Core {
         Integer doSubtraction(const Integer &NumberOther) const noexcept {
             if (NumberOther.isNegative()) return doAddition(NumberOther.getAbsolute());
             if (doCompare(NumberOther) < 0) return NumberOther.doSubtraction(*this).getOpposite();
-            std::vector<uintmax_t> NumberResult;
+            ::std::vector<uintmax_t> NumberResult;
             NumberResult.reserve(Objects::getMaximum(NumberList.size(), NumberOther.NumberList.size()) + 1);
             bool NumberBorrow = false;
             for (uintmax_t NumberPart = 0;; ++NumberPart) {
@@ -315,8 +311,12 @@ namespace eLibrary::Core {
 
         // TODO: Replace with Stein algorithm(Binary GCD)
         Integer getGreatestCommonFactor(const Integer &NumberSource) const noexcept {
-            if (NumberSource.getAbsolute().isZero()) return *this;
-            return NumberSource.getGreatestCommonFactor(doModulo(NumberSource));
+            if (isZero()) return NumberSource;
+            if (NumberSource.isZero()) return *this;
+            if (isEven() && NumberSource.isEven()) return doDivision(2).getGreatestCommonFactor(NumberSource.doDivision(2)).doMultiplication(2);
+            else if (isEven()) return doDivision(2).getGreatestCommonFactor(NumberSource);
+            else if (NumberSource.isEven()) return getGreatestCommonFactor(NumberSource.doDivision(2));
+            return doSubtraction(NumberSource).getAbsolute().getGreatestCommonFactor(Objects::getMinimum(*this, NumberSource));
         }
 
         Integer getOpposite() const noexcept {
@@ -384,7 +384,7 @@ namespace eLibrary::Core {
 
         template<Arithmetic OT>
         OT doCast() const {
-            if (Numbers::doCompare(NumberValue, std::numeric_limits<OT>::max()) > 0 || Numbers::doCompare(NumberValue, std::numeric_limits<OT>::min()) < 0) throw TypeException(String(u"IntegerBuiltin::doCast<OT(Arithmetic)>() NumberValue"));
+            if (Numbers::doCompare(NumberValue, ::std::numeric_limits<OT>::max()) > 0 || Numbers::doCompare(NumberValue, ::std::numeric_limits<OT>::min()) < 0) throw TypeException(String(u"IntegerBuiltin::doCast<OT(Arithmetic)>() NumberValue"));
             return (OT) NumberValue;
         }
 

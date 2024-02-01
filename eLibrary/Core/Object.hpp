@@ -1,5 +1,8 @@
 #pragma once
 
+#ifndef eLibraryHeaderCoreObject
+#define eLibraryHeaderCoreObject
+
 #include <Core/Global.hpp>
 #include <functional>
 #include <utility>
@@ -40,6 +43,11 @@ namespace eLibrary::Core {
         template<Comparable T>
         static intmax_t doCompare(const T *Object1, const T *Object2) {
             return Object1->doCompare(*Object2);
+        }
+
+        template<std::integral T>
+        static intmax_t doCompare(T Object1, T Object2) {
+            return Object1 == Object2 ? 0 : (Object1 > Object2 ? 1 : -1);
         }
 
         template<typename T>
@@ -101,58 +109,60 @@ namespace eLibrary::Core {
     };
 }
 
-template<eLibrary::Core::Comparable T>
-struct ::std::equal_to<T> {
-public:
-    bool operator()(const T &Object1, const T &Object2) const noexcept {
-        return !Object1.doCompare(Object2);
-    }
-};
+//template<eLibrary::Core::Comparable T>
+//struct ::std::equal_to<T> : public binary_function<T, T, bool> {
+//public:
+//    bool operator()(const T &Object1, const T &Object2) const noexcept {
+//        return !Object1.doCompare(Object2);
+//    }
+//};
+//
+//template<eLibrary::Core::Comparable T>
+//struct ::std::greater<T> {
+//public:
+//    bool operator()(const T &Object1, const T &Object2) const noexcept {
+//        return Object1.doCompare(Object2) > 0;
+//    }
+//};
+//
+//template<eLibrary::Core::Comparable T>
+//struct ::std::greater_equal<T> {
+//public:
+//    bool operator()(const T &Object1, const T &Object2) const noexcept {
+//        return Object1.doCompare(Object2) >= 0;
+//    }
+//};
+//
+//template<eLibrary::Core::Hashable T>
+//struct ::std::hash<T> {
+//public:
+//    auto operator()(const T &ObjectSource) const noexcept {
+//        return ObjectSource.hashCode();
+//    }
+//};
+//
+//template<eLibrary::Core::Comparable T>
+//struct ::std::less<T> {
+//public:
+//    bool operator()(const T &Object1, const T &Object2) const noexcept {
+//        return Object1.doCompare(Object2) < 0;
+//    }
+//};
+//
+//template<eLibrary::Core::Comparable T>
+//struct ::std::less_equal<T> {
+//public:
+//    bool operator()(const T &Object1, const T &Object2) const noexcept {
+//        return Object1.doCompare(Object2) <= 0;
+//    }
+//};
+//
+//template<eLibrary::Core::Comparable T>
+//struct ::std::not_equal_to<T> {
+//public:
+//    bool operator()(const T &Object1, const T &Object2) const noexcept {
+//        return Object1.doCompare(Object2);
+//    }
+//};
 
-template<eLibrary::Core::Comparable T>
-struct ::std::greater<T> {
-public:
-    bool operator()(const T &Object1, const T &Object2) const noexcept {
-        return Object1.doCompare(Object2) > 0;
-    }
-};
-
-template<eLibrary::Core::Comparable T>
-struct ::std::greater_equal<T> {
-public:
-    bool operator()(const T &Object1, const T &Object2) const noexcept {
-        return Object1.doCompare(Object2) >= 0;
-    }
-};
-
-template<eLibrary::Core::Hashable T>
-struct ::std::hash<T> {
-public:
-    auto operator()(const T &ObjectSource) const noexcept {
-        return ObjectSource.hashCode();
-    }
-};
-
-template<eLibrary::Core::Comparable T>
-struct ::std::less<T> {
-public:
-    bool operator()(const T &Object1, const T &Object2) const noexcept {
-        return Object1.doCompare(Object2) < 0;
-    }
-};
-
-template<eLibrary::Core::Comparable T>
-struct ::std::less_equal<T> {
-public:
-    bool operator()(const T &Object1, const T &Object2) const noexcept {
-        return Object1.doCompare(Object2) <= 0;
-    }
-};
-
-template<eLibrary::Core::Comparable T>
-struct ::std::not_equal_to<T> {
-public:
-    bool operator()(const T &Object1, const T &Object2) const noexcept {
-        return Object1.doCompare(Object2);
-    }
-};
+#endif

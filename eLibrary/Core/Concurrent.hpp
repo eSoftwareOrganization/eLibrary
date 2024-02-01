@@ -3,6 +3,7 @@
 #ifndef eLibraryHeaderCoreConcurrent
 #define eLibraryHeaderCoreConcurrent
 
+#include <Core/Container.hpp>
 #include <Core/Number.hpp>
 
 #if eLibraryCompiler(MSVC)
@@ -16,13 +17,15 @@
 #include <unistd.h>
 #endif
 
+#include <condition_variable>
+#include <future>
+#include <mutex>
+#include <queue>
 #include <utility>
 
 namespace eLibrary::Core {
-    class ConcurrentUtility final : public Object {
+    class ConcurrentUtility final : public Object, public NonConstructable {
     public:
-        constexpr ConcurrentUtility() noexcept = delete;
-
 #if eLibraryCompiler(MSVC)
         static int16_t doCompareAndExchange16(volatile int16_t *ValueAddress, int16_t ValueExpected, int16_t ValueTarget) noexcept {
             return InterlockedCompareExchange16(ValueAddress, ValueTarget, ValueExpected);
@@ -191,7 +194,7 @@ namespace eLibrary::Core {
 
         virtual void doExecute() noexcept {}
 
-        void doInterrupt() {
+        [[deprecated]] void doInterrupt() {
             if (isInterrupted()) throw InterruptedException(String(u"Thread::doInterrupt() isInterrupted"));
             ThreadInterrupt = true;
         }
@@ -233,7 +236,7 @@ namespace eLibrary::Core {
             return ThreadFinish;
         }
 
-        bool isInterrupted() const noexcept {
+        [[deprecated]] bool isInterrupted() const noexcept {
             return ThreadInterrupt != 0;
         }
 
@@ -250,12 +253,12 @@ namespace eLibrary::Core {
     class FunctionThread final : public Thread {
     private:
         F ThreadFunction;
-        std::tuple<Ts...> ThreadParameter;
+        ::std::tuple<Ts...> ThreadParameter;
     public:
         constexpr explicit FunctionThread(F ThreadFunctionSource, Ts ...ThreadParameterSource) noexcept : ThreadFunction(ThreadFunctionSource), ThreadParameter(std::make_tuple(ThreadParameterSource...)) {}
 
         void doExecute() noexcept override {
-            std::apply(ThreadFunction, ThreadParameter);
+            ::std::apply(ThreadFunction, ThreadParameter);
         }
 
         const char *getClassName() const noexcept override {
@@ -263,33 +266,96 @@ namespace eLibrary::Core {
         }
     };
 
-    class ReentrantThread : public Thread {
+    template <typename T>
+    class ConcurrentQueue final : public Object {
+    private:
+        ::std::queue<T> QueueObject;
+        ::std::mutex QueueMutex;
     public:
-        constexpr ReentrantThread() noexcept = default;
-
-        void doStart() override {
-            doStartCore();
+        bool isEmpty() {
+            ::std::unique_lock<::std::mutex> QueueLock(QueueMutex);
+            return QueueObject.empty();
         }
 
-        const char *getClassName() const noexcept override {
-            return "ReentrantThread";
+        bool doDequeue(T &QueueSource) {
+            ::std::unique_lock<::std::mutex> QueueLock(QueueMutex);
+            if (QueueObject.empty()) return false;
+            QueueSource = Objects::doMove(QueueObject.front());
+            QueueObject.pop();
+            return true;
+        }
+
+        void doEnqueue(T &QueueSource) {
+            ::std::unique_lock<::std::mutex> QueueLock(QueueMutex);
+            QueueObject.push(QueueSource);
         }
     };
 
-    template<typename F, typename ...Ts>
-    class ReentrantFunctionThread final : public ReentrantThread {
+    class ThreadExecutor final : public Object, public NonCopyable, public NonMovable {
     private:
-        F ThreadFunction;
-        std::tuple<Ts...> ThreadParameter;
-    public:
-        constexpr explicit ReentrantFunctionThread(F ThreadFunctionSource, Ts ...ThreadParameterSource) noexcept : ThreadFunction(ThreadFunctionSource), ThreadParameter(std::make_tuple(ThreadParameterSource...)) {}
+        class ThreadExecutorCore final : public Thread {
+        private:
+            ThreadExecutor *ExecutorObject;
+        public:
+            ThreadExecutorCore(ThreadExecutor *ExecutorSource) : ExecutorObject(ExecutorSource) {}
 
-        void doExecute() noexcept override {
-            std::apply(ThreadFunction, ThreadParameter);
+            void doExecute() noexcept override {
+                ::std::function<void()> ExecutorFunction;
+                bool ExecutorFunctionAvailable;
+                while (!ExecutorObject->ExecutorShutdown) {
+                    {
+                        ::std::unique_lock<::std::mutex> ExecutorLock(ExecutorObject->ExecutorMutex);
+                        if (ExecutorObject->ExecutorQueue.isEmpty()) ExecutorObject->ExecutorVariable.wait(ExecutorLock);
+                        ExecutorFunctionAvailable = ExecutorObject->ExecutorQueue.doDequeue(ExecutorFunction);
+                    }
+                    if (ExecutorFunctionAvailable) ExecutorFunction();
+                }
+            }
+        };
+
+        ::std::mutex ExecutorMutex;
+        ConcurrentQueue<::std::function<void()>> ExecutorQueue;
+        bool ExecutorShutdown = false;
+        ::std::vector<ThreadExecutorCore*> ExecutorThread;
+        ::std::condition_variable ExecutorVariable;
+    public:
+        ThreadExecutor(uintmax_t ExecutorThreadCount) {
+            ExecutorThread.reserve(ExecutorThreadCount);
+            for (uintmax_t ExecutorThreadIndex = 0;ExecutorThreadIndex < ExecutorThreadCount;++ExecutorThreadIndex) {
+                ExecutorThread[ExecutorThreadIndex] = new ThreadExecutorCore(this);
+                ExecutorThread[ExecutorThreadIndex]->doStart();
+            }
         }
 
-        const char *getClassName() const noexcept override {
-            return "ReentrantFunctionThread";
+        ~ThreadExecutor() {
+            doShutdown();
+        }
+
+        void doShutdown() noexcept {
+            ExecutorShutdown = true;
+            ExecutorVariable.notify_all();
+            Collections::doTraverse(ExecutorThread.begin(), ExecutorThread.end(), [](ThreadExecutorCore *ExecutorCore){
+                ExecutorCore->doJoin();
+                delete ExecutorCore;
+            });
+            ExecutorThread.clear();
+        }
+
+        template<typename F, typename ...Ps>
+        auto doSubmit(F &&ExecutorFunction, Ps &&...ExecutorFunctionParameter) -> ::std::future<decltype(ExecutorFunction(ExecutorFunctionParameter...))> {
+            if (ExecutorShutdown) throw Exception(String(u"ThreadExecutor::doSubmit<F, Ps...>(F&&, Ps&&...) ExecutorShutdown"));
+            auto ExecutorTarget(::std::bind(Objects::doForward<F>(ExecutorFunction), Objects::doForward<Ps>(ExecutorFunctionParameter)...));
+            auto ExecutorTask(::std::make_shared<::std::packaged_task<decltype(ExecutorTarget(ExecutorFunctionParameter...))()>>(ExecutorTarget));
+            ::std::function<void()> ExecutorWrapper = [ExecutorTask] {
+                (*ExecutorTask)();
+            };
+            ExecutorQueue.doEnqueue(ExecutorWrapper);
+            ExecutorVariable.notify_one();
+            return ExecutorTask->get_future();
+        }
+
+        bool isShutdown() const noexcept {
+            return ExecutorShutdown;
         }
     };
 
@@ -309,14 +375,6 @@ namespace eLibrary::Core {
         };
         volatile AbstractQueuedNode *NodeHead = nullptr, *NodeTail = nullptr;
     public:
-        ~AbstractQueuedSynchronizer() noexcept {
-            NodeTail = nullptr;
-            if (NodeHead) {
-                MemoryAllocator::deleteObject(NodeHead);
-                NodeHead = nullptr;
-            }
-        }
-
         virtual bool tryAcquireExclusive(int) noexcept = 0;
 
         virtual bool tryAcquireShared(int) noexcept = 0;

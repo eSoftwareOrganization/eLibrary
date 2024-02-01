@@ -10,13 +10,15 @@
 
 #if eLibrarySystem(Windows)
 #include <ws2tcpip.h>
-
-typedef SOCKET SocketHandleType;
 #else
 #include <netinet/in.h>
 #include <netinet/tcp.h>
 #include <unistd.h>
+#endif
 
+#if eLibrarySystem(Windows)
+typedef SOCKET SocketHandleType;
+#else
 typedef int SocketHandleType;
 #endif
 
@@ -44,7 +46,7 @@ namespace eLibrary::Network {
         }
 
         explicit NetworkAddress(const in6_addr &AddressSource) : AddressProtocol(NetworkAddressProtocol::ProtocolIPv6) {
-            AddressFieldList.doAssign(Array<uint8_t>::doAllocate(16));
+            AddressFieldList.doAssign(Array<uint8_t>(16));
             Collections::doCopy(AddressSource.s6_addr, 16, AddressFieldList.begin());
         }
 

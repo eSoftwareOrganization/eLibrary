@@ -49,7 +49,7 @@ namespace eLibrary::IO {
 
         void doRead(ByteBuffer &FileBuffer) override {
             if (!isAvailable()) throw IOException(String(u"FileInputStream::doRead(ByteBuffer&) isAvailable"));
-            FileBuffer.setBufferPosition(FileBuffer.getBufferPosition() + ::read((int) StreamDescriptor, FileBuffer.getBufferContainer() + FileBuffer.getBufferPosition(), FileBuffer.getRemaining()));
+            FileBuffer.setBufferPosition(FileBuffer.getBufferPosition() + ::read((int) StreamDescriptor, FileBuffer.BufferContainer.getElementContainer() + FileBuffer.getBufferPosition(), FileBuffer.getRemaining()));
         }
 
         void doSeek(long FileOffset, int FileOrigin) const {
@@ -114,7 +114,7 @@ namespace eLibrary::IO {
 
         void doWrite(const ByteBuffer &FileBuffer) override {
             if (!isAvailable()) throw IOException(String(u"FileOutputStream::doWrite(const ByteBuffer&) isAvailable"));
-            ::write((int) StreamDescriptor, FileBuffer.BufferContainer + FileBuffer.getBufferPosition(), FileBuffer.getRemaining());
+            ::write((int) StreamDescriptor, FileBuffer.BufferContainer.getElementContainer() + FileBuffer.getBufferPosition(), FileBuffer.getRemaining());
             FileBuffer.setBufferPosition(FileBuffer.getBufferLimit());
         }
 

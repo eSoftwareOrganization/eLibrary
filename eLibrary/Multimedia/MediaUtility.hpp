@@ -29,6 +29,10 @@ namespace eLibrary::Multimedia {
             if (!LayoutChannelMask) LayoutChannelMask = AV_CH_LAYOUT_STEREO;
         }
 
+        intmax_t doCompare(const MediaChannelLayout &LayoutSource) const noexcept {
+            return Numbers::doCompare(LayoutChannelCount, LayoutSource.LayoutChannelCount);
+        }
+
         uint8_t getChannelCount() const noexcept {
             return LayoutChannelCount;
         }
@@ -233,9 +237,9 @@ namespace eLibrary::Multimedia {
                 ContextSource.ContextObject = nullptr;
             }
 
-            void doConvert(const uint8_t **ContextInput, uint8_t **ContextOutput, int ContextSize) {
-                if (swr_convert(ContextObject, ContextOutput, ContextSize, ContextInput, ContextSize) < 0)
-                    throw MediaException(String(u"MediaSWRContext::doConvert(const uint8_t**, uint8_t**, int) swr_convert"));
+            void doConvert(const uint8_t **ContextInput, int ContextInputSize, uint8_t **ContextOutput, int ContextOutputSize) {
+                if (swr_convert(ContextObject, ContextOutput, ContextOutputSize, ContextInput, ContextInputSize) < 0)
+                    throw MediaException(String(u"MediaSWRContext::doConvert(const uint8_t**, int, uint8_t**, int) swr_convert"));
             }
 
             void doInitialize() {
@@ -414,7 +418,7 @@ namespace eLibrary::Multimedia {
             MediaBuffer(const MediaChannelLayout &AudioBufferLayout, const IO::ByteBuffer &AudioBuffer, ALsizei AudioSampleRate) : BufferObject(AudioBuffer) {
                 alGenBuffers(1, &BufferIndex);
                 if (alGetError() != AL_NO_ERROR) throw MediaException(String(u"MediaSource::MediaSource(const MediaChannelLayout&, const IO::ByteBuffer&, ALsizei) alGenSources"));
-                alBufferData(BufferIndex, AudioBufferLayout.toOpenALFormat(), AudioBuffer.getBufferContainer(), BufferObject.getBufferLimit(), AudioSampleRate);
+                alBufferData(BufferIndex, AudioBufferLayout.toOpenALFormat(), AudioBuffer.getBufferContainer().getElementContainer(), BufferObject.getBufferLimit(), AudioSampleRate);
             }
 
             ~MediaBuffer() noexcept {

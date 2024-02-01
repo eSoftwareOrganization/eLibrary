@@ -9,12 +9,12 @@
 namespace eLibrary::Core {
     class MathematicsContext final : public Object {
     private:
-        Integer FunctionPrecision{10000000};
+        Integer FunctionPrecision;
     public:
-        MathematicsContext() noexcept = default;
+        explicit MathematicsContext(const Integer &FunctionPrecisionSource) noexcept : FunctionPrecision(FunctionPrecisionSource) {}
 
         static MathematicsContext getDefault() noexcept {
-            static MathematicsContext ContextObject;
+            static MathematicsContext ContextObject{10000000};
             return ContextObject;
         }
 
@@ -30,7 +30,7 @@ namespace eLibrary::Core {
     /**
      * Support for mathematical operations
      */
-    class Mathematics final : public Object {
+    class Mathematics final : public Object, public NonConstructable {
     private:
         static bool isPrimeLucas(const Integer &NumberSource) noexcept {
             Integer NumberD(5);
@@ -105,7 +105,7 @@ namespace eLibrary::Core {
             return false;
         }
 
-        static bool isPrimeRabinMiller(const Integer &NumberSource, std::initializer_list<Integer> NumberBaseList) noexcept {
+        static bool isPrimeRabinMiller(const Integer &NumberSource, ::std::initializer_list<Integer> NumberBaseList) noexcept {
             Integer NumberIteration(1), NumberExponent(NumberSource.doSubtraction(1));
             while (NumberExponent.isEven()) NumberExponent = NumberExponent.doDivision(2), NumberIteration = NumberIteration.doAddition(1);
             for (Integer NumberBase : NumberBaseList) {
@@ -290,7 +290,7 @@ namespace eLibrary::Core {
                     if (!NumberN.doModulo(8).doCompare(3) || !NumberN.doModulo(8).doCompare(5))
                         NumberJ = NumberJ.getOpposite();
                 }
-                std::swap(NumberM, NumberN);
+                ::std::swap(NumberM, NumberN);
                 if (!NumberM.doModulo(4).doCompare(3) && !NumberN.doModulo(4).doCompare(3)) NumberJ = NumberJ.getOpposite();
                 NumberM = NumberM.doModulo(NumberN);
             }
@@ -352,7 +352,7 @@ namespace eLibrary::Core {
 
         template<Arithmetic T>
         static T toDegrees(T NumberSource) noexcept {
-            return 180. / std::numbers::pi * NumberSource;
+            return 180. / ::std::numbers::pi * NumberSource;
         }
 
         static Fraction toDegreesFraction(const Fraction &NumberSource) noexcept {
@@ -361,7 +361,7 @@ namespace eLibrary::Core {
 
         template<Arithmetic T>
         static T toRadians(T NumberSource) noexcept {
-            return std::numbers::pi / 180. * NumberSource;
+            return ::std::numbers::pi / 180. * NumberSource;
         }
 
         static Fraction toRadiansFraction(const Fraction &NumberSource) noexcept {
