@@ -42,7 +42,7 @@ namespace eLibrary::Core {
                 else NumberD = NumberD.getOpposite().doAddition(2);
             }
             if (NumberD.isZero()) return false;
-            Integer NumberIterationCount(0), NumberK(NumberSource.doAddition(1)), NumberP(1), NumberQ(Integer(1).doSubtraction(NumberD).doDivision(4));
+            Integer NumberIterationCount(0), NumberK(NumberSource.doAddition(1)), NumberP(1), NumberQ((1_I).doSubtraction(NumberD).doDivision(4));
             while (NumberK.isEven()) NumberK = NumberK.doDivision(2), NumberIterationCount = NumberIterationCount.doAddition(1);
             Integer NumberBitCount(NumberK.toString(2).getCharacterSize()), NumberQk(NumberQ), NumberU(1), NumberV(NumberP);
             if (!NumberQ.doCompare(1)) {
@@ -50,7 +50,7 @@ namespace eLibrary::Core {
                     NumberU = NumberU.doMultiplication(NumberV).doModulo(NumberSource);
                     NumberV = NumberV.doMultiplication(NumberV).doSubtraction(2).doModulo(NumberSource);
                     NumberBitCount = NumberBitCount.doSubtraction(1);
-                    if (NumberK.doDivision(Integer(2).doPower(NumberBitCount.doSubtraction(1))).isOdd()) {
+                    if (NumberK.doDivision((2_I).doPower(NumberBitCount.doSubtraction(1))).isOdd()) {
                         Integer NumberUBackup(NumberU.doMultiplication(NumberP).doAddition(NumberV));
                         NumberV = NumberV.doMultiplication(NumberP).doAddition(NumberU.doMultiplication(NumberP));
                         NumberU = NumberUBackup;
@@ -66,7 +66,7 @@ namespace eLibrary::Core {
                     if (!NumberQk.doCompare(1)) NumberV = NumberV.doMultiplication(NumberV).doSubtraction(2).doModulo(NumberSource);
                     else NumberV = NumberV.doMultiplication(NumberV).doAddition(2).doModulo(NumberSource), NumberQk = 1;
                     NumberBitCount = NumberBitCount.doSubtraction(1);
-                    if (NumberK.doDivision(Integer(2).doPower(NumberBitCount.doSubtraction(1))).isOdd()) {
+                    if (NumberK.doDivision((2_I).doPower(NumberBitCount.doSubtraction(1))).isOdd()) {
                         Integer NumberUBackup(NumberU.doAddition(NumberV));
                         NumberV = NumberV.doAddition(NumberU.doMultiplication(NumberD));
                         NumberU = NumberUBackup;
@@ -82,7 +82,7 @@ namespace eLibrary::Core {
                     NumberV = NumberV.doMultiplication(NumberV).doSubtraction(NumberQk.doAddition(NumberQk)).doModulo(NumberSource);
                     NumberQk = NumberQk.doMultiplication(NumberQk);
                     NumberBitCount = NumberBitCount.doSubtraction(1);
-                    if (NumberK.doDivision(Integer(2).doPower(NumberBitCount.doSubtraction(1))).isOdd()) {
+                    if (NumberK.doDivision((2_I).doPower(NumberBitCount.doSubtraction(1))).isOdd()) {
                         Integer NumberUBackup(NumberU.doAddition(NumberV));
                         NumberV = NumberV.doAddition(NumberU.doMultiplication(NumberD));
                         NumberU = NumberUBackup;
@@ -142,7 +142,7 @@ namespace eLibrary::Core {
         }
 
         static Integer doCombinator(const Integer &NumberM, const Integer &NumberN) {
-            if (NumberN.doCompare(NumberM) < 0) throw ArithmeticException(String(u"Mathematics::doCombinator(const Integer&, const Integer&) NumberM NumberN"));
+            if (NumberN.doCompare(NumberM) < 0) throw ArithmeticException(u"Mathematics::doCombinator(const Integer&, const Integer&) NumberM NumberN"_S);
             return NumberN.doFactorial().doDivision(NumberM.doFactorial().doMultiplication(NumberN.doSubtraction(NumberM).doFactorial()));
         }
 
@@ -192,11 +192,11 @@ namespace eLibrary::Core {
         }
 
         static Fraction doHyperbolicCosineFraction(const Fraction &NumberSource, const MathematicsContext &NumberContext) noexcept {
-            return doExponentFraction(NumberSource, NumberContext).doAddition(doExponentFraction(NumberSource.getOpposite(), NumberContext)).doDivision(Integer(2));
+            return doExponentFraction(NumberSource, NumberContext).doAddition(doExponentFraction(NumberSource.getOpposite(), NumberContext)).doDivision(2_I);
         }
 
         static Fraction doHyperbolicSineFraction(const Fraction &NumberSource, const MathematicsContext &NumberContext) noexcept {
-            return doExponentFraction(NumberSource, NumberContext).doSubtraction(doExponentFraction(NumberSource.getOpposite(), NumberContext)).doDivision(Integer(2));
+            return doExponentFraction(NumberSource, NumberContext).doSubtraction(doExponentFraction(NumberSource.getOpposite(), NumberContext)).doDivision(2_I);
         }
 
         static Fraction doHyperbolicTangentFraction(const Fraction &NumberSource, const MathematicsContext &NumberContext) noexcept {
@@ -216,7 +216,7 @@ namespace eLibrary::Core {
         }
 
         static Fraction doLogarithmEFraction(const Fraction &NumberSource, const MathematicsContext &NumberContext) noexcept {
-            return doInverseHyperbolicTangentFraction(NumberSource.doSubtraction(Integer(1)).doDivision(NumberSource.doAddition(Integer(1))), NumberContext).doMultiplication(Integer(2));
+            return doInverseHyperbolicTangentFraction(NumberSource.doSubtraction(1_I).doDivision(NumberSource.doAddition(1_I)), NumberContext).doMultiplication(2_I);
         }
 
         template<std::integral T>
@@ -274,7 +274,7 @@ namespace eLibrary::Core {
         }
 
         static Integer getJocabiSymbol(const Integer &NumberMSource, const Integer &NumberNSource) {
-            if (NumberNSource.isNegative() || NumberNSource.isEven()) throw ArithmeticException(String(u"Mathematics::getJocabiSymbol(const Integer&, const Integer&) NumberNSource"));
+            if (NumberNSource.isNegative() || NumberNSource.isEven()) throw ArithmeticException(u"Mathematics::getJocabiSymbol(const Integer&, const Integer&) NumberNSource"_S);
             Integer NumberM(NumberMSource), NumberN(NumberNSource);
             if (NumberM.isNegative() || NumberM.doCompare(NumberN) > 0) NumberM = NumberM.doModulo(NumberN);
             if (NumberM.isZero()) return !NumberNSource.doCompare(1);
@@ -329,14 +329,14 @@ namespace eLibrary::Core {
                 return false;
             if (NumberSource.doCompare(2809) < 0) return true;
             if (NumberSource.doCompare(23001) <= 0)
-                return !Integer(2).doPower(NumberSource, NumberSource).doCompare(2) && NumberSource.doCompare(7957) && NumberSource.doCompare(8321) && NumberSource.doCompare(13747) && NumberSource.doCompare(18721) && NumberSource.doCompare(19951);
-            if (NumberSource.doCompare(341531) < 0) return isPrimeRabinMiller(NumberSource, {{{u"9345883071009581737"}, 10}});
+                return !(2_I).doPower(NumberSource, NumberSource).doCompare(2) && NumberSource.doCompare(7957) && NumberSource.doCompare(8321) && NumberSource.doCompare(13747) && NumberSource.doCompare(18721) && NumberSource.doCompare(19951);
+            if (NumberSource.doCompare(341531) < 0) return isPrimeRabinMiller(NumberSource, {u"9345883071009581737"_I});
             if (NumberSource.doCompare(885594169) < 0) return isPrimeRabinMiller(NumberSource, {725270293939359937, 3569819667048198375});
-            if (NumberSource.doCompare(350269456337) < 0) return isPrimeRabinMiller(NumberSource, {4230279247111683200, {{u"14694767155120705706"}, 10}, {{u"16641139526367750375"}, 10}});
-            if (NumberSource.doCompare(55245642489451) < 0) return isPrimeRabinMiller(NumberSource, {2, 141889084524735, 1199124725622454117, {{u"11096072698276303650"}, 10}});
+            if (NumberSource.doCompare(350269456337) < 0) return isPrimeRabinMiller(NumberSource, {4230279247111683200, u"14694767155120705706"_I, u"16641139526367750375"_I});
+            if (NumberSource.doCompare(55245642489451) < 0) return isPrimeRabinMiller(NumberSource, {2, 141889084524735, 1199124725622454117, u"11096072698276303650"_I});
             if (NumberSource.doCompare(7999252175582851) < 0) return isPrimeRabinMiller(NumberSource, {2, 4130806001517, 149795463772692060, 186635894390467037, 3967304179347715805});
             if (NumberSource.doCompare(585226005592931977) < 0) return isPrimeRabinMiller(NumberSource, {2, 123635709730000, 9233062284813009, 43835965440333360, 761179012939631437, 1263739024124850375});
-            if (NumberSource.doCompare({{u"18446744073709551616"}, 10}) < 0) return isPrimeRabinMiller(NumberSource, {2, 325, 9375, 28178, 450775, 9780504, 1795265022});
+            if (NumberSource.doCompare(u"18446744073709551616"_I) < 0) return isPrimeRabinMiller(NumberSource, {2, 325, 9375, 28178, 450775, 9780504, 1795265022});
             return isPrimeRabinMiller(NumberSource, {2}) && isPrimeLucas(NumberSource);
         }
 

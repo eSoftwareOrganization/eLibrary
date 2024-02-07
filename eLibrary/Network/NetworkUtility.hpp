@@ -6,7 +6,7 @@
 #if eLibraryFeature(Network)
 
 #include <IO/IOUtility.hpp>
-#include <Network/Exception.hpp>
+#include <Network/NetworkException.hpp>
 
 #if eLibrarySystem(Windows)
 #include <ws2tcpip.h>
@@ -46,8 +46,7 @@ namespace eLibrary::Network {
         }
 
         explicit NetworkAddress(const in6_addr &AddressSource) : AddressProtocol(NetworkAddressProtocol::ProtocolIPv6) {
-            AddressFieldList.doAssign(Array<uint8_t>(16));
-            Collections::doCopy(AddressSource.s6_addr, 16, AddressFieldList.begin());
+            AddressFieldList.doAssign(Array<uint8_t>(AddressSource.s6_addr, AddressSource.s6_addr + 16));
         }
 
         auto getAddressFamily() const noexcept {
@@ -114,7 +113,7 @@ namespace eLibrary::Network {
                 AddressResult.s_addr = htonl((AddressFieldList.getElement(0) << 24) | (AddressFieldList.getElement(1) << 16) | (AddressFieldList.getElement(2) << 8) | AddressFieldList.getElement(3));
                 return AddressResult;
             }
-            throw NetworkException(String(u"NetworkAddress::toAddressIn4() AddressProtocol"));
+            throw NetworkException(u"NetworkAddress::toAddressIn4() AddressProtocol"_S);
         }
 
         auto toAddressIn6() const {
@@ -123,7 +122,7 @@ namespace eLibrary::Network {
                 Collections::doCopy(AddressFieldList.begin(), 16, AddressResult.s6_addr);
                 return AddressResult;
             }
-            throw NetworkException(String(u"NetworkAddress::toAddressIn6() AddressProtocol"));
+            throw NetworkException(u"NetworkAddress::toAddressIn6() AddressProtocol"_S);
         }
 
         String toString() const noexcept override {
@@ -166,7 +165,7 @@ namespace eLibrary::Network {
         }
 
         void doClose() override {
-            if (!isAvailable()) throw NetworkException(String(u"NetworkSocketDescriptor::doClose() isAvailable"));
+            if (!isAvailable()) throw NetworkException(u"NetworkSocketDescriptor::doClose() isAvailable"_S);
 #if eLibrarySystem(Windows)
             closesocket(DescriptorHandle);
 #else
@@ -176,13 +175,13 @@ namespace eLibrary::Network {
         }
 
         String toString() const noexcept override {
-            return String(u"NetworkSocketDescriptor[DescriptorHandle=").doConcat(String::valueOf(DescriptorHandle)).doConcat(u']');
+            return u"NetworkSocketDescriptor[DescriptorHandle="_S.doConcat(String::valueOf(DescriptorHandle)).doConcat(u']');
         }
     };
 
 #if eLibrarySystem(Windows)
-#define doDestroySocket() WSACleanup();
-#define doInitializeSocket() WSADATA SocketData;WSAStartup(MAKEWORD(2, 2), &SocketData);
+#define doDestroySocket() WSACleanup()
+#define doInitializeSocket() WSADATA SocketData;WSAStartup(MAKEWORD(2, 2), &SocketData)
 #else
 #define doDestroySocket()
 #define doInitializeSocket()

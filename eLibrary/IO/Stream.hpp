@@ -6,7 +6,7 @@
 #if eLibraryFeature(IO)
 
 #include <IO/Buffer.hpp>
-#include <IO/Exception.hpp>
+#include <IO/IOException.hpp>
 
 namespace eLibrary::IO {
     class InputStream : public Object, public NonCopyable {
@@ -16,7 +16,7 @@ namespace eLibrary::IO {
         virtual int doRead() = 0;
 
         virtual void doRead(ByteBuffer &StreamBuffer) {
-            if (!isAvailable()) throw IOException(String(u"InputStream::doRead(ByteBuffer&) isAvailable"));
+            if (!isAvailable()) throw IOException(u"InputStream::doRead(ByteBuffer&) isAvailable"_S);
             int StreamCharacter = doRead();
             if (StreamCharacter == -1) return;
             StreamBuffer.setValue((uint8_t) StreamCharacter);
@@ -41,7 +41,7 @@ namespace eLibrary::IO {
         virtual void doWrite(uint8_t) = 0;
 
         virtual void doWrite(const ByteBuffer &StreamBuffer) {
-            if (!isAvailable()) throw IOException(String(u"OutputStream::doWrite(const ByteBuffer&) isAvailable"));
+            if (!isAvailable()) throw IOException(u"OutputStream::doWrite(const ByteBuffer&) isAvailable"_S);
             for (uintmax_t StreamIndex = 0;StreamIndex < StreamBuffer.getRemaining();++StreamIndex)
                 doWrite(StreamBuffer.getValue());
         }

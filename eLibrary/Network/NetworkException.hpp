@@ -5,7 +5,7 @@
 
 #if eLibraryFeature(Network)
 
-#include <IO/Exception.hpp>
+#include <IO/IOException.hpp>
 
 namespace eLibrary::Network {
     using namespace eLibrary::Core;
@@ -13,10 +13,6 @@ namespace eLibrary::Network {
     class NetworkException final : public IO::IOException {
     public:
         using IOException::IOException;
-
-        const char *getClassName() const noexcept override {
-            return "NetworkException";
-        }
     };
 }
 #endif

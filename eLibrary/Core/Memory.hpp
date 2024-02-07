@@ -53,34 +53,37 @@ namespace eLibrary::Core {
             delete ObjectSource;
         }
 
-        [[nodiscard]] T *doAllocate(uintmax_t ObjectSize) {
+        [[nodiscard]] constexpr T *doAllocate(uintmax_t ObjectSize) {
+            if consteval {
+                return static_cast<T *>(::operator new(ObjectSize * sizeof(T)));
+            }
             return (T*) ::operator new(ObjectSize, AllocatorResource->doAcquire(ObjectSize * sizeof(T), alignof(T)));
         }
 
         template<typename ...Ts>
-        static void doConstruct(T *ObjectSource, Ts&& ...ObjectParameter) {
+        static constexpr void doConstruct(T *ObjectSource, Ts&& ...ObjectParameter) {
             ::new((void*) ObjectSource) T(Objects::doForward<Ts>(ObjectParameter)...);
         }
 
-        void doDeallocate(T *ObjectSource, uintmax_t ObjectSize) {
+        constexpr void doDeallocate(T *ObjectSource, uintmax_t ObjectSize) {
+            if consteval {
+                ::operator delete(ObjectSource);
+                return;
+            }
             AllocatorResource->doRelease(ObjectSource, ObjectSize * sizeof(T), alignof(T));
         }
 
-        static void doDestroy(T *ObjectSource) {
+        static constexpr void doDestroy(T *ObjectSource) {
             ObjectSource->~T();
         }
 
-        const char *getClassName() const noexcept override {
-            return "MemoryAllocator";
-        }
-
         static auto newArray(uintmax_t ArraySize) noexcept {
-            return new (std::nothrow) T[ArraySize];
+            return new (::std::nothrow) T[ArraySize];
         }
 
-        template<typename ...As>
-        static auto newObject(As&&... ArgumentList) {
-            return new (std::nothrow) T(Objects::doForward<As>(ArgumentList)...);
+        template<typename ...Ts>
+        static auto newObject(Ts&&... ArgumentList) {
+            return new (::std::nothrow) T(Objects::doForward<Ts>(ArgumentList)...);
         }
 
         void releaseObject(T *ObjectSource) {

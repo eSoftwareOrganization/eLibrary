@@ -2,19 +2,13 @@
 using namespace eLibrary;
 using namespace eLibrary::Core;
 
-#undef max
-#undef min
-
 #define DOCTEST_CONFIG_IMPLEMENT
 #include "3rd_party/doctest.h"
-#define ANKERL_NANOBENCH_IMPLEMENT
-#include "3rd_party/nanobench.h"
 
 #include <random>
 
 #define doGenerateSigned() (RandomEngine() & 1 ? RandomEngine() : -intmax_t(RandomEngine()))
 
-ankerl::nanobench::Bench TestBench;
 ::std::mt19937 RandomEngine;
 ::std::mt19937_64 RandomEngine64;
 ::std::random_device RandomDevice;
@@ -60,6 +54,26 @@ TEST_SUITE("Container") {
         CHECK(NumberList.doUnion(NumberList).doDifference(NumberList).isEmpty());
     }
 
+    TEST_CASE("RedBlackTree") {
+        RedBlackTree<NumberBuiltin<intmax_t>, nullptr_t> NumberTree;
+        for (uintmax_t NumberIndex = 0;NumberIndex < 10000;++NumberIndex)
+            NumberTree.doInsert(RandomEngine(), nullptr);
+        ArrayList<NumberBuiltin<intmax_t>> NumberList;
+        NumberTree.doOrder([&NumberList](const auto &NumberValue, nullptr_t){
+            NumberList.addElement(NumberValue);
+        });
+        CHECK_LE(NumberTree.getSize(), 10000);
+        CHECK_EQ(NumberList.getElementSize(), NumberTree.getSize());
+        Collections::doTraverse(NumberList.begin(), NumberList.end(), [&NumberTree](const auto &NumberValue){
+            CHECK(NumberTree.doSearch(NumberValue).hasValue());
+            NumberTree.doRemove(NumberValue);
+        });
+        Collections::doTraverse(NumberList.begin(), NumberList.end(), [&NumberTree](const auto &NumberValue){
+            CHECK_FALSE(NumberTree.doSearch(NumberValue).hasValue());
+        });
+        CHECK_EQ(NumberTree.getSize(), 0);
+    }
+
     TEST_CASE("SingleLinkedList") {
         SingleLinkedList<NumberBuiltin<uintmax_t>> NumberList;
         for (uintmax_t NumberIndex = 0;NumberIndex < 10000;++NumberIndex)
@@ -83,15 +97,15 @@ TEST_SUITE("Container") {
 
 TEST_SUITE("Concurrent") {
     TEST_CASE("AtomicInteger&ThreadExecutor") {
-        AtomicNumber<int64_t> NumberSource(0);
+        AtomicStorage<int64_t> NumberSource(0);
         uintmax_t NumberValue = RandomEngine() % 10000;
         auto ThreadFunctionDecrement = [&]() {
             for (uintmax_t NumberEpoch = 0; NumberEpoch < NumberValue; ++NumberEpoch)
-                NumberSource.getAndDecrement();
+                NumberSource.doFetchSub(1);
         };
         auto ThreadFunctionIncrement = [&]() {
             for (uintmax_t NumberEpoch = 0; NumberEpoch < NumberValue; ++NumberEpoch)
-                NumberSource.getAndIncrement();
+                NumberSource.doFetchAdd(1);
         };
         ThreadExecutor ThreadExecutorObject(4);
         ThreadExecutorObject.doSubmit(ThreadFunctionIncrement);
@@ -150,10 +164,6 @@ TEST_SUITE("Number") {
 
             CHECK_EQ(NumberObject1.doAddition(NumberObject2).doCompare(Number1 + Number2), 0);
         }
-        Integer NumberObject1(RandomEngine64()), NumberObject2(RandomEngine64());
-        TestBench.run("IntegerAddition", [&] {
-            NumberObject1.doAddition(NumberObject2);
-        });
     }
 
     TEST_CASE("IntegerComparison") {
@@ -165,10 +175,6 @@ TEST_SUITE("Number") {
             if (Number1 == Number2) CHECK_EQ(NumberObject1.doCompare(NumberObject2), 0);
             if (Number1 < Number2) CHECK_LT(NumberObject1.doCompare(NumberObject2), 0);
         }
-        Integer NumberObject1(RandomEngine64()), NumberObject2(RandomEngine64());
-        TestBench.run("IntegerComparison", [&] {
-            ankerl::nanobench::doNotOptimizeAway(NumberObject1.doCompare(NumberObject2));
-        });
     }
 
     TEST_CASE("IntegerDivision") {
@@ -178,10 +184,6 @@ TEST_SUITE("Number") {
 
             CHECK_EQ(NumberObject1.doDivision(NumberObject2).doCompare(Number1 / Number2), 0);
         }
-        Integer NumberObject1(RandomEngine64()), NumberObject2(RandomEngine64());
-        TestBench.run("IntegerDivision", [&] {
-            NumberObject1.doDivision(NumberObject2);
-        });
     }
 
     TEST_CASE("IntegerFactorial") {
@@ -189,10 +191,6 @@ TEST_SUITE("Number") {
             Integer NumberObject(RandomEngine() % 1000 + 1);
             CHECK_EQ(NumberObject.doFactorial().doCompare(NumberObject.doSubtraction(1).doFactorial().doMultiplication(NumberObject)), 0);
         }
-        Integer NumberObject(RandomEngine() % 10000);
-        TestBench.run("IntegerFactorial", [&] {
-            NumberObject.doFactorial();
-        });
     }
 
     TEST_CASE("IntegerModulo") {
@@ -202,10 +200,6 @@ TEST_SUITE("Number") {
 
             CHECK_EQ(NumberObject1.doModulo(NumberObject2).doCompare(Number1 % Number2), 0);
         }
-        Integer NumberObject1(RandomEngine64()), NumberObject2(RandomEngine64());
-        TestBench.run("IntegerModulo", [&] {
-            NumberObject1.doModulo(NumberObject2);
-        });
     }
 
     TEST_CASE("IntegerMultiplication") {
@@ -215,10 +209,6 @@ TEST_SUITE("Number") {
 
             CHECK_EQ(NumberObject1.doMultiplication(NumberObject2).doCompare(Number1 * Number2), 0);
         }
-        Integer NumberObject1(RandomEngine64()), NumberObject2(RandomEngine64());
-        TestBench.run("IntegerMultiplication", [&] {
-            NumberObject1.doMultiplication(NumberObject2);
-        });
     }
 
     TEST_CASE("IntegerPower") {
@@ -226,10 +216,6 @@ TEST_SUITE("Number") {
             uintmax_t NumberBase = RandomEngine() + 1, NumberExponent = RandomEngine() % 10000 + 1, NumberModulo = RandomEngine() + 1;
             CHECK_EQ(Integer(NumberBase).doPower(NumberExponent, NumberModulo).getValue<uintmax_t>(), Mathematics::doPower(NumberBase, NumberExponent, NumberModulo));
         }
-        Integer NumberBaseObject(RandomEngine64()), NumberExponentObject(RandomEngine() % 10000 + 1);
-        TestBench.run("IntegerPower", [&] {
-            NumberBaseObject.doPower(NumberExponentObject);
-        });
     }
 
     TEST_CASE("IntegerPrime") {
@@ -246,17 +232,13 @@ TEST_SUITE("Number") {
 
             CHECK_EQ(NumberObject1.doSubtraction(NumberObject2).doCompare(Number1 - Number2), 0);
         }
-        Integer NumberObject1(RandomEngine64()), NumberObject2(RandomEngine64());
-        TestBench.run("IntegerSubtraction", [&] {
-            NumberObject1.doSubtraction(NumberObject2);
-        });
     }
 }
 
 #if eLibraryFeature(Network)
 TEST_SUITE("Socket") {
     TEST_CASE("StreamSocket") {
-        doInitializeSocket()
+        doInitializeSocket();
 
         Network::StreamSocket SocketClient(Network::NetworkSocketAddress(Network::NetworkAddress(Array<uint8_t>{127, 0, 0, 1}), 26916));
         Network::StreamSocketServer SocketServer(Network::NetworkSocketAddress(Network::NetworkAddress(Array<uint8_t>{127, 0, 0, 1}), 26916));
@@ -276,7 +258,7 @@ TEST_SUITE("Socket") {
         SocketClient.doClose();
         SocketServer.doClose();
 
-        doDestroySocket()
+        doDestroySocket();
     }
 }
 #endif

@@ -5,7 +5,7 @@
 
 #if eLibraryFeature(IO)
 
-#include <IO/Exception.hpp>
+#include <IO/IOException.hpp>
 
 namespace eLibrary::IO {
     class Buffer : public Object {
@@ -52,13 +52,13 @@ namespace eLibrary::IO {
 
         void setBufferLimit(uintmax_t BufferLimitSource) {
             if (BufferLimitSource > BufferCapacity)
-                throw IOException(String(u"Buffer::setBufferLimit(uintmax_t) BufferLimitSource"));
+                throw IOException(u"Buffer::setBufferLimit(uintmax_t) BufferLimitSource"_S);
             BufferLimit = BufferLimitSource;
         }
 
         void setBufferPosition(uintmax_t BufferPositionSource) const {
             if (BufferPositionSource > BufferLimit)
-                throw IOException(String(u"Buffer::setBufferPosition(uintmax_t) BufferPositionSource"));
+                throw IOException(u"Buffer::setBufferPosition(uintmax_t) BufferPositionSource"_S);
             BufferPosition = BufferPositionSource;
         }
     };
@@ -67,19 +67,13 @@ namespace eLibrary::IO {
     protected:
         Array<uint8_t> BufferContainer;
 
-        ByteBuffer(const Array<uint8_t> &BufferContainerSource) noexcept : BufferContainer(BufferContainerSource) {
-            BufferCapacity = BufferLimit = BufferContainerSource.getElementSize();
-        }
-
         friend class FileInputStream;
         friend class FileOutputStream;
     public:
         constexpr ByteBuffer() noexcept = default;
 
-        ~ByteBuffer() noexcept {
-            BufferCapacity = 0;
-            BufferLimit = 0;
-            BufferPosition = 0;
+        ByteBuffer(const Array<uint8_t> &BufferContainerSource) noexcept : BufferContainer(BufferContainerSource) {
+            BufferCapacity = BufferLimit = BufferContainerSource.getElementSize();
         }
 
         static ByteBuffer doAllocate(uintmax_t BufferCapacitySource) noexcept {
@@ -101,22 +95,22 @@ namespace eLibrary::IO {
         }
 
         uint8_t getValue() const {
-            if (BufferPosition >= BufferLimit) throw IOException(String(u"ByteBuffer::setValue(uint8_t) BufferPosition"));
+            if (BufferPosition >= BufferLimit) throw IOException(u"ByteBuffer::setValue(uint8_t) BufferPosition"_S);
             return BufferContainer.getElement(BufferPosition++);
         }
 
         uint8_t getValue(uintmax_t ValueIndex) const {
-            if (ValueIndex >= BufferLimit) throw IOException(String(u"ByteBuffer::getValue(uintmax_t) ValueIndex"));
+            if (ValueIndex >= BufferLimit) throw IOException(u"ByteBuffer::getValue(uintmax_t) ValueIndex"_S);
             return BufferContainer.getElement(ValueIndex);
         }
 
         void setValue(uint8_t ValueSource) {
-            if (BufferPosition >= BufferLimit) throw IOException(String(u"ByteBuffer::setValue(uint8_t) BufferPosition"));
+            if (BufferPosition >= BufferLimit) throw IOException(u"ByteBuffer::setValue(uint8_t) BufferPosition"_S);
             BufferContainer.getElement(BufferPosition++) = ValueSource;
         }
 
         void setValue(uint8_t ValueSource, uintmax_t ValueIndex) {
-            if (ValueIndex >= BufferLimit) throw IOException(String(u"ByteBuffer::setValue(uint8_t, uintmax_t)"));
+            if (ValueIndex >= BufferLimit) throw IOException(u"ByteBuffer::setValue(uint8_t, uintmax_t)"_S);
             BufferContainer.getElement(ValueIndex) = ValueSource;
         }
     };

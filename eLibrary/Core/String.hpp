@@ -21,10 +21,6 @@ namespace eLibrary::Core {
             return (intmax_t) CharacterValue - CharacterSource.CharacterValue;
         }
 
-        const char *getClassName() const noexcept override {
-            return "Character";
-        }
-
         uintmax_t hashCode() const noexcept override {
             return CharacterValue;
         }
@@ -143,10 +139,6 @@ namespace eLibrary::Core {
             return CharacterSize;
         }
 
-        const char *getClassName() const noexcept override {
-            return "String";
-        }
-
         uintmax_t hashCode() const noexcept override {
             uintmax_t CharacterCode = 0;
             for (intmax_t ElementIndex = 0; ElementIndex < CharacterSize; ++ElementIndex)
@@ -233,12 +225,18 @@ namespace eLibrary::Core {
 
         eLibraryAPI void doClear() noexcept;
 
-        const char *getClassName() const noexcept override {
-            return "StringStream";
-        }
-
         eLibraryAPI String toString() const noexcept override;
     };
+
+    inline namespace Literal {
+        eLibraryAPI String operator"" _S(const char *StringSource);
+
+        eLibraryAPI String operator"" _S(const char16_t *StringSource, size_t StringSize);
+
+        eLibraryAPI String operator"" _S(const char32_t *StringSource, size_t StringSize);
+
+        eLibraryAPI String operator"" _S(const wchar_t *StringSource, size_t StringSize);
+    }
 }
 
 #if __has_include(<format>) && !eLibraryCompiler(AppleClang)

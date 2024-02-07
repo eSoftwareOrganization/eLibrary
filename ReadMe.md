@@ -30,6 +30,7 @@ Core::Mathematics
 Project Dependencies:
 + [doctest](https://github.com/doctest/doctest)
 + [ffmpeg](https://ffmpeg.org) for eLibrary::Multimedia
++ [libmaxminddb](https://github.com/maxmind/libmaxminddb) for eLibrary::Extension::GeoIP
 + [nanobench](https://github.com/martinus/nanobench)
 + [OpenAL Soft](https://github.com/kcat/openal-soft) for eLibrary::Multimedia
 

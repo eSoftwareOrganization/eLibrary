@@ -3,7 +3,7 @@
 #ifndef eLibraryHeaderIOLibrary
 #define eLibraryHeaderIOLibrary
 
-#include <IO/Exception.hpp>
+#include <IO/IOException.hpp>
 #if eLibrarySystem(Windows)
 #include <libloaderapi.h>
 #else
@@ -44,7 +44,7 @@ namespace eLibrary::IO {
 #else
             dlopen(LibraryPath.toU8String().c_str(), RTLD_LAZY);
 #endif
-            if (!LibraryHandle) throw IOException(String(u"Library::Library(const String&)"));
+            if (!LibraryHandle) throw IOException(u"Library::Library(const String&)"_S);
             return {LibraryHandle};
         }
 

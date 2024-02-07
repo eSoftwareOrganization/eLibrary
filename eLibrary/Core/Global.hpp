@@ -16,11 +16,6 @@ namespace eLibrary::Core {
         {ObjectSource.doCompare(ObjectSource)} -> ::std::same_as<intmax_t>;
     };
 
-    template<typename T>
-    concept Hashable = requires (const T &ObjectSource) {
-        {ObjectSource.hashCode()} -> ::std::same_as<uintmax_t>;
-    };
-
     class NonConstructable {
     public:
         constexpr NonConstructable() noexcept = delete;

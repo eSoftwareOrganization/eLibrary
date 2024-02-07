@@ -4,14 +4,14 @@
 
 namespace eLibrary::Core {
     uint8_t Character::toNumber(uint8_t NumberRadix) const {
-        if (NumberRadix < 2 || NumberRadix > 36) throw ArithmeticException(String(u"Character::toNumber(uint8_t) NumberRadix"));
+        if (NumberRadix < 2 || NumberRadix > 36) throw ArithmeticException(u"Character::toNumber(uint8_t) NumberRadix"_S);
         if (isDigit()) {
             if (CharacterValue - 48 >= NumberRadix)
-                throw Exception(String(u"Character::toNumber(uint8_t) NumberRadix"));
+                throw Exception(u"Character::toNumber(uint8_t) NumberRadix"_S);
             return CharacterValue - 48;
-        } else if (!isAlpha()) throw Exception(String(u"Character::toNumber(uint8_t) isAlpha"));
+        } else if (!isAlpha()) throw Exception(u"Character::toNumber(uint8_t) isAlpha"_S);
         if (towupper(CharacterValue) - 55 >= NumberRadix)
-            throw Exception(String(u"Character::toNumber(uint8_t) NumberRadix"));
+            throw Exception(u"Character::toNumber(uint8_t) NumberRadix"_S);
         return CharacterValue - 55;
     }
 
@@ -20,8 +20,8 @@ namespace eLibrary::Core {
     }
 
     Character Character::valueOf(uint8_t NumberSource, uint8_t NumberRadix) {
-        if (NumberRadix < 2 || NumberRadix > 36) throw ArithmeticException(String(u"Character::valueOf(uint8_t, uint8_t) NumberRadix"));
-        if (NumberSource >= NumberRadix) throw Exception(String(u"Character::valueOf(uint8_t, uint8_t) NumberSource"));
+        if (NumberRadix < 2 || NumberRadix > 36) throw ArithmeticException(u"Character::valueOf(uint8_t, uint8_t) NumberRadix"_S);
+        if (NumberSource >= NumberRadix) throw Exception(u"Character::valueOf(uint8_t, uint8_t) NumberSource"_S);
         if (NumberSource <= 10) return {char16_t(NumberSource + 48)};
         return {char16_t(NumberSource + 55)};
     }
@@ -181,12 +181,11 @@ namespace eLibrary::Core {
     }
 
     ::std::u16string String::toU16String() const noexcept {
-        auto *CharacterBuffer = MemoryAllocator<char16_t>::newArray(CharacterSize + 1);
+        Array<char16_t> CharacterBuffer(CharacterSize + 1);
         for (intmax_t CharacterIndex = 0;CharacterIndex < CharacterSize;++CharacterIndex)
-            CharacterBuffer[CharacterIndex] = (char16_t) CharacterContainer[CharacterIndex];
-        CharacterBuffer[CharacterSize] = char16_t();
-        ::std::u16string CharacterResult(CharacterBuffer, (size_t) CharacterSize);
-        MemoryAllocator<char16_t>::deleteArray(CharacterBuffer);
+            CharacterBuffer.getElement(CharacterIndex) = (char16_t) CharacterContainer[CharacterIndex];
+        CharacterBuffer.getElement(CharacterSize) = char16_t();
+        ::std::u16string CharacterResult(CharacterBuffer.begin(), CharacterBuffer.end());
         return CharacterResult;
     }
 
@@ -245,12 +244,27 @@ namespace eLibrary::Core {
     }
 
     String StringStream::toString() const noexcept {
-        auto *CharacterBuffer = MemoryAllocator<char16_t>::newArray(CharacterSize + 1);
+        Array<char16_t> CharacterBuffer(CharacterSize + 1);
         for (uintmax_t CharacterIndex = 0;CharacterIndex < CharacterSize;++CharacterIndex)
-            CharacterBuffer[CharacterIndex] = (char16_t) CharacterContainer[CharacterIndex];
-        CharacterBuffer[CharacterSize] = char16_t();
-        ::std::u16string CharacterResult(CharacterBuffer, (size_t) CharacterSize);
-        MemoryAllocator<char16_t>::deleteArray(CharacterBuffer);
+            CharacterBuffer.getElement(CharacterIndex) = (char16_t) CharacterContainer[CharacterIndex];
+        CharacterBuffer.getElement(CharacterSize) = char16_t();
+        ::std::u16string CharacterResult(CharacterBuffer.begin(), CharacterBuffer.end());
         return CharacterResult;
+    }
+
+    eLibraryAPI String Literal::operator"" _S(const char *StringSource) {
+        return {::std::string(StringSource)};
+    }
+
+    eLibraryAPI String Literal::operator"" _S(const char16_t *StringSource, size_t StringSize) {
+        return {::std::u16string(StringSource, StringSize)};
+    }
+
+    eLibraryAPI String Literal::operator"" _S(const char32_t *StringSource, size_t StringSize) {
+        return {::std::u32string(StringSource, StringSize)};
+    }
+
+    eLibraryAPI String Literal::operator"" _S(const wchar_t *StringSource, size_t StringSize) {
+        return {::std::wstring(StringSource, StringSize)};
     }
 }

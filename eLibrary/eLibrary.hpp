@@ -6,8 +6,8 @@
 #define eLibraryToStringImplement(ObjectSource) #ObjectSource
 #define eLibraryToString(ObjectSource) eLibraryToStringImplement(ObjectSource)
 
-#define eLibraryVersionMajor 2023
-#define eLibraryVersionMinor 19
+#define eLibraryVersionMajor 0
+#define eLibraryVersionMinor 20
 #define eLibraryVersionPatch 0
 #define eLibraryVersionNumber (eLibraryVersionMajor * 10000 + eLibraryVersionMinor * 100 + eLibraryVersionPatch)
 #define eLibraryVersionString (eLibraryToString(eLibraryVersionMajor) "." eLibraryToString(eLibraryVersionMinor) "." eLibraryToString(eLibraryVersionPatch))

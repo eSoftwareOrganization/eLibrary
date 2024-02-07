@@ -5,7 +5,7 @@
 
 #if eLibraryFeature(Multimedia)
 
-#include <IO/Exception.hpp>
+#include <IO/IOException.hpp>
 
 namespace eLibrary::Multimedia {
     using namespace eLibrary::Core;
@@ -13,10 +13,6 @@ namespace eLibrary::Multimedia {
     class MediaException final : public IO::IOException {
     public:
         using IOException::IOException;
-
-        const char *getClassName() const noexcept override {
-            return "MediaException";
-        }
     };
 }
 #endif

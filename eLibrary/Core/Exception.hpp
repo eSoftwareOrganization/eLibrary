@@ -17,14 +17,8 @@ namespace eLibrary::Core {
     public:
         explicit Exception(const String &ExceptionMessageSource) noexcept : ExceptionMessage(ExceptionMessageSource) {}
 
-        const char *getClassName() const noexcept override {
-            return "Exception";
-        }
-
         String toString() const noexcept override {
-            if (ExceptionDetail.empty()) {
-                ExceptionDetail = String(getClassName()).doConcat(u' ').doConcat(ExceptionMessage).toU8String();
-            }
+            if (ExceptionDetail.empty()) ExceptionDetail = ExceptionMessage.toU8String();
             return {ExceptionDetail};
         }
 
@@ -37,46 +31,26 @@ namespace eLibrary::Core {
     class ArithmeticException final : public Exception {
     public:
         using Exception::Exception;
+    };
 
-        const char *getClassName() const noexcept override {
-            return "ArithmeticException";
-        }
+    class ConcurrentException : public Exception {
+    public:
+        using Exception::Exception;
     };
 
     class IndexException final : public Exception {
     public:
         using Exception::Exception;
-
-        const char *getClassName() const noexcept override {
-            return "IndexException";
-        }
     };
 
-    class InterruptedException final : public Exception {
+    class InterruptedException final : public ConcurrentException {
     public:
-        using Exception::Exception;
-
-        const char *getClassName() const noexcept override {
-            return "InterruptedException";
-        }
-    };
-
-    class RuntimeException final : public Exception {
-    public:
-        using Exception::Exception;
-
-        const char *getClassName() const noexcept override {
-            return "RuntimeException";
-        }
+        using ConcurrentException::ConcurrentException;
     };
 
     class TypeException final : public Exception {
     public:
         using Exception::Exception;
-
-        const char *getClassName() const noexcept override {
-            return "TypeException";
-        }
     };
 }
 

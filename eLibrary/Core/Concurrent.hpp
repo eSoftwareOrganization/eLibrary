@@ -6,7 +6,7 @@
 #include <Core/Container.hpp>
 #include <Core/Number.hpp>
 
-#if eLibraryCompiler(MSVC)
+#if __has_include(<intrin.h>)
 #include <intrin.h>
 #endif
 
@@ -17,6 +17,12 @@
 #include <unistd.h>
 #endif
 
+#if defined(YieldProcessor)
+#define doYieldCpu YieldProcessor
+#elif __has_builtin(__yield)
+#define doYieldCpu __yield
+#endif
+
 #include <condition_variable>
 #include <future>
 #include <mutex>
@@ -24,124 +30,733 @@
 #include <utility>
 
 namespace eLibrary::Core {
-    class ConcurrentUtility final : public Object, public NonConstructable {
-    public:
+    enum class MemoryOrder : int {
+        OrderRelaxed = 0,
+        OrderSeqCst = 5
+    };
+
+    template<typename T, size_t>
+    struct ConcurrentOperation {
+        template<typename O, typename I>
+        static O *doCastAddress(I &AddressSource) noexcept {
+            return &reinterpret_cast<O&>(AddressSource);
+        }
+
+        template<typename O, typename I>
+        static volatile O *doCastAddress(volatile I &AddressSource) noexcept {
+            return &reinterpret_cast<volatile O&>(AddressSource);
+        }
+
+        template<typename O, typename I>
+        static O doCastObject(const I &ObjectSource) noexcept {
+            if constexpr ((::std::is_integral_v<I> || ::std::is_pointer_v<I>) && sizeof(O) == sizeof(I))
+                return (O) ObjectSource;
+            else {
+                O ObjectResult{};
+                ::memcpy(&ObjectResult, Objects::getAddress(ObjectSource), sizeof(ObjectSource));
+                return ObjectResult;
+            }
+        }
+    };
+
+    template<typename T>
+    struct ConcurrentOperation<T, 1> {
+        using ParameterType = char;
+
 #if eLibraryCompiler(MSVC)
-        static int16_t doCompareAndExchange16(volatile int16_t *ValueAddress, int16_t ValueExpected, int16_t ValueTarget) noexcept {
-            return InterlockedCompareExchange16(ValueAddress, ValueTarget, ValueExpected);
+        static T doAddFetch(volatile T &ValueAddress, const T ValueTargetSource, MemoryOrder=MemoryOrder::OrderSeqCst) noexcept {
+            auto ValueTarget(ConcurrentOperation<T, 0>::template doCastObject<ParameterType>(ValueTargetSource));
+            return reinterpret_cast<T&>(_InterlockedExchangeAdd8(ConcurrentOperation<T, 0>::template doCastAddress<ParameterType>(ValueAddress), ValueTarget) + ValueTarget);
         }
 
-        static int32_t doCompareAndExchange32(volatile int32_t *ValueAddress, int32_t ValueExpected, int32_t ValueTarget) noexcept {
-            return InterlockedCompareExchange((volatile LONG*) ValueAddress, ValueTarget, ValueExpected);
+        static T doAndFetch(volatile T &ValueAddress, const T ValueTargetSource, MemoryOrder=MemoryOrder::OrderSeqCst) noexcept {
+            auto ValueTarget(ConcurrentOperation<T, 0>::template doCastObject<ParameterType>(ValueTargetSource));
+            return reinterpret_cast<T&>(_InterlockedAnd8(ConcurrentOperation<T, 0>::template doCastAddress<ParameterType>(ValueAddress), ValueTarget) & ValueTarget);
         }
 
-        static int64_t doCompareAndExchange64(volatile int64_t *ValueAddress, int64_t ValueExpected, int64_t ValueTarget) noexcept {
-            return InterlockedCompareExchange64(ValueAddress, ValueTarget, ValueExpected);
+        static T doFetchAdd(volatile T &ValueAddress, const T ValueTarget, MemoryOrder=MemoryOrder::OrderSeqCst) noexcept {
+            return reinterpret_cast<T&>(_InterlockedExchangeAdd8(ConcurrentOperation<T, 0>::template doCastAddress<ParameterType>(ValueAddress), ConcurrentOperation<T, 0>::template doCastObject<ParameterType>(ValueTarget)));
+        }
+
+        static T doFetchAnd(volatile T &ValueAddress, const T ValueTarget, MemoryOrder=MemoryOrder::OrderSeqCst) noexcept {
+            return reinterpret_cast<T&>(_InterlockedAnd8(ConcurrentOperation<T, 0>::template doCastAddress<ParameterType>(ValueAddress), ConcurrentOperation<T, 0>::template doCastObject<ParameterType>(ValueTarget)));
+        }
+
+        static T doFetchOr(volatile T &ValueAddress, const T ValueTarget, MemoryOrder=MemoryOrder::OrderSeqCst) noexcept {
+            return reinterpret_cast<T&>(_InterlockedOr8(ConcurrentOperation<T, 0>::template doCastAddress<ParameterType>(ValueAddress), ConcurrentOperation<T, 0>::template doCastObject<ParameterType>(ValueTarget)));
+        }
+
+        static T doFetchSub(volatile T &ValueAddress, const T ValueTarget, MemoryOrder=MemoryOrder::OrderSeqCst) noexcept {
+            return reinterpret_cast<T&>(_InterlockedExchangeAdd8(ConcurrentOperation<T, 0>::template doCastAddress<ParameterType>(ValueAddress), -ConcurrentOperation<T, 0>::template doCastObject<ParameterType>(ValueTarget)));
+        }
+
+        static T doFetchXor(volatile T &ValueAddress, const T ValueTarget, MemoryOrder=MemoryOrder::OrderSeqCst) noexcept {
+            return reinterpret_cast<T&>(_InterlockedXor8(ConcurrentOperation<T, 0>::template doCastAddress<ParameterType>(ValueAddress), ConcurrentOperation<T, 0>::template doCastObject<ParameterType>(ValueTarget)));
+        }
+
+        static bool doCompareExchange(volatile T &ValueAddress, T &ValueExpectedSource, const T ValueTarget, MemoryOrder=MemoryOrder::OrderSeqCst, MemoryOrder=MemoryOrder::OrderSeqCst) noexcept {
+            auto ValueExpected(ConcurrentOperation<T, 0>::template doCastObject<ParameterType>(ValueExpectedSource));
+            auto ValuePrevious(_InterlockedCompareExchange8(ConcurrentOperation<T, 0>::template doCastAddress<ParameterType>(ValueAddress), ValueExpected, ConcurrentOperation<T, 0>::template doCastObject<ParameterType>(ValueTarget)));
+            if (ValuePrevious == ValueExpected) return true;
+            reinterpret_cast<ParameterType&>(ValueExpectedSource) = ValuePrevious;
+            return false;
+        }
+
+        static void doExchange(volatile T &ValueAddress, T ValueTarget, MemoryOrder ValueOrder = MemoryOrder::OrderSeqCst) noexcept {
+            switch (ValueOrder) {
+                case MemoryOrder::OrderRelaxed:
+                    __iso_volatile_store8(ConcurrentOperation<T, 0>::template doCastAddress<ParameterType>(ValueAddress), ConcurrentOperation<T, 0>::template doCastObject<ParameterType>(ValueTarget));
+                    break;
+                case MemoryOrder::OrderSeqCst:
+                    _InterlockedExchange8(ConcurrentOperation<T, 0>::template doCastAddress<ParameterType>(ValueAddress), ConcurrentOperation<T, 0>::template doCastObject<ParameterType>(ValueTarget));
+                    break;
+            }
+        }
+
+        static T doLoad(volatile T &ValueAddress, MemoryOrder ValueOrder = MemoryOrder::OrderSeqCst) noexcept {
+            auto ValueResult(__iso_volatile_load8(ConcurrentOperation<T, 0>::template doCastAddress<ParameterType>(ValueAddress)));
+            switch (ValueOrder) {
+                case MemoryOrder::OrderRelaxed:
+                    break;
+                case MemoryOrder::OrderSeqCst:
+                    _Compiler_or_memory_barrier();
+                    break;
+            }
+            return reinterpret_cast<T&>(ValueResult);
+        }
+
+        static T doOrFetch(volatile T &ValueAddress, const T ValueTargetSource, MemoryOrder=MemoryOrder::OrderSeqCst) noexcept {
+            auto ValueTarget(ConcurrentOperation<T, 0>::template doCastObject<ParameterType>(ValueTargetSource));
+            return reinterpret_cast<T&>(_InterlockedOr8(ConcurrentOperation<T, 0>::template doCastAddress<ParameterType>(ValueAddress), ValueTarget) | ValueTarget);
+        }
+
+        static T doSubFetch(volatile T &ValueAddress, const T ValueTargetSource, MemoryOrder=MemoryOrder::OrderSeqCst) noexcept {
+            auto ValueTarget(ConcurrentOperation<T, 0>::template doCastObject<ParameterType>(ValueTargetSource));
+            return reinterpret_cast<T&>(_InterlockedExchangeAdd8(ConcurrentOperation<T, 0>::template doCastAddress<ParameterType>(ValueAddress), -ValueTarget) - ValueTarget);
+        }
+
+        static T doXorFetch(volatile T &ValueAddress, const T ValueTargetSource, MemoryOrder=MemoryOrder::OrderSeqCst) noexcept {
+            auto ValueTarget(ConcurrentOperation<T, 0>::template doCastObject<ParameterType>(ValueTargetSource));
+            return reinterpret_cast<T&>(_InterlockedXor8(ConcurrentOperation<T, 0>::template doCastAddress<ParameterType>(ValueAddress), ValueTarget) ^ ValueTarget);
         }
 #else
-        static int16_t doCompareAndExchange16(volatile int16_t *ValueAddress, int16_t ValueExpected, int16_t ValueTarget) noexcept {
-            int16_t ValueResult;
-            asm volatile("lock\n\tcmpxchgw %2, (%3)":"=a"(ValueResult):"a"(ValueExpected), "r"(ValueTarget), "r"(ValueAddress):"cc", "memory");
-            return ValueResult;
+        static T doAddFetch(volatile T &ValueAddress, T ValueTarget, MemoryOrder ValueOrder = MemoryOrder::OrderSeqCst) noexcept {
+            return __atomic_add_fetch(ConcurrentOperation<T, 0>::template doCastAddress<T>(ValueAddress), ValueTarget, int(ValueOrder));
         }
 
-        static int32_t doCompareAndExchange32(volatile int32_t *ValueAddress, int32_t ValueExpected, int32_t ValueTarget) noexcept {
-            int32_t ValueResult;
-            asm volatile("lock\n\tcmpxchgl %2, (%3)":"=a"(ValueResult):"a"(ValueExpected), "r"(ValueTarget), "r"(ValueAddress):"cc", "memory");
-            return ValueResult;
+        static T doAndFetch(volatile T &ValueAddress, T ValueTarget, MemoryOrder ValueOrder = MemoryOrder::OrderSeqCst) noexcept {
+            return __atomic_and_fetch(ConcurrentOperation<T, 0>::template doCastAddress<T>(ValueAddress), ValueTarget, int(ValueOrder));
         }
 
-        static int64_t doCompareAndExchange64(volatile int64_t *ValueAddress, int64_t ValueExpected, int64_t ValueTarget) noexcept {
-            int64_t ValueResult;
-            asm volatile("lock\n\tcmpxchgq %2, (%3)":"=a"(ValueResult):"a"(ValueExpected), "r"(ValueTarget), "r"(ValueAddress):"cc", "memory");
-            return ValueResult;
+        static T doFetchAdd(volatile T &ValueAddress, T ValueTarget, MemoryOrder ValueOrder = MemoryOrder::OrderSeqCst) noexcept {
+            return __atomic_fetch_add(ConcurrentOperation<T, 0>::template doCastAddress<T>(ValueAddress), ValueTarget, int(ValueOrder));
+        }
+
+        static T doFetchAnd(volatile T &ValueAddress, T ValueTarget, MemoryOrder ValueOrder = MemoryOrder::OrderSeqCst) noexcept {
+            return __atomic_fetch_and(ConcurrentOperation<T, 0>::template doCastAddress<T>(ValueAddress), ValueTarget, int(ValueOrder));
+        }
+
+        static T doFetchOr(volatile T &ValueAddress, T ValueTarget, MemoryOrder ValueOrder = MemoryOrder::OrderSeqCst) noexcept {
+            return __atomic_fetch_or(ConcurrentOperation<T, 0>::template doCastAddress<T>(ValueAddress), ValueTarget, int(ValueOrder));
+        }
+
+        static T doFetchSub(volatile T &ValueAddress, T ValueTarget, MemoryOrder ValueOrder = MemoryOrder::OrderSeqCst) noexcept {
+            return __atomic_fetch_sub(ConcurrentOperation<T, 0>::template doCastAddress<T>(ValueAddress), ValueTarget, int(ValueOrder));
+        }
+
+        static T doFetchXor(volatile T &ValueAddress, T ValueTarget, MemoryOrder ValueOrder = MemoryOrder::OrderSeqCst) noexcept {
+            return __atomic_fetch_xor(ConcurrentOperation<T, 0>::template doCastAddress<T>(ValueAddress), ValueTarget, int(ValueOrder));
+        }
+
+        static bool doCompareExchange(volatile T &ValueAddress, T &ValueExpected, const T ValueTarget, MemoryOrder ValueOrder1 = MemoryOrder::OrderSeqCst, MemoryOrder ValueOrder2 = MemoryOrder::OrderSeqCst) noexcept {
+            return __atomic_compare_exchange_n(ConcurrentOperation<T, 0>::template doCastAddress<T>(ValueAddress), ConcurrentOperation<T, 0>::template doCastAddress<T>(ValueExpected), ValueTarget, false, int(ValueOrder1), int(ValueOrder2));
+        }
+
+        static void doExchange(volatile T &ValueAddress, const T ValueTarget, MemoryOrder ValueOrder = MemoryOrder::OrderSeqCst) noexcept {
+            __atomic_store_n(ConcurrentOperation<T, 0>::template doCastAddress<ParameterType>(ValueAddress), ConcurrentOperation<T, 0>::template doCastObject<ParameterType>(ValueTarget), int(ValueOrder));
+        }
+
+        static T doLoad(volatile T &ValueAddress, MemoryOrder ValueOrder = MemoryOrder::OrderSeqCst) noexcept {
+            return __atomic_load_n(ConcurrentOperation<T, 0>::template doCastAddress<ParameterType>(ValueAddress), int(ValueOrder));
+        }
+
+        static T doOrFetch(volatile T &ValueAddress, T ValueTarget, MemoryOrder ValueOrder = MemoryOrder::OrderSeqCst) noexcept {
+            return __atomic_or_fetch(ConcurrentOperation<T, 0>::template doCastAddress<T>(ValueAddress), ValueTarget, int(ValueOrder));
+        }
+
+        static T doSubFetch(volatile T &ValueAddress, T ValueTarget, MemoryOrder ValueOrder = MemoryOrder::OrderSeqCst) noexcept {
+            return __atomic_sub_fetch(ConcurrentOperation<T, 0>::template doCastAddress<T>(ValueAddress), ValueTarget, int(ValueOrder));
+        }
+
+        static T doXorFetch(volatile T &ValueAddress, T ValueTarget, MemoryOrder ValueOrder = MemoryOrder::OrderSeqCst) noexcept {
+            return __atomic_xor_fetch(ConcurrentOperation<T, 0>::template doCastAddress<T>(ValueAddress), ValueTarget, int(ValueOrder));
         }
 #endif
+    };
 
-        template<SizeEqual<int16_t> T>
-        static T doCompareAndExchange(volatile T *ValueAddress, T ValueExpected, T ValueTarget) noexcept {
-            return doCompareAndExchange16((volatile int16_t*) ValueAddress, (int16_t) ValueExpected, (int16_t) ValueTarget);
+    template<typename T>
+    struct ConcurrentOperation<T, 2> {
+        using ParameterType = short;
+
+#if eLibraryCompiler(MSVC)
+        static T doAddFetch(volatile T &ValueAddress, const T ValueTargetSource, MemoryOrder=MemoryOrder::OrderSeqCst) noexcept {
+            auto ValueTarget(ConcurrentOperation<T, 0>::template doCastObject<ParameterType>(ValueTargetSource));
+            return reinterpret_cast<T&>(_InterlockedExchangeAdd16(ConcurrentOperation<T, 0>::template doCastAddress<ParameterType>(ValueAddress), ValueTarget) + ValueTarget);
         }
 
-        template<SizeEqual<int32_t> T>
-        static T doCompareAndExchange(volatile T *ValueAddress, T ValueExpected, T ValueTarget) noexcept {
-            return doCompareAndExchange32((volatile int32_t*) ValueAddress, (int32_t) ValueExpected, (int32_t) ValueTarget);
+        static T doAndFetch(volatile T &ValueAddress, const T ValueTargetSource, MemoryOrder=MemoryOrder::OrderSeqCst) noexcept {
+            auto ValueTarget(ConcurrentOperation<T, 0>::template doCastObject<ParameterType>(ValueTargetSource));
+            return reinterpret_cast<T&>(_InterlockedAnd16(ConcurrentOperation<T, 0>::template doCastAddress<ParameterType>(ValueAddress), ValueTarget) & ValueTarget);
         }
 
-        template<SizeEqual<int64_t> T>
-        static T doCompareAndExchange(volatile T *ValueAddress, T ValueExpected, T ValueTarget) noexcept {
-            return doCompareAndExchange64((volatile int64_t*) ValueAddress, (int64_t) ValueExpected, (int64_t) ValueTarget);
+        static T doFetchAdd(volatile T &ValueAddress, const T ValueTarget, MemoryOrder=MemoryOrder::OrderSeqCst) noexcept {
+            return reinterpret_cast<T&>(_InterlockedExchangeAdd16(ConcurrentOperation<T, 0>::template doCastAddress<ParameterType>(ValueAddress), ConcurrentOperation<T, 0>::template doCastObject<ParameterType>(ValueTarget)));
         }
 
-        template<typename T>
-        static auto doCompareAndExchangeReference(volatile T **ValueAddress, T *ValueExpected, T *ValueTarget) noexcept {
-            return doCompareAndExchange((volatile intptr_t*) ValueAddress, (intptr_t) ValueExpected, (intptr_t) ValueTarget);
+        static T doFetchAnd(volatile T &ValueAddress, const T ValueTarget, MemoryOrder=MemoryOrder::OrderSeqCst) noexcept {
+            return reinterpret_cast<T&>(_InterlockedAnd16(ConcurrentOperation<T, 0>::template doCastAddress<ParameterType>(ValueAddress), ConcurrentOperation<T, 0>::template doCastObject<ParameterType>(ValueTarget)));
         }
 
-        template<Arithmetic T>
-        static bool doCompareAndSet(volatile T *ValueAddress, T ValueExpected, T ValueTarget) noexcept {
-            doCompareAndExchange(ValueAddress, ValueExpected, ValueTarget);
-            return *ValueAddress == ValueTarget;
+        static T doFetchOr(volatile T &ValueAddress, const T ValueTarget, MemoryOrder=MemoryOrder::OrderSeqCst) noexcept {
+            return reinterpret_cast<T&>(_InterlockedOr16(ConcurrentOperation<T, 0>::template doCastAddress<ParameterType>(ValueAddress), ConcurrentOperation<T, 0>::template doCastObject<ParameterType>(ValueTarget)));
         }
 
-        template<typename T>
-        static bool doCompareAndSetReference(volatile T **ValueAddress, T *ValueExpected, T *ValueTarget) noexcept {
-            doCompareAndExchangeReference(ValueAddress, ValueExpected, ValueTarget);
-            return *ValueAddress == ValueTarget;
+        static T doFetchSub(volatile T &ValueAddress, const T ValueTarget, MemoryOrder=MemoryOrder::OrderSeqCst) noexcept {
+            return reinterpret_cast<T&>(_InterlockedExchangeAdd16(ConcurrentOperation<T, 0>::template doCastAddress<ParameterType>(ValueAddress), -ConcurrentOperation<T, 0>::template doCastObject<ParameterType>(ValueTarget)));
         }
 
-        template<Arithmetic T>
-        static T getAndAddNumber(volatile T *ValueAddress, T ValueDelta) noexcept {
-            T ValueExpected;
-            do {
-                ValueExpected = *ValueAddress;
-            } while (ConcurrentUtility::doCompareAndExchange(ValueAddress, ValueExpected, ValueExpected + ValueDelta) != ValueExpected);
-            return ValueExpected;
+        static T doFetchXor(volatile T &ValueAddress, const T ValueTarget, MemoryOrder=MemoryOrder::OrderSeqCst) noexcept {
+            return reinterpret_cast<T&>(_InterlockedXor16(ConcurrentOperation<T, 0>::template doCastAddress<ParameterType>(ValueAddress), ConcurrentOperation<T, 0>::template doCastObject<ParameterType>(ValueTarget)));
         }
 
-        template<Arithmetic T>
-        static T getAndAndNumber(volatile T *ValueAddress, T ValueSource) noexcept {
-            T ValueExpected;
-            do {
-                ValueExpected = *ValueAddress;
-            } while (ConcurrentUtility::doCompareAndExchange(ValueAddress, ValueExpected, ValueExpected & ValueSource) != ValueExpected);
-            return ValueExpected;
+        static bool doCompareExchange(volatile T &ValueAddress, T &ValueExpectedSource, const T ValueTarget, MemoryOrder=MemoryOrder::OrderSeqCst, MemoryOrder=MemoryOrder::OrderSeqCst) noexcept {
+            auto ValueExpected(ConcurrentOperation<T, 0>::template doCastObject<ParameterType>(ValueExpectedSource));
+            auto ValuePrevious(_InterlockedCompareExchange16(ConcurrentOperation<T, 0>::template doCastAddress<ParameterType>(ValueAddress), ValueExpected, ConcurrentOperation<T, 0>::template doCastObject<ParameterType>(ValueTarget)));
+            if (ValuePrevious == ValueExpected) return true;
+            reinterpret_cast<ParameterType&>(ValueExpectedSource) = ValuePrevious;
+            return false;
         }
 
-        template<Arithmetic T>
-        static T getAndOrNumber(volatile T *ValueAddress, T ValueSource) noexcept {
-            T ValueExpected;
-            do {
-                ValueExpected = *ValueAddress;
-            } while (ConcurrentUtility::doCompareAndExchange(ValueAddress, ValueExpected, ValueExpected | ValueSource) != ValueExpected);
-            return ValueExpected;
+        static void doExchange(volatile T &ValueAddress, T ValueTarget, MemoryOrder ValueOrder = MemoryOrder::OrderSeqCst) noexcept {
+            switch (ValueOrder) {
+                case MemoryOrder::OrderRelaxed:
+                    __iso_volatile_store16(ConcurrentOperation<T, 0>::template doCastAddress<ParameterType>(ValueAddress), ConcurrentOperation<T, 0>::template doCastObject<ParameterType>(ValueTarget));
+                    break;
+                case MemoryOrder::OrderSeqCst:
+                    _InterlockedExchange16(ConcurrentOperation<T, 0>::template doCastAddress<ParameterType>(ValueAddress), ConcurrentOperation<T, 0>::template doCastObject<ParameterType>(ValueTarget));
+                    break;
+            }
         }
 
-        template<Arithmetic T>
-        static T getAndSetNumber(volatile T *ValueAddress, T ValueTarget) noexcept {
-            T ValueExpected;
-            do {
-                ValueExpected = *ValueAddress;
-            } while (ConcurrentUtility::doCompareAndExchange(ValueAddress, ValueExpected, ValueTarget) != ValueExpected);
-            return ValueExpected;
+        static T doLoad(volatile T &ValueAddress, MemoryOrder ValueOrder = MemoryOrder::OrderSeqCst) noexcept {
+            auto ValueResult(__iso_volatile_load16(ConcurrentOperation<T, 0>::template doCastAddress<ParameterType>(ValueAddress)));
+            switch (ValueOrder) {
+                case MemoryOrder::OrderRelaxed:
+                    break;
+                case MemoryOrder::OrderSeqCst:
+                    _Compiler_or_memory_barrier();
+                    break;
+            }
+            return reinterpret_cast<T&>(ValueResult);
         }
 
-        template<typename T>
-        static T *getAndSetReference(volatile T **ValueAddress, T *ValueTarget) noexcept {
-            T *ValueExpected;
-            do {
-                ValueExpected = *ValueAddress;
-            } while (ConcurrentUtility::doCompareAndExchangeReference(ValueAddress, ValueExpected, ValueTarget) != ValueExpected);
-            return ValueExpected;
+        static T doOrFetch(volatile T &ValueAddress, const T ValueTargetSource, MemoryOrder=MemoryOrder::OrderSeqCst) noexcept {
+            auto ValueTarget(ConcurrentOperation<T, 0>::template doCastObject<ParameterType>(ValueTargetSource));
+            return reinterpret_cast<T&>(_InterlockedOr16(ConcurrentOperation<T, 0>::template doCastAddress<ParameterType>(ValueAddress), ValueTarget) | ValueTarget);
         }
 
-        template<Arithmetic T>
-        static T getAndXorNumber(volatile T *ValueAddress, T ValueSource) noexcept {
-            T ValueExpected;
-            do {
-                ValueExpected = *ValueAddress;
-            } while (ConcurrentUtility::doCompareAndExchange(ValueAddress, ValueExpected, ValueExpected ^ ValueSource) != ValueExpected);
-            return ValueExpected;
+        static T doSubFetch(volatile T &ValueAddress, const T ValueTargetSource, MemoryOrder=MemoryOrder::OrderSeqCst) noexcept {
+            auto ValueTarget(ConcurrentOperation<T, 0>::template doCastObject<ParameterType>(ValueTargetSource));
+            return reinterpret_cast<T&>(_InterlockedExchangeAdd16(ConcurrentOperation<T, 0>::template doCastAddress<ParameterType>(ValueAddress), -ValueTarget) - ValueTarget);
+        }
+
+        static T doXorFetch(volatile T &ValueAddress, const T ValueTargetSource, MemoryOrder=MemoryOrder::OrderSeqCst) noexcept {
+            auto ValueTarget(ConcurrentOperation<T, 0>::template doCastObject<ParameterType>(ValueTargetSource));
+            return reinterpret_cast<T&>(_InterlockedXor16(ConcurrentOperation<T, 0>::template doCastAddress<ParameterType>(ValueAddress), ValueTarget) ^ ValueTarget);
+        }
+#else
+        static T doAddFetch(volatile T &ValueAddress, T ValueTarget, MemoryOrder ValueOrder = MemoryOrder::OrderSeqCst) noexcept {
+            return __atomic_add_fetch(ConcurrentOperation<T, 0>::template doCastAddress<T>(ValueAddress), ValueTarget, int(ValueOrder));
+        }
+
+        static T doAndFetch(volatile T &ValueAddress, T ValueTarget, MemoryOrder ValueOrder = MemoryOrder::OrderSeqCst) noexcept {
+            return __atomic_and_fetch(ConcurrentOperation<T, 0>::template doCastAddress<T>(ValueAddress), ValueTarget, int(ValueOrder));
+        }
+
+        static T doFetchAdd(volatile T &ValueAddress, T ValueTarget, MemoryOrder ValueOrder = MemoryOrder::OrderSeqCst) noexcept {
+            return __atomic_fetch_add(ConcurrentOperation<T, 0>::template doCastAddress<T>(ValueAddress), ValueTarget, int(ValueOrder));
+        }
+
+        static T doFetchAnd(volatile T &ValueAddress, T ValueTarget, MemoryOrder ValueOrder = MemoryOrder::OrderSeqCst) noexcept {
+            return __atomic_fetch_and(ConcurrentOperation<T, 0>::template doCastAddress<T>(ValueAddress), ValueTarget, int(ValueOrder));
+        }
+
+        static T doFetchOr(volatile T &ValueAddress, T ValueTarget, MemoryOrder ValueOrder = MemoryOrder::OrderSeqCst) noexcept {
+            return __atomic_fetch_or(ConcurrentOperation<T, 0>::template doCastAddress<T>(ValueAddress), ValueTarget, int(ValueOrder));
+        }
+
+        static T doFetchSub(volatile T &ValueAddress, T ValueTarget, MemoryOrder ValueOrder = MemoryOrder::OrderSeqCst) noexcept {
+            return __atomic_fetch_sub(ConcurrentOperation<T, 0>::template doCastAddress<T>(ValueAddress), ValueTarget, int(ValueOrder));
+        }
+
+        static T doFetchXor(volatile T &ValueAddress, T ValueTarget, MemoryOrder ValueOrder = MemoryOrder::OrderSeqCst) noexcept {
+            return __atomic_fetch_xor(ConcurrentOperation<T, 0>::template doCastAddress<T>(ValueAddress), ValueTarget, int(ValueOrder));
+        }
+
+        static bool doCompareExchange(volatile T &ValueAddress, T &ValueExpected, const T ValueTarget, MemoryOrder ValueOrder1 = MemoryOrder::OrderSeqCst, MemoryOrder ValueOrder2 = MemoryOrder::OrderSeqCst) noexcept {
+            return __atomic_compare_exchange_n(ConcurrentOperation<T, 0>::template doCastAddress<T>(ValueAddress), ConcurrentOperation<T, 0>::template doCastAddress<T>(ValueExpected), ValueTarget, false, int(ValueOrder1), int(ValueOrder2));
+        }
+
+        static void doExchange(volatile T &ValueAddress, const T ValueTarget, MemoryOrder ValueOrder = MemoryOrder::OrderSeqCst) noexcept {
+            __atomic_store_n(ConcurrentOperation<T, 0>::template doCastAddress<ParameterType>(ValueAddress), ConcurrentOperation<T, 0>::template doCastObject<ParameterType>(ValueTarget), int(ValueOrder));
+        }
+
+        static T doLoad(volatile T &ValueAddress, MemoryOrder ValueOrder = MemoryOrder::OrderSeqCst) noexcept {
+            return __atomic_load_n(ConcurrentOperation<T, 0>::template doCastAddress<ParameterType>(ValueAddress), int(ValueOrder));
+        }
+
+        static T doOrFetch(volatile T &ValueAddress, T ValueTarget, MemoryOrder ValueOrder = MemoryOrder::OrderSeqCst) noexcept {
+            return __atomic_or_fetch(ConcurrentOperation<T, 0>::template doCastAddress<T>(ValueAddress), ValueTarget, int(ValueOrder));
+        }
+
+        static T doSubFetch(volatile T &ValueAddress, T ValueTarget, MemoryOrder ValueOrder = MemoryOrder::OrderSeqCst) noexcept {
+            return __atomic_sub_fetch(ConcurrentOperation<T, 0>::template doCastAddress<T>(ValueAddress), ValueTarget, int(ValueOrder));
+        }
+
+        static T doXorFetch(volatile T &ValueAddress, T ValueTarget, MemoryOrder ValueOrder = MemoryOrder::OrderSeqCst) noexcept {
+            return __atomic_xor_fetch(ConcurrentOperation<T, 0>::template doCastAddress<T>(ValueAddress), ValueTarget, int(ValueOrder));
+        }
+#endif
+    };
+
+    template<typename T>
+    struct ConcurrentOperation<T, 4> {
+        using ParameterType = long;
+
+#if eLibraryCompiler(MSVC)
+        static T doAddFetch(volatile T &ValueAddress, const T ValueTargetSource, MemoryOrder=MemoryOrder::OrderSeqCst) noexcept {
+            auto ValueTarget(ConcurrentOperation<T, 0>::template doCastObject<ParameterType>(ValueTargetSource));
+            return reinterpret_cast<T&>(_InterlockedExchangeAdd(ConcurrentOperation<T, 0>::template doCastAddress<ParameterType>(ValueAddress), ValueTarget) + ValueTarget);
+        }
+
+        static T doAndFetch(volatile T &ValueAddress, const T ValueTargetSource, MemoryOrder=MemoryOrder::OrderSeqCst) noexcept {
+            auto ValueTarget(ConcurrentOperation<T, 0>::template doCastObject<ParameterType>(ValueTargetSource));
+            return reinterpret_cast<T&>(_InterlockedAnd(ConcurrentOperation<T, 0>::template doCastAddress<ParameterType>(ValueAddress), ValueTarget) & ValueTarget);
+        }
+
+        static T doFetchAdd(volatile T &ValueAddress, const T ValueTarget, MemoryOrder=MemoryOrder::OrderSeqCst) noexcept {
+            return reinterpret_cast<T&>(_InterlockedExchangeAdd(ConcurrentOperation<T, 0>::template doCastAddress<ParameterType>(ValueAddress), ConcurrentOperation<T, 0>::template doCastObject<ParameterType>(ValueTarget)));
+        }
+
+        static T doFetchAnd(volatile T &ValueAddress, const T ValueTarget, MemoryOrder=MemoryOrder::OrderSeqCst) noexcept {
+            return reinterpret_cast<T&>(_InterlockedAnd(ConcurrentOperation<T, 0>::template doCastAddress<ParameterType>(ValueAddress), ConcurrentOperation<T, 0>::template doCastObject<ParameterType>(ValueTarget)));
+        }
+
+        static T doFetchOr(volatile T &ValueAddress, const T ValueTarget, MemoryOrder=MemoryOrder::OrderSeqCst) noexcept {
+            return reinterpret_cast<T&>(_InterlockedOr(ConcurrentOperation<T, 0>::template doCastAddress<ParameterType>(ValueAddress), ConcurrentOperation<T, 0>::template doCastObject<ParameterType>(ValueTarget)));
+        }
+
+        static T doFetchSub(volatile T &ValueAddress, const T ValueTarget, MemoryOrder=MemoryOrder::OrderSeqCst) noexcept {
+            return reinterpret_cast<T&>(_InterlockedExchangeAdd(ConcurrentOperation<T, 0>::template doCastAddress<ParameterType>(ValueAddress), -ConcurrentOperation<T, 0>::template doCastObject<ParameterType>(ValueTarget)));
+        }
+
+        static T doFetchXor(volatile T &ValueAddress, const T ValueTarget, MemoryOrder=MemoryOrder::OrderSeqCst) noexcept {
+            return reinterpret_cast<T&>(_InterlockedXor(ConcurrentOperation<T, 0>::template doCastAddress<ParameterType>(ValueAddress), ConcurrentOperation<T, 0>::template doCastObject<ParameterType>(ValueTarget)));
+        }
+
+        static bool doCompareExchange(volatile T &ValueAddress, T &ValueExpectedSource, const T ValueTarget, MemoryOrder=MemoryOrder::OrderSeqCst, MemoryOrder=MemoryOrder::OrderSeqCst) noexcept {
+            auto ValueExpected(ConcurrentOperation<T, 0>::template doCastObject<ParameterType>(ValueExpectedSource));
+            auto ValuePrevious(_InterlockedCompareExchange(ConcurrentOperation<T, 0>::template doCastAddress<ParameterType>(ValueAddress), ValueExpected, ConcurrentOperation<T, 0>::template doCastObject<ParameterType>(ValueTarget)));
+            if (ValuePrevious == ValueExpected) return true;
+            reinterpret_cast<ParameterType&>(ValueExpectedSource) = ValuePrevious;
+            return false;
+        }
+
+        static void doExchange(volatile T &ValueAddress, T ValueTarget, MemoryOrder ValueOrder = MemoryOrder::OrderSeqCst) noexcept {
+            switch (ValueOrder) {
+                case MemoryOrder::OrderRelaxed:
+                    __iso_volatile_store32((volatile int*) ConcurrentOperation<T, 0>::template doCastAddress<ParameterType>(ValueAddress), (int) ConcurrentOperation<T, 0>::template doCastObject<ParameterType>(ValueTarget));
+                    break;
+                case MemoryOrder::OrderSeqCst:
+                    _InterlockedExchange(ConcurrentOperation<T, 0>::template doCastAddress<ParameterType>(ValueAddress), ConcurrentOperation<T, 0>::template doCastObject<ParameterType>(ValueTarget));
+                    break;
+            }
+        }
+
+        static T doLoad(volatile T &ValueAddress, MemoryOrder ValueOrder = MemoryOrder::OrderSeqCst) noexcept {
+            auto ValueResult(__iso_volatile_load32((volatile int*) ConcurrentOperation<T, 0>::template doCastAddress<ParameterType>(ValueAddress)));
+            switch (ValueOrder) {
+                case MemoryOrder::OrderRelaxed:
+                    break;
+                case MemoryOrder::OrderSeqCst:
+                    _Compiler_or_memory_barrier();
+                    break;
+            }
+            return reinterpret_cast<T&>(ValueResult);
+        }
+
+        static T doOrFetch(volatile T &ValueAddress, const T ValueTargetSource, MemoryOrder=MemoryOrder::OrderSeqCst) noexcept {
+            auto ValueTarget(ConcurrentOperation<T, 0>::template doCastObject<ParameterType>(ValueTargetSource));
+            return reinterpret_cast<T&>(_InterlockedOr(ConcurrentOperation<T, 0>::template doCastAddress<ParameterType>(ValueAddress), ValueTarget) | ValueTarget);
+        }
+
+        static T doSubFetch(volatile T &ValueAddress, const T ValueTargetSource, MemoryOrder=MemoryOrder::OrderSeqCst) noexcept {
+            auto ValueTarget(ConcurrentOperation<T, 0>::template doCastObject<ParameterType>(ValueTargetSource));
+            return reinterpret_cast<T&>(_InterlockedExchangeAdd(ConcurrentOperation<T, 0>::template doCastAddress<ParameterType>(ValueAddress), -ValueTarget) - ValueTarget);
+        }
+
+        static T doXorFetch(volatile T &ValueAddress, const T ValueTargetSource, MemoryOrder=MemoryOrder::OrderSeqCst) noexcept {
+            auto ValueTarget(ConcurrentOperation<T, 0>::template doCastObject<ParameterType>(ValueTargetSource));
+            return reinterpret_cast<T&>(_InterlockedXor(ConcurrentOperation<T, 0>::template doCastAddress<ParameterType>(ValueAddress), ValueTarget) ^ ValueTarget);
+        }
+#else
+        static T doAddFetch(volatile T &ValueAddress, T ValueTarget, MemoryOrder ValueOrder = MemoryOrder::OrderSeqCst) noexcept {
+            return __atomic_add_fetch(ConcurrentOperation<T, 0>::template doCastAddress<T>(ValueAddress), ValueTarget, int(ValueOrder));
+        }
+
+        static T doAndFetch(volatile T &ValueAddress, T ValueTarget, MemoryOrder ValueOrder = MemoryOrder::OrderSeqCst) noexcept {
+            return __atomic_and_fetch(ConcurrentOperation<T, 0>::template doCastAddress<T>(ValueAddress), ValueTarget, int(ValueOrder));
+        }
+
+        static T doFetchAdd(volatile T &ValueAddress, T ValueTarget, MemoryOrder ValueOrder = MemoryOrder::OrderSeqCst) noexcept {
+            return __atomic_fetch_add(ConcurrentOperation<T, 0>::template doCastAddress<T>(ValueAddress), ValueTarget, int(ValueOrder));
+        }
+
+        static T doFetchAnd(volatile T &ValueAddress, T ValueTarget, MemoryOrder ValueOrder = MemoryOrder::OrderSeqCst) noexcept {
+            return __atomic_fetch_and(ConcurrentOperation<T, 0>::template doCastAddress<T>(ValueAddress), ValueTarget, int(ValueOrder));
+        }
+
+        static T doFetchOr(volatile T &ValueAddress, T ValueTarget, MemoryOrder ValueOrder = MemoryOrder::OrderSeqCst) noexcept {
+            return __atomic_fetch_or(ConcurrentOperation<T, 0>::template doCastAddress<T>(ValueAddress), ValueTarget, int(ValueOrder));
+        }
+
+        static T doFetchSub(volatile T &ValueAddress, T ValueTarget, MemoryOrder ValueOrder = MemoryOrder::OrderSeqCst) noexcept {
+            return __atomic_fetch_sub(ConcurrentOperation<T, 0>::template doCastAddress<T>(ValueAddress), ValueTarget, int(ValueOrder));
+        }
+
+        static T doFetchXor(volatile T &ValueAddress, T ValueTarget, MemoryOrder ValueOrder = MemoryOrder::OrderSeqCst) noexcept {
+            return __atomic_fetch_xor(ConcurrentOperation<T, 0>::template doCastAddress<T>(ValueAddress), ValueTarget, int(ValueOrder));
+        }
+
+        static bool doCompareExchange(volatile T &ValueAddress, T &ValueExpected, const T ValueTarget, MemoryOrder ValueOrder1 = MemoryOrder::OrderSeqCst, MemoryOrder ValueOrder2 = MemoryOrder::OrderSeqCst) noexcept {
+            return __atomic_compare_exchange_n(ConcurrentOperation<T, 0>::template doCastAddress<T>(ValueAddress), ConcurrentOperation<T, 0>::template doCastAddress<T>(ValueExpected), ValueTarget, false, int(ValueOrder1), int(ValueOrder2));
+        }
+
+        static void doExchange(volatile T &ValueAddress, const T ValueTarget, MemoryOrder ValueOrder = MemoryOrder::OrderSeqCst) noexcept {
+            __atomic_store_n(ConcurrentOperation<T, 0>::template doCastAddress<ParameterType>(ValueAddress), ConcurrentOperation<T, 0>::template doCastObject<ParameterType>(ValueTarget), int(ValueOrder));
+        }
+
+        static T doLoad(volatile T &ValueAddress, MemoryOrder ValueOrder = MemoryOrder::OrderSeqCst) noexcept {
+            return __atomic_load_n(ConcurrentOperation<T, 0>::template doCastAddress<ParameterType>(ValueAddress), int(ValueOrder));
+        }
+
+        static T doOrFetch(volatile T &ValueAddress, T ValueTarget, MemoryOrder ValueOrder = MemoryOrder::OrderSeqCst) noexcept {
+            return __atomic_or_fetch(ConcurrentOperation<T, 0>::template doCastAddress<T>(ValueAddress), ValueTarget, int(ValueOrder));
+        }
+
+        static T doSubFetch(volatile T &ValueAddress, T ValueTarget, MemoryOrder ValueOrder = MemoryOrder::OrderSeqCst) noexcept {
+            return __atomic_sub_fetch(ConcurrentOperation<T, 0>::template doCastAddress<T>(ValueAddress), ValueTarget, int(ValueOrder));
+        }
+
+        static T doXorFetch(volatile T &ValueAddress, T ValueTarget, MemoryOrder ValueOrder = MemoryOrder::OrderSeqCst) noexcept {
+            return __atomic_xor_fetch(ConcurrentOperation<T, 0>::template doCastAddress<T>(ValueAddress), ValueTarget, int(ValueOrder));
+        }
+#endif
+    };
+
+    template<typename T>
+    struct ConcurrentOperation<T, 8> {
+        using ParameterType = long long;
+
+#if eLibraryCompiler(MSVC)
+        static T doAddFetch(volatile T &ValueAddress, const T ValueTargetSource, MemoryOrder=MemoryOrder::OrderSeqCst) noexcept {
+            auto ValueTarget(ConcurrentOperation<T, 0>::template doCastObject<ParameterType>(ValueTargetSource));
+            return reinterpret_cast<T&>(_InterlockedExchangeAdd64(ConcurrentOperation<T, 0>::template doCastAddress<ParameterType>(ValueAddress), ValueTarget) + ValueTarget);
+        }
+
+        static T doAndFetch(volatile T &ValueAddress, const T ValueTargetSource, MemoryOrder=MemoryOrder::OrderSeqCst) noexcept {
+            auto ValueTarget(ConcurrentOperation<T, 0>::template doCastObject<ParameterType>(ValueTargetSource));
+            return reinterpret_cast<T&>(_InterlockedAnd64(ConcurrentOperation<T, 0>::template doCastAddress<ParameterType>(ValueAddress), ValueTarget) & ValueTarget);
+        }
+
+        static T doFetchAdd(volatile T &ValueAddress, const T ValueTarget, MemoryOrder=MemoryOrder::OrderSeqCst) noexcept {
+            return reinterpret_cast<T&>(_InterlockedExchangeAdd64(ConcurrentOperation<T, 0>::template doCastAddress<ParameterType>(ValueAddress), ConcurrentOperation<T, 0>::template doCastObject<ParameterType>(ValueTarget)));
+        }
+
+        static T doFetchAnd(volatile T &ValueAddress, const T ValueTarget, MemoryOrder=MemoryOrder::OrderSeqCst) noexcept {
+            return reinterpret_cast<T&>(_InterlockedAnd64(ConcurrentOperation<T, 0>::template doCastAddress<ParameterType>(ValueAddress), ConcurrentOperation<T, 0>::template doCastObject<ParameterType>(ValueTarget)));
+        }
+
+        static T doFetchOr(volatile T &ValueAddress, const T ValueTarget, MemoryOrder=MemoryOrder::OrderSeqCst) noexcept {
+            return reinterpret_cast<T&>(_InterlockedOr64(ConcurrentOperation<T, 0>::template doCastAddress<ParameterType>(ValueAddress), ConcurrentOperation<T, 0>::template doCastObject<ParameterType>(ValueTarget)));
+        }
+
+        static T doFetchSub(volatile T &ValueAddress, const T ValueTarget, MemoryOrder=MemoryOrder::OrderSeqCst) noexcept {
+            return reinterpret_cast<T&>(_InterlockedExchangeAdd64(ConcurrentOperation<T, 0>::template doCastAddress<ParameterType>(ValueAddress), -ConcurrentOperation<T, 0>::template doCastObject<ParameterType>(ValueTarget)));
+        }
+
+        static T doFetchXor(volatile T &ValueAddress, const T ValueTarget, MemoryOrder=MemoryOrder::OrderSeqCst) noexcept {
+            return reinterpret_cast<T&>(_InterlockedXor64(ConcurrentOperation<T, 0>::template doCastAddress<ParameterType>(ValueAddress), ConcurrentOperation<T, 0>::template doCastObject<ParameterType>(ValueTarget)));
+        }
+
+        static bool doCompareExchange(volatile T &ValueAddress, T &ValueExpectedSource, const T ValueTarget, MemoryOrder=MemoryOrder::OrderSeqCst, MemoryOrder=MemoryOrder::OrderSeqCst) noexcept {
+            auto ValueExpected(ConcurrentOperation<T, 0>::template doCastObject<ParameterType>(ValueExpectedSource));
+            auto ValuePrevious(_InterlockedCompareExchange64(ConcurrentOperation<T, 0>::template doCastAddress<ParameterType>(ValueAddress), ValueExpected, ConcurrentOperation<T, 0>::template doCastObject<ParameterType>(ValueTarget)));
+            if (ValuePrevious == ValueExpected) return true;
+            reinterpret_cast<ParameterType&>(ValueExpectedSource) = ValuePrevious;
+            return false;
+        }
+
+        static void doExchange(volatile T &ValueAddress, T ValueTarget, MemoryOrder ValueOrder = MemoryOrder::OrderSeqCst) noexcept {
+            switch (ValueOrder) {
+                case MemoryOrder::OrderRelaxed:
+                    __iso_volatile_store64(ConcurrentOperation<T, 0>::template doCastAddress<ParameterType>(ValueAddress), ConcurrentOperation<T, 0>::template doCastObject<ParameterType>(ValueTarget));
+                    break;
+                case MemoryOrder::OrderSeqCst:
+                    _InterlockedExchange64(ConcurrentOperation<T, 0>::template doCastAddress<ParameterType>(ValueAddress), ConcurrentOperation<T, 0>::template doCastObject<ParameterType>(ValueTarget));
+                    break;
+            }
+        }
+
+        static T doLoad(volatile T &ValueAddress, MemoryOrder ValueOrder = MemoryOrder::OrderSeqCst) noexcept {
+            auto ValueResult(__iso_volatile_load64(ConcurrentOperation<T, 0>::template doCastAddress<ParameterType>(ValueAddress)));
+            switch (ValueOrder) {
+                case MemoryOrder::OrderRelaxed:
+                    break;
+                case MemoryOrder::OrderSeqCst:
+                    _Compiler_or_memory_barrier();
+                    break;
+            }
+            return reinterpret_cast<T&>(ValueResult);
+        }
+
+        static T doOrFetch(volatile T &ValueAddress, const T ValueTargetSource, MemoryOrder=MemoryOrder::OrderSeqCst) noexcept {
+            auto ValueTarget(ConcurrentOperation<T, 0>::template doCastObject<ParameterType>(ValueTargetSource));
+            return reinterpret_cast<T&>(_InterlockedOr64(ConcurrentOperation<T, 0>::template doCastAddress<ParameterType>(ValueAddress), ValueTarget) | ValueTarget);
+        }
+
+        static T doSubFetch(volatile T &ValueAddress, const T ValueTargetSource, MemoryOrder=MemoryOrder::OrderSeqCst) noexcept {
+            auto ValueTarget(ConcurrentOperation<T, 0>::template doCastObject<ParameterType>(ValueTargetSource));
+            return reinterpret_cast<T&>(_InterlockedExchangeAdd64(ConcurrentOperation<T, 0>::template doCastAddress<ParameterType>(ValueAddress), -ValueTarget) - ValueTarget);
+        }
+
+        static T doXorFetch(volatile T &ValueAddress, const T ValueTargetSource, MemoryOrder=MemoryOrder::OrderSeqCst) noexcept {
+            auto ValueTarget(ConcurrentOperation<T, 0>::template doCastObject<ParameterType>(ValueTargetSource));
+            return reinterpret_cast<T&>(_InterlockedXor64(ConcurrentOperation<T, 0>::template doCastAddress<ParameterType>(ValueAddress), ValueTarget) ^ ValueTarget);
+        }
+#else
+        static T doAddFetch(volatile T &ValueAddress, T ValueTarget, MemoryOrder ValueOrder = MemoryOrder::OrderSeqCst) noexcept {
+            return __atomic_add_fetch(ConcurrentOperation<T, 0>::template doCastAddress<T>(ValueAddress), ValueTarget, int(ValueOrder));
+        }
+
+        static T doAndFetch(volatile T &ValueAddress, T ValueTarget, MemoryOrder ValueOrder = MemoryOrder::OrderSeqCst) noexcept {
+            return __atomic_and_fetch(ConcurrentOperation<T, 0>::template doCastAddress<T>(ValueAddress), ValueTarget, int(ValueOrder));
+        }
+
+        static T doFetchAdd(volatile T &ValueAddress, T ValueTarget, MemoryOrder ValueOrder = MemoryOrder::OrderSeqCst) noexcept {
+            return __atomic_fetch_add(ConcurrentOperation<T, 0>::template doCastAddress<T>(ValueAddress), ValueTarget, int(ValueOrder));
+        }
+
+        static T doFetchAnd(volatile T &ValueAddress, T ValueTarget, MemoryOrder ValueOrder = MemoryOrder::OrderSeqCst) noexcept {
+            return __atomic_fetch_and(ConcurrentOperation<T, 0>::template doCastAddress<T>(ValueAddress), ValueTarget, int(ValueOrder));
+        }
+
+        static T doFetchOr(volatile T &ValueAddress, T ValueTarget, MemoryOrder ValueOrder = MemoryOrder::OrderSeqCst) noexcept {
+            return __atomic_fetch_or(ConcurrentOperation<T, 0>::template doCastAddress<T>(ValueAddress), ValueTarget, int(ValueOrder));
+        }
+
+        static T doFetchSub(volatile T &ValueAddress, T ValueTarget, MemoryOrder ValueOrder = MemoryOrder::OrderSeqCst) noexcept {
+            return __atomic_fetch_sub(ConcurrentOperation<T, 0>::template doCastAddress<T>(ValueAddress), ValueTarget, int(ValueOrder));
+        }
+
+        static T doFetchXor(volatile T &ValueAddress, T ValueTarget, MemoryOrder ValueOrder = MemoryOrder::OrderSeqCst) noexcept {
+            return __atomic_fetch_xor(ConcurrentOperation<T, 0>::template doCastAddress<T>(ValueAddress), ValueTarget, int(ValueOrder));
+        }
+
+        static bool doCompareExchange(volatile T &ValueAddress, T &ValueExpected, const T ValueTarget, MemoryOrder ValueOrder1 = MemoryOrder::OrderSeqCst, MemoryOrder ValueOrder2 = MemoryOrder::OrderSeqCst) noexcept {
+            return __atomic_compare_exchange_n(ConcurrentOperation<T, 0>::template doCastAddress<T>(ValueAddress), ConcurrentOperation<T, 0>::template doCastAddress<T>(ValueExpected), ValueTarget, false, int(ValueOrder1), int(ValueOrder2));
+        }
+
+        static void doExchange(volatile T &ValueAddress, const T ValueTarget, MemoryOrder ValueOrder = MemoryOrder::OrderSeqCst) noexcept {
+            __atomic_store_n(ConcurrentOperation<T, 0>::template doCastAddress<ParameterType>(ValueAddress), ConcurrentOperation<T, 0>::template doCastObject<ParameterType>(ValueTarget), int(ValueOrder));
+        }
+
+        static T doLoad(volatile T &ValueAddress, MemoryOrder ValueOrder = MemoryOrder::OrderSeqCst) noexcept {
+            return __atomic_load_n(ConcurrentOperation<T, 0>::template doCastAddress<ParameterType>(ValueAddress), int(ValueOrder));
+        }
+
+        static T doOrFetch(volatile T &ValueAddress, T ValueTarget, MemoryOrder ValueOrder = MemoryOrder::OrderSeqCst) noexcept {
+            return __atomic_or_fetch(ConcurrentOperation<T, 0>::template doCastAddress<T>(ValueAddress), ValueTarget, int(ValueOrder));
+        }
+
+        static T doSubFetch(volatile T &ValueAddress, T ValueTarget, MemoryOrder ValueOrder = MemoryOrder::OrderSeqCst) noexcept {
+            return __atomic_sub_fetch(ConcurrentOperation<T, 0>::template doCastAddress<T>(ValueAddress), ValueTarget, int(ValueOrder));
+        }
+
+        static T doXorFetch(volatile T &ValueAddress, T ValueTarget, MemoryOrder ValueOrder = MemoryOrder::OrderSeqCst) noexcept {
+            return __atomic_xor_fetch(ConcurrentOperation<T, 0>::template doCastAddress<T>(ValueAddress), ValueTarget, int(ValueOrder));
+        }
+#endif
+    };
+
+    template<typename T, size_t=sizeof(::std::remove_reference_t<T>)>
+    class AtomicStorage;
+
+    template<typename T, size_t S>
+    class AtomicStorage : public NonCopyable {
+    public:
+        alignas(alignof(T)) volatile mutable T StorageValue{};
+    public:
+        AtomicStorage() = default;
+
+        constexpr AtomicStorage(const T &StorageSource) : StorageValue(StorageSource) {}
+
+        T doAddFetch(T StorageTarget, MemoryOrder StorageOrder = MemoryOrder::OrderSeqCst) noexcept {
+            return ConcurrentOperation<T, S>::doAddFetch(StorageValue, StorageTarget, StorageOrder);
+        }
+
+        T doAndFetch(T StorageTarget, MemoryOrder StorageOrder = MemoryOrder::OrderSeqCst) noexcept {
+            return ConcurrentOperation<T, S>::doAndFetch(StorageValue, StorageTarget, StorageOrder);
+        }
+
+        bool doCompareExchangeValue(T &StorageExpected, const T StorageTarget, MemoryOrder StorageOrder1 = MemoryOrder::OrderSeqCst, MemoryOrder StorageOrder2 = MemoryOrder::OrderSeqCst) {
+            return ConcurrentOperation<T, S>::doCompareExchange(StorageValue, StorageExpected, StorageTarget, StorageOrder1, StorageOrder2);
+        }
+
+        T doFetchAdd(T StorageTarget, MemoryOrder StorageOrder = MemoryOrder::OrderSeqCst) noexcept {
+            return ConcurrentOperation<T, S>::doFetchAdd(StorageValue, StorageTarget, StorageOrder);
+        }
+
+        T doFetchAnd(T StorageTarget, MemoryOrder StorageOrder = MemoryOrder::OrderSeqCst) noexcept {
+            return ConcurrentOperation<T, S>::doFetchAnd(StorageValue, StorageTarget, StorageOrder);
+        }
+
+        T doFetchOr(T StorageTarget, MemoryOrder StorageOrder = MemoryOrder::OrderSeqCst) noexcept {
+            return ConcurrentOperation<T, S>::doFetchOr(StorageValue, StorageTarget, StorageOrder);
+        }
+
+        T doFetchSub(T StorageTarget, MemoryOrder StorageOrder = MemoryOrder::OrderSeqCst) noexcept {
+            return ConcurrentOperation<T, S>::doFetchSub(StorageValue, StorageTarget, StorageOrder);
+        }
+
+        T doFetchXor(T StorageTarget, MemoryOrder StorageOrder = MemoryOrder::OrderSeqCst) noexcept {
+            return ConcurrentOperation<T, S>::doFetchXor(StorageValue, StorageTarget, StorageOrder);
+        }
+
+        T doOrFetch(T StorageTarget, MemoryOrder StorageOrder = MemoryOrder::OrderSeqCst) noexcept {
+            return ConcurrentOperation<T, S>::doOrFetch(StorageValue, StorageTarget, StorageOrder);
+        }
+
+        T doSubFetch(T StorageTarget, MemoryOrder StorageOrder = MemoryOrder::OrderSeqCst) noexcept {
+            return ConcurrentOperation<T, S>::doSubFetch(StorageValue, StorageTarget, StorageOrder);
+        }
+
+        T doXorFetch(T StorageTarget, MemoryOrder StorageOrder = MemoryOrder::OrderSeqCst) noexcept {
+            return ConcurrentOperation<T, S>::doXorFetch(StorageValue, StorageTarget, StorageOrder);
+        }
+
+        T getValue(MemoryOrder StorageOrder = MemoryOrder::OrderSeqCst) const {
+            return ConcurrentOperation<T, S>::doLoad(StorageValue, StorageOrder);
+        }
+
+        void setValue(const T StorageSource, MemoryOrder StorageOrder = MemoryOrder::OrderSeqCst) {
+            ConcurrentOperation<T, S>::doExchange(StorageValue, StorageSource, StorageOrder);
+        }
+    };
+
+    class Mutex final : public AtomicStorage<bool> {
+    public:
+        void doLock() noexcept {
+            while (this->getValue()) doYieldCpu();
+            this->setValue(true, MemoryOrder::OrderRelaxed);
+        }
+
+        void doUnlock() noexcept {
+            this->setValue(false, MemoryOrder::OrderRelaxed);
+        }
+
+        bool isLocked() const noexcept {
+            return this->getValue(MemoryOrder::OrderRelaxed);
+        }
+
+        bool tryLock() noexcept {
+            bool MutexSource(false);
+            return this->doCompareExchangeValue(MutexSource, true, MemoryOrder::OrderRelaxed, MemoryOrder::OrderRelaxed);
+        }
+    };
+
+    class MutexLocker final : public NonCopyable, public NonMovable {
+    private:
+        Mutex &LockerMutex;
+    public:
+        explicit MutexLocker(Mutex &LockerMutexSource) noexcept : LockerMutex(LockerMutexSource) {
+            LockerMutex.doLock();
+        }
+
+        ~MutexLocker() noexcept {
+            LockerMutex.doUnlock();
+        }
+    };
+
+    class MutexLockerUnique final : public NonCopyable {
+    private:
+        Mutex *LockerMutex = nullptr;
+        bool LockerOwnership = false;
+    public:
+        doEnableMoveAssignConstruct(MutexLockerUnique)
+
+        explicit MutexLockerUnique(Mutex &LockerMutexSource) noexcept : LockerMutex(Objects::getAddress(LockerMutexSource)), LockerOwnership(false) {
+            doLock();
+            LockerOwnership = true;
+        }
+
+        ~MutexLockerUnique() noexcept {
+            if (LockerOwnership) doUnlock();
+        }
+
+        void doAssign(MutexLockerUnique &&LockerSource) noexcept {
+            if (LockerOwnership) doUnlock();
+            LockerMutex = LockerSource.LockerMutex;
+            LockerOwnership = LockerSource.LockerOwnership;
+            LockerSource.LockerMutex = nullptr;
+            LockerSource.LockerOwnership = false;
+        }
+
+        void doLock() {
+            if (!LockerMutex || LockerOwnership) throw Exception(u"MutexLockerUnique::doLock() LockerMutex || LockerOwnership"_S);
+            LockerMutex->doLock();
+            LockerOwnership = true;
+        }
+
+        void doUnlock() {
+            if (!LockerOwnership) throw Exception(u"MutexLockerUnique::doUnlock() LockerOwnership"_S);
+            if (LockerMutex) LockerMutex->doUnlock();
+        }
+
+        bool tryLock() {
+            if (!LockerMutex || LockerOwnership) throw Exception(u"MutexLockerUnique::tryLock() LockerMutex || LockerOwnership"_S);
+            return LockerOwnership = LockerMutex->tryLock();
+        }
+    };
+
+    template<typename T>
+    class AtomicStorage<T, 0> {
+    private:
+        T StorageValue;
+        mutable Mutex StorageMutex;
+    public:
+        AtomicStorage() = default;
+
+        constexpr AtomicStorage(const T &StorageSource) : StorageValue(StorageSource) {}
+
+        T getValue() const {
+            MutexLocker StorageGuard(StorageMutex);
+            return StorageValue;
+        }
+
+        void setValue(const T StorageSource) {
+            MutexLocker StorageGuard(StorageMutex);
+            StorageValue = StorageSource;
         }
     };
 
@@ -151,23 +766,43 @@ namespace eLibrary::Core {
     typedef pthread_t ThreadHandleType;
 #endif
 
+    class ThreadStateManager final {
+    private:
+        AtomicStorage<bool> StateFinish{false};
+        AtomicStorage<bool> StateInterrupt{false};
+    public:
+        bool isFinished() const noexcept {
+            return StateFinish.getValue();
+        }
+
+        bool isInterrupted() const noexcept {
+            return StateInterrupt.getValue();
+        }
+
+        void setFinished(bool StateValue) noexcept {
+            StateFinish.setValue(StateValue);
+        }
+
+        void setInterrupted(bool StateValue) noexcept {
+            StateInterrupt.setValue(StateValue);
+        }
+    };
+
     /**
      * Support for multithreading
      */
     class Thread : public Object, public NonCopyable {
     private:
         ThreadHandleType ThreadHandle;
-        volatile bool ThreadFinish;
-        volatile bool ThreadInterrupt;
+        ThreadStateManager ThreadState;
 
         static void *doExecuteCore(void *ThreadContext) noexcept {
-            ((Thread*) ThreadContext)->ThreadFinish = false;
             ((Thread*) ThreadContext)->doExecute();
-            ((Thread*) ThreadContext)->ThreadFinish = true;
+            ((Thread*) ThreadContext)->ThreadState.setFinished(true);
             return nullptr;
         }
 
-        constexpr Thread(ThreadHandleType ThreadHandleSource) noexcept : ThreadHandle(ThreadHandleSource), ThreadFinish(false), ThreadInterrupt(false) {}
+        constexpr Thread(ThreadHandleType ThreadHandleSource) noexcept : ThreadHandle(ThreadHandleSource) {}
     protected:
         void doStartCore() noexcept {
 #if eLibrarySystem(Windows)
@@ -181,7 +816,7 @@ namespace eLibrary::Core {
 #endif
         }
     public:
-        constexpr Thread() noexcept : ThreadHandle(ThreadHandleType()), ThreadFinish(false), ThreadInterrupt(false) {}
+        constexpr Thread() noexcept : ThreadHandle(ThreadHandleType()) {}
 
 #if eLibrarySystem(Windows)
         ~Thread() noexcept {
@@ -194,29 +829,29 @@ namespace eLibrary::Core {
 
         virtual void doExecute() noexcept {}
 
-        [[deprecated]] void doInterrupt() {
-            if (isInterrupted()) throw InterruptedException(String(u"Thread::doInterrupt() isInterrupted"));
-            ThreadInterrupt = true;
+        void doInterrupt() {
+            if (isInterrupted()) throw InterruptedException(u"Thread::doInterrupt() isInterrupted"_S);
+            ThreadState.setInterrupted(true);
         }
 
         void doJoin() const {
 #if eLibrarySystem(Windows)
-            while (!ThreadFinish) {
-                if (isInterrupted()) throw InterruptedException(String(u"Thread::doJoin() isInterrupted"));
-                Sleep(10);
+            while (!isFinished()) {
+                if (isInterrupted()) throw InterruptedException(u"Thread::doJoin() isInterrupted"_S);
+                doYieldCpu();
             }
             WaitForSingleObject(ThreadHandle, INFINITE);
 #else
             while (!ThreadFinish) {
                 if (isInterrupted()) throw InterruptedException(String(u"Thread::doJoin() isInterrupted"));
-                usleep(10000);
+                doYieldCpu();
             }
             pthread_join(ThreadHandle, nullptr);
 #endif
         }
 
         virtual void doStart() {
-            if (ThreadHandle) throw Exception(String(u"Thread::doStart() ThreadHandle"));
+            if (ThreadHandle) throw Exception(u"Thread::doStart() ThreadHandle"_S);
             doStartCore();
         }
 
@@ -228,16 +863,12 @@ namespace eLibrary::Core {
 #endif
         }
 
-        const char *getClassName() const noexcept override {
-            return "Thread";
-        }
-
         bool isFinished() const noexcept {
-            return ThreadFinish;
+            return ThreadState.isFinished();
         }
 
-        [[deprecated]] bool isInterrupted() const noexcept {
-            return ThreadInterrupt != 0;
+        bool isInterrupted() const noexcept {
+            return ThreadState.isInterrupted();
         }
 
         static Thread getCurrentThread() noexcept {
@@ -258,11 +889,7 @@ namespace eLibrary::Core {
         constexpr explicit FunctionThread(F ThreadFunctionSource, Ts ...ThreadParameterSource) noexcept : ThreadFunction(ThreadFunctionSource), ThreadParameter(std::make_tuple(ThreadParameterSource...)) {}
 
         void doExecute() noexcept override {
-            ::std::apply(ThreadFunction, ThreadParameter);
-        }
-
-        const char *getClassName() const noexcept override {
-            return "FunctionThread";
+            Functions::doInvokeTuple(ThreadFunction, ThreadParameter);
         }
     };
 
@@ -270,15 +897,15 @@ namespace eLibrary::Core {
     class ConcurrentQueue final : public Object {
     private:
         ::std::queue<T> QueueObject;
-        ::std::mutex QueueMutex;
+        Mutex QueueMutex;
     public:
         bool isEmpty() {
-            ::std::unique_lock<::std::mutex> QueueLock(QueueMutex);
+            MutexLocker QueueLock(QueueMutex);
             return QueueObject.empty();
         }
 
         bool doDequeue(T &QueueSource) {
-            ::std::unique_lock<::std::mutex> QueueLock(QueueMutex);
+            MutexLocker QueueLock(QueueMutex);
             if (QueueObject.empty()) return false;
             QueueSource = Objects::doMove(QueueObject.front());
             QueueObject.pop();
@@ -286,7 +913,7 @@ namespace eLibrary::Core {
         }
 
         void doEnqueue(T &QueueSource) {
-            ::std::unique_lock<::std::mutex> QueueLock(QueueMutex);
+            MutexLocker QueueLock(QueueMutex);
             QueueObject.push(QueueSource);
         }
     };
@@ -316,14 +943,13 @@ namespace eLibrary::Core {
         ::std::mutex ExecutorMutex;
         ConcurrentQueue<::std::function<void()>> ExecutorQueue;
         bool ExecutorShutdown = false;
-        ::std::vector<ThreadExecutorCore*> ExecutorThread;
+        Array<ThreadExecutorCore*> ExecutorThread;
         ::std::condition_variable ExecutorVariable;
     public:
-        ThreadExecutor(uintmax_t ExecutorThreadCount) {
-            ExecutorThread.reserve(ExecutorThreadCount);
+        ThreadExecutor(uintmax_t ExecutorThreadCount) : ExecutorThread(ExecutorThreadCount) {
             for (uintmax_t ExecutorThreadIndex = 0;ExecutorThreadIndex < ExecutorThreadCount;++ExecutorThreadIndex) {
-                ExecutorThread[ExecutorThreadIndex] = new ThreadExecutorCore(this);
-                ExecutorThread[ExecutorThreadIndex]->doStart();
+                ExecutorThread.getElement(ExecutorThreadIndex) = new ThreadExecutorCore(this);
+                ExecutorThread.getElement(ExecutorThreadIndex)->doStart();
             }
         }
 
@@ -338,12 +964,11 @@ namespace eLibrary::Core {
                 ExecutorCore->doJoin();
                 delete ExecutorCore;
             });
-            ExecutorThread.clear();
         }
 
         template<typename F, typename ...Ps>
         auto doSubmit(F &&ExecutorFunction, Ps &&...ExecutorFunctionParameter) -> ::std::future<decltype(ExecutorFunction(ExecutorFunctionParameter...))> {
-            if (ExecutorShutdown) throw Exception(String(u"ThreadExecutor::doSubmit<F, Ps...>(F&&, Ps&&...) ExecutorShutdown"));
+            if (ExecutorShutdown) throw Exception(u"ThreadExecutor::doSubmit<F, Ps...>(F&&, Ps&&...) ExecutorShutdown"_S);
             auto ExecutorTarget(::std::bind(Objects::doForward<F>(ExecutorFunction), Objects::doForward<Ps>(ExecutorFunctionParameter)...));
             auto ExecutorTask(::std::make_shared<::std::packaged_task<decltype(ExecutorTarget(ExecutorFunctionParameter...))()>>(ExecutorTarget));
             ::std::function<void()> ExecutorWrapper = [ExecutorTask] {
@@ -382,120 +1007,6 @@ namespace eLibrary::Core {
         virtual bool tryReleaseExclusive(int) noexcept = 0;
 
         virtual bool tryReleaseShared(int) noexcept = 0;
-    };
-
-    /**
-     * Support for safely operating integers in concurrent environments
-     */
-    template<Arithmetic T>
-    class AtomicNumber final : public Object {
-    private:
-        volatile T NumberValue;
-    public:
-        explicit constexpr AtomicNumber(T NumberSource) noexcept : NumberValue(NumberSource) {}
-
-        T addAndGet(T NumberDelta) noexcept {
-            return ConcurrentUtility::getAndAddNumber(&NumberValue, NumberDelta) + NumberDelta;
-        }
-
-        T andAndGet(T NumberSource) noexcept {
-            return ConcurrentUtility::getAndAddNumber(&NumberValue, NumberSource) & NumberSource;
-        }
-
-        bool compareAndSet(T ValueExpected, T ValueTarget) noexcept {
-            return ConcurrentUtility::doCompareAndSet(&NumberValue, ValueExpected, ValueTarget);
-        }
-
-        T decrementAndGet() noexcept {
-            return getAndDecrement() - 1;
-        }
-
-        T getAndAdd(T NumberDelta) noexcept {
-            return ConcurrentUtility::getAndAddNumber(&NumberValue, NumberDelta);
-        }
-
-        T getAndAnd(T NumberSource) noexcept {
-            return ConcurrentUtility::getAndAndNumber(&NumberValue, NumberSource);
-        }
-
-        T getAndDecrement() noexcept {
-            return ConcurrentUtility::getAndAddNumber(&NumberValue, (T) -1);
-        }
-
-        T getAndIncrement() noexcept {
-            return ConcurrentUtility::getAndAddNumber(&NumberValue, (T) 1);
-        }
-
-        T getAndOr(T NumberSource) noexcept {
-            return ConcurrentUtility::getAndOrNumber(&NumberValue, NumberSource);
-        }
-
-        T getAndSet(T ValueTarget) noexcept {
-            return ConcurrentUtility::getAndSetNumber(&NumberValue, ValueTarget);
-        }
-
-        T getAndXor(T NumberSource) noexcept {
-            return ConcurrentUtility::getAndXorNumber(&NumberValue, NumberSource);
-        }
-
-        const char *getClassName() const noexcept override {
-            return "AtomicNumber";
-        }
-
-        T getValue() const noexcept {
-            return NumberValue;
-        }
-
-        T incrementAndGet() noexcept {
-            return getAndIncrement() + 1;
-        }
-
-        T orAndGet(T NumberSource) noexcept {
-            return ConcurrentUtility::getAndOrNumber(&NumberValue, NumberSource) | NumberSource;
-        }
-
-        T xorAndGet(T NumberSource) noexcept {
-            return ConcurrentUtility::getAndXorNumber(&NumberValue, NumberSource) ^ NumberSource;
-        }
-
-        String toString() const noexcept override {
-            return String::valueOf(NumberValue);
-        }
-    };
-
-    template<>
-    class AtomicNumber<bool> {};
-
-    template<>
-    class AtomicNumber<int8_t> {};
-
-    template<>
-    class AtomicNumber<uint8_t> {};
-
-    template<typename T>
-    class AtomicReference final : public Object {
-    private:
-        volatile T *ObjectValue;
-    public:
-        bool doCompareAndSet(const T &ObjectExpected, const T &ObjectTarget) noexcept {
-            return ConcurrentUtility::doCompareAndSetReference(&ObjectValue, &ObjectExpected, &ObjectTarget);
-        }
-
-        T *getAndSet(const T &ObjectTarget) noexcept {
-            return ConcurrentUtility::getAndSetReference(&ObjectValue, &ObjectTarget);
-        }
-
-        const char *getClassName() const noexcept override {
-            return "AtomicReference";
-        }
-
-        T *getValue() const noexcept {
-            return ObjectValue;
-        }
-
-        String toString() const noexcept override {
-            return String::valueOf(*ObjectValue);
-        }
     };
 }
 

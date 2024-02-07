@@ -14,10 +14,6 @@ namespace eLibrary::Core {
     public:
         virtual ~Object() noexcept = default;
 
-        virtual const char *getClassName() const noexcept {
-            return "Object";
-        }
-
         virtual uintmax_t hashCode() const noexcept {
             return (uintmax_t) this;
         }
