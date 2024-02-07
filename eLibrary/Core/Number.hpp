@@ -32,11 +32,11 @@ namespace eLibrary::Core {
     private:
         class NumberVector final : protected ::std::vector<intmax_t> {
         public:
-            constexpr NumberVector() noexcept = default;
+            NumberVector() noexcept = default;
 
-            constexpr NumberVector(intmax_t NumberSize, intmax_t NumberValue) : ::std::vector<intmax_t>(NumberSize, NumberValue) {}
+            NumberVector(intmax_t NumberSize, intmax_t NumberValue) : ::std::vector<intmax_t>(NumberSize, NumberValue) {}
 
-            constexpr void addElement(intmax_t NumberSource) {
+            void addElement(intmax_t NumberSource) {
                 push_back(NumberSource);
             }
 
@@ -58,31 +58,31 @@ namespace eLibrary::Core {
                 return NumberResult;
             }
 
-            constexpr void doReserve(intmax_t NumberSize) {
+            void doReserve(intmax_t NumberSize) {
                 reserve(NumberSize);
             }
 
-            constexpr intmax_t getElementFront() const noexcept {
+            intmax_t getElementFront() const noexcept {
                 return front();
             }
 
-            constexpr intmax_t getElementSize() const noexcept {
+            intmax_t getElementSize() const noexcept {
                 return (intmax_t) size();
             }
 
-            constexpr bool isEmpty() const noexcept {
+            bool isEmpty() const noexcept {
                 return empty();
             }
 
-            constexpr intmax_t &operator[](intmax_t NumberIndex) noexcept {
+            intmax_t &operator[](intmax_t NumberIndex) noexcept {
                 return ::std::vector<intmax_t>::operator[](NumberIndex);
             }
 
-            constexpr intmax_t operator[](intmax_t NumberIndex) const noexcept {
+            intmax_t operator[](intmax_t NumberIndex) const noexcept {
                 return ::std::vector<intmax_t>::operator[](NumberIndex);
             }
 
-            constexpr void doRemove0() noexcept {
+            void doRemove0() noexcept {
                 while (!back() && getElementSize() > 1)
                     pop_back();
             }
