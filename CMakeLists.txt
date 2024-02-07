@@ -29,7 +29,7 @@ if(ELIBRARY_MODULE_NETWORK)
     add_compile_definitions(eLibraryFeature_Network=1)
 endif()
 
-project(eLibrary DESCRIPTION "An all-in-one cpp library" VERSION 0.20.0)
+project(eLibrary DESCRIPTION "An all-in-one cpp library" VERSION 0.21.0)
 
 set(CMAKE_CXX_STANDARD 23)
 set(CMAKE_CXX_STANDARD_REQUIRED TRUE)

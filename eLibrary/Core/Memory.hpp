@@ -54,7 +54,7 @@ namespace eLibrary::Core {
         }
 
         [[nodiscard]] constexpr T *doAllocate(uintmax_t ObjectSize) {
-            if constexpr (::std::is_constant_evaluated()) {
+            if (::std::is_constant_evaluated()) {
                 return static_cast<T *>(::operator new(ObjectSize * sizeof(T)));
             }
             return (T*) ::operator new(ObjectSize, AllocatorResource->doAcquire(ObjectSize * sizeof(T), alignof(T)));
@@ -66,7 +66,7 @@ namespace eLibrary::Core {
         }
 
         constexpr void doDeallocate(T *ObjectSource, uintmax_t ObjectSize) {
-            if constexpr (::std::is_constant_evaluated()) {
+            if (::std::is_constant_evaluated()) {
                 ::operator delete(ObjectSource);
                 return;
             }

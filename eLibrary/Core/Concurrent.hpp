@@ -6,7 +6,7 @@
 #include <Core/Container.hpp>
 #include <Core/Number.hpp>
 
-#if __has_include(<intrin.h>)
+#if eLibraryCompiler(MSVC)
 #include <intrin.h>
 #endif
 
@@ -21,9 +21,12 @@
 #define doYieldCpu YieldProcessor
 #elif __has_builtin(__yield)
 #define doYieldCpu __yield
+#elif __has_builtin(__builtin_ia32_pause)
+#define doYieldCpu __builtin_ia32_pause
 #endif
 
 #include <condition_variable>
+#include <cstring>
 #include <future>
 #include <mutex>
 #include <queue>
@@ -842,7 +845,7 @@ namespace eLibrary::Core {
             }
             WaitForSingleObject(ThreadHandle, INFINITE);
 #else
-            while (!ThreadFinish) {
+            while (!isFinished()) {
                 if (isInterrupted()) throw InterruptedException(String(u"Thread::doJoin() isInterrupted"));
                 doYieldCpu();
             }

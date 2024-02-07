@@ -2,6 +2,9 @@
 using namespace eLibrary;
 using namespace eLibrary::Core;
 
+#undef max
+#undef min
+
 #define DOCTEST_CONFIG_IMPLEMENT
 #include "3rd_party/doctest.h"
 

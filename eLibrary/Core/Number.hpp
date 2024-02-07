@@ -572,7 +572,7 @@ namespace eLibrary::Core {
             return {{::std::u16string{StringSource, StringSize}}, 10};
         }
 
-        Integer operator""_I(uintmax_t NumberValue) noexcept {
+        Integer operator""_I(unsigned long long int NumberValue) noexcept {
             return {NumberValue};
         }
     }
