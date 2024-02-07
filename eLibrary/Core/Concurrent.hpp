@@ -90,7 +90,8 @@ namespace eLibrary::Core {
         }
 
         static T doFetchSub(volatile T &ValueAddress, const T ValueTarget, MemoryOrder=MemoryOrder::OrderSeqCst) noexcept {
-            return reinterpret_cast<T&>(_InterlockedExchangeAdd8(ConcurrentOperation<T, 0>::template doCastAddress<ParameterType>(ValueAddress), -ConcurrentOperation<T, 0>::template doCastObject<ParameterType>(ValueTarget)));
+            auto ValueResult(_InterlockedExchangeAdd8(ConcurrentOperation<T, 0>::template doCastAddress<ParameterType>(ValueAddress), -ConcurrentOperation<T, 0>::template doCastObject<ParameterType>(ValueTarget)));
+            return reinterpret_cast<T&>(ValueResult);
         }
 
         static T doFetchXor(volatile T &ValueAddress, const T ValueTarget, MemoryOrder=MemoryOrder::OrderSeqCst) noexcept {
@@ -135,7 +136,8 @@ namespace eLibrary::Core {
 
         static T doSubFetch(volatile T &ValueAddress, const T ValueTargetSource, MemoryOrder=MemoryOrder::OrderSeqCst) noexcept {
             auto ValueTarget(ConcurrentOperation<T, 0>::template doCastObject<ParameterType>(ValueTargetSource));
-            return reinterpret_cast<T&>(_InterlockedExchangeAdd8(ConcurrentOperation<T, 0>::template doCastAddress<ParameterType>(ValueAddress), -ValueTarget) - ValueTarget);
+            auto ValueResult(_InterlockedExchangeAdd8(ConcurrentOperation<T, 0>::template doCastAddress<ParameterType>(ValueAddress), -ValueTarget) - ValueTarget);
+            return reinterpret_cast<T&>(ValueResult);
         }
 
         static T doXorFetch(volatile T &ValueAddress, const T ValueTargetSource, MemoryOrder=MemoryOrder::OrderSeqCst) noexcept {
