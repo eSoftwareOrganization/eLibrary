@@ -2,6 +2,8 @@
 
 This document describes the changes to eLibrary present in each release.
 
+> eLibrary V0.20.2
+- Core::ConcurrentOperation<T, 16>(New)(MSVC)
 > eLibrary V0.20.1
 - Core::MemoryAllocator doAllocate / doDeallocate(...)
 - operator "" _I(...)
