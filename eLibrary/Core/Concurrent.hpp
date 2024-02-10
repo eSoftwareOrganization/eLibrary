@@ -12,6 +12,7 @@
 
 #if eLibrarySystem(Windows)
 #include <Windows.h>
+#include <Platform/Windows.hpp>
 #else
 #include <pthread.h>
 #include <unistd.h>
@@ -642,9 +643,10 @@ namespace eLibrary::Core {
 #endif
     };
 
-#if eLibraryCompiler(MSVC)
+#if eLibraryArchitecture(AMD64)
     template<typename T>
     struct ConcurrentOperation<T, 16> {
+#if eLibraryCompiler(MSVC)
         struct int128_t {
             alignas(16) long long LowPart;
             long long HighPart;
@@ -670,6 +672,61 @@ namespace eLibrary::Core {
             _InterlockedCompareExchange128(ConcurrentOperation<T, 0>::template doCastObject<long long>(ValueAddress), 0, 0, &ValueResult.LowPart);
             return reinterpret_cast<T&>(ValueResult);
         }
+#else
+        using ParameterType = __int128;
+
+        static T doAddFetch(volatile T &ValueAddress, T ValueTarget, MemoryOrder ValueOrder = MemoryOrder::OrderSeqCst) noexcept {
+            return __atomic_add_fetch(ConcurrentOperation<T, 0>::template doCastAddress<T>(ValueAddress), ValueTarget, int(ValueOrder));
+        }
+
+        static T doAndFetch(volatile T &ValueAddress, T ValueTarget, MemoryOrder ValueOrder = MemoryOrder::OrderSeqCst) noexcept {
+            return __atomic_and_fetch(ConcurrentOperation<T, 0>::template doCastAddress<T>(ValueAddress), ValueTarget, int(ValueOrder));
+        }
+
+        static T doFetchAdd(volatile T &ValueAddress, T ValueTarget, MemoryOrder ValueOrder = MemoryOrder::OrderSeqCst) noexcept {
+            return __atomic_fetch_add(ConcurrentOperation<T, 0>::template doCastAddress<T>(ValueAddress), ValueTarget, int(ValueOrder));
+        }
+
+        static T doFetchAnd(volatile T &ValueAddress, T ValueTarget, MemoryOrder ValueOrder = MemoryOrder::OrderSeqCst) noexcept {
+            return __atomic_fetch_and(ConcurrentOperation<T, 0>::template doCastAddress<T>(ValueAddress), ValueTarget, int(ValueOrder));
+        }
+
+        static T doFetchOr(volatile T &ValueAddress, T ValueTarget, MemoryOrder ValueOrder = MemoryOrder::OrderSeqCst) noexcept {
+            return __atomic_fetch_or(ConcurrentOperation<T, 0>::template doCastAddress<T>(ValueAddress), ValueTarget, int(ValueOrder));
+        }
+
+        static T doFetchSub(volatile T &ValueAddress, T ValueTarget, MemoryOrder ValueOrder = MemoryOrder::OrderSeqCst) noexcept {
+            return __atomic_fetch_sub(ConcurrentOperation<T, 0>::template doCastAddress<T>(ValueAddress), ValueTarget, int(ValueOrder));
+        }
+
+        static T doFetchXor(volatile T &ValueAddress, T ValueTarget, MemoryOrder ValueOrder = MemoryOrder::OrderSeqCst) noexcept {
+            return __atomic_fetch_xor(ConcurrentOperation<T, 0>::template doCastAddress<T>(ValueAddress), ValueTarget, int(ValueOrder));
+        }
+
+        static bool doCompareExchange(volatile T &ValueAddress, T &ValueExpected, const T ValueTarget, MemoryOrder ValueOrder1 = MemoryOrder::OrderSeqCst, MemoryOrder ValueOrder2 = MemoryOrder::OrderSeqCst) noexcept {
+            return __atomic_compare_exchange_n(ConcurrentOperation<T, 0>::template doCastAddress<T>(ValueAddress), ConcurrentOperation<T, 0>::template doCastAddress<T>(ValueExpected), ValueTarget, false, int(ValueOrder1), int(ValueOrder2));
+        }
+
+        static void doExchange(volatile T &ValueAddress, const T ValueTarget, MemoryOrder ValueOrder = MemoryOrder::OrderSeqCst) noexcept {
+            __atomic_store_n(ConcurrentOperation<T, 0>::template doCastAddress<ParameterType>(ValueAddress), ConcurrentOperation<T, 0>::template doCastObject<ParameterType>(ValueTarget), int(ValueOrder));
+        }
+
+        static T doLoad(volatile T &ValueAddress, MemoryOrder ValueOrder = MemoryOrder::OrderSeqCst) noexcept {
+            return __atomic_load_n(ConcurrentOperation<T, 0>::template doCastAddress<ParameterType>(ValueAddress), int(ValueOrder));
+        }
+
+        static T doOrFetch(volatile T &ValueAddress, T ValueTarget, MemoryOrder ValueOrder = MemoryOrder::OrderSeqCst) noexcept {
+            return __atomic_or_fetch(ConcurrentOperation<T, 0>::template doCastAddress<T>(ValueAddress), ValueTarget, int(ValueOrder));
+        }
+
+        static T doSubFetch(volatile T &ValueAddress, T ValueTarget, MemoryOrder ValueOrder = MemoryOrder::OrderSeqCst) noexcept {
+            return __atomic_sub_fetch(ConcurrentOperation<T, 0>::template doCastAddress<T>(ValueAddress), ValueTarget, int(ValueOrder));
+        }
+
+        static T doXorFetch(volatile T &ValueAddress, T ValueTarget, MemoryOrder ValueOrder = MemoryOrder::OrderSeqCst) noexcept {
+            return __atomic_xor_fetch(ConcurrentOperation<T, 0>::template doCastAddress<T>(ValueAddress), ValueTarget, int(ValueOrder));
+        }
+#endif
     };
 #endif
 
@@ -678,7 +735,7 @@ namespace eLibrary::Core {
 
     template<typename T, size_t S>
     class AtomicStorage : public NonCopyable {
-    public:
+    private:
         alignas(alignof(T)) volatile mutable T StorageValue{};
     public:
         AtomicStorage() = default;
@@ -742,20 +799,20 @@ namespace eLibrary::Core {
     public:
         void doLock() noexcept {
             while (this->getValue()) doYieldCpu();
-            this->setValue(true, MemoryOrder::OrderRelaxed);
+            this->setValue(true);
         }
 
         void doUnlock() noexcept {
-            this->setValue(false, MemoryOrder::OrderRelaxed);
+            this->setValue(false);
         }
 
         bool isLocked() const noexcept {
-            return this->getValue(MemoryOrder::OrderRelaxed);
+            return this->getValue();
         }
 
         bool tryLock() noexcept {
             bool MutexSource(false);
-            return this->doCompareExchangeValue(MutexSource, true, MemoryOrder::OrderRelaxed, MemoryOrder::OrderRelaxed);
+            return this->doCompareExchangeValue(MutexSource, true);
         }
     };
 
@@ -835,7 +892,7 @@ namespace eLibrary::Core {
     };
 
 #if eLibrarySystem(Windows)
-    typedef HANDLE ThreadHandleType;
+    typedef Platform::Windows::NtHandle ThreadHandleType;
 #else
     typedef pthread_t ThreadHandleType;
 #endif
@@ -867,7 +924,7 @@ namespace eLibrary::Core {
      */
     class Thread : public Object, public NonCopyable {
     private:
-        ThreadHandleType ThreadHandle;
+        ThreadHandleType ThreadHandle{};
         ThreadStateManager ThreadState;
 
         static void *doExecuteCore(void *ThreadContext) noexcept {
@@ -876,11 +933,14 @@ namespace eLibrary::Core {
             return nullptr;
         }
 
+#if eLibrarySystem(Windows)
+        Thread(const Platform::Windows::NtHandle &ThreadHandleSource) noexcept : ThreadHandle(ThreadHandleSource) {}
+#else
         constexpr Thread(ThreadHandleType ThreadHandleSource) noexcept : ThreadHandle(ThreadHandleSource) {}
+#endif
     protected:
         void doStartCore() noexcept {
 #if eLibrarySystem(Windows)
-            if (ThreadHandle) CloseHandle(ThreadHandle);
             ThreadHandle = ::CreateThread(nullptr, 0, (LPTHREAD_START_ROUTINE) &Thread::doExecuteCore, this, 0, nullptr);
 #else
             pthread_attr_t ThreadAttribute;
@@ -890,16 +950,7 @@ namespace eLibrary::Core {
 #endif
         }
     public:
-        constexpr Thread() noexcept : ThreadHandle(ThreadHandleType()) {}
-
-#if eLibrarySystem(Windows)
-        ~Thread() noexcept {
-            if (ThreadHandle) {
-                CloseHandle(ThreadHandle);
-                ThreadHandle = nullptr;
-            }
-        }
-#endif
+        constexpr Thread() noexcept = default;
 
         virtual void doExecute() noexcept {}
 
@@ -914,7 +965,7 @@ namespace eLibrary::Core {
                 if (isInterrupted()) throw InterruptedException(u"Thread::doJoin() isInterrupted"_S);
                 doYieldCpu();
             }
-            WaitForSingleObject(ThreadHandle, INFINITE);
+            WaitForSingleObject((HANDLE) ThreadHandle, INFINITE);
 #else
             while (!isFinished()) {
                 if (isInterrupted()) throw InterruptedException(String(u"Thread::doJoin() isInterrupted"));
@@ -924,7 +975,7 @@ namespace eLibrary::Core {
 #endif
         }
 
-        virtual void doStart() {
+        void doStart() {
             if (ThreadHandle) throw Exception(u"Thread::doStart() ThreadHandle"_S);
             doStartCore();
         }

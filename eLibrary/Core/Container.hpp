@@ -382,9 +382,9 @@ namespace eLibrary::Core {
                                                                                                  ElementContainerSource) {}
 
         template<typename ...Es>
-        void doInitialize(E ElementCurrent, Es ...ElementList) noexcept {
+        void doInitialize(E ElementCurrent, Es&& ...ElementList) noexcept {
             ElementAllocator.doConstruct(ElementContainer + (ElementSize++), ElementCurrent);
-            if constexpr (sizeof...(ElementList)) doInitialize(ElementList...);
+            if constexpr (sizeof...(ElementList)) doInitialize(Objects::doForward<Es>(ElementList)...);
         }
 
         template<typename>
@@ -410,9 +410,9 @@ namespace eLibrary::Core {
         }
 
         template<typename ...Es>
-        explicit Array(E ElementCurrent, Es ...ElementList) {
+        explicit Array(E ElementCurrent, Es&& ...ElementList) {
             ElementContainer = ElementAllocator.doAllocate(sizeof...(ElementList) + 1);
-            doInitialize(ElementCurrent, ElementList...);
+            doInitialize(Objects::doForward<E>(ElementCurrent), Objects::doForward<Es>(ElementList)...);
         }
 
         explicit Array(intmax_t ElementSizeSource) : ElementSize(ElementSizeSource) {
@@ -514,9 +514,9 @@ namespace eLibrary::Core {
         }
 
         template<typename ...Es>
-        void doInitialize(E ElementCurrent, Es ...ElementList) noexcept {
+        void doInitialize(E ElementCurrent, Es&& ...ElementList) noexcept {
             ElementAllocator.doConstruct(ElementContainer + (ElementSize++), ElementCurrent);
-            if constexpr (sizeof...(ElementList)) doInitialize(ElementList...);
+            if constexpr (sizeof...(ElementList)) doInitialize(Objects::doForward<Es>(ElementList)...);
         }
 
     public:
@@ -527,10 +527,10 @@ namespace eLibrary::Core {
         constexpr ArrayList() noexcept = default;
 
         template<typename ...Es>
-        ArrayList(Es ...ElementList) : ElementCapacity(1) {
+        ArrayList(Es&& ...ElementList) : ElementCapacity(1) {
             while ((uintmax_t) ElementCapacity < sizeof...(ElementList)) ElementCapacity <<= 1;
             ElementContainer = ElementAllocator.doAllocate(ElementCapacity);
-            doInitialize(ElementList...);
+            doInitialize(Objects::doForward<Es>(ElementList)...);
         }
 
         ArrayList(::std::initializer_list<E> ElementList) : ElementCapacity(1), ElementSize((intmax_t) ElementList.size()) {
@@ -1298,7 +1298,7 @@ namespace eLibrary::Core {
             }
 
             FunctionDescriptorBase *doClone() const override {
-                return MemoryAllocator<FunctionDescriptor<F>>::newObject(DescriptorHandle);
+                return new FunctionDescriptor<F>(DescriptorHandle);
             }
         };
 
@@ -1309,19 +1309,18 @@ namespace eLibrary::Core {
 
         template<typename F>
         requires ::std::is_invocable_r_v<Tr, F, Ts...>
-        Function(F FunctionObject) noexcept : DescriptorHandle(
-                MemoryAllocator<FunctionDescriptor<F>>::newObject(FunctionObject)) {}
+        Function(F FunctionObject) noexcept : DescriptorHandle(new FunctionDescriptor<F>(Objects::doMove(FunctionObject))) {}
 
         ~Function() {
             if (DescriptorHandle) {
-                MemoryAllocator<FunctionDescriptorBase>::deleteObject(DescriptorHandle);
+                delete DescriptorHandle;
                 DescriptorHandle = nullptr;
             }
         }
 
         void doAssign(const Function<Tr(Ts...)> &FunctionSource) {
             if (Objects::getAddress(FunctionSource) == this) return;
-            MemoryAllocator<FunctionDescriptorBase>::deleteObject(DescriptorHandle);
+            delete DescriptorHandle;
             if (FunctionSource.DescriptorHandle) DescriptorHandle = FunctionSource.DescriptorHandle->doClone();
             else DescriptorHandle = nullptr;
         }
@@ -1332,14 +1331,16 @@ namespace eLibrary::Core {
             FunctionSource.DescriptorHandle = nullptr;
         }
 
-        Tr doCall(Ts ...ParameterList) {
+        Tr doCall(Ts ...FunctionParameter) {
             if (!DescriptorHandle) [[unlikely]]
                 throw Exception(u"Function<Tr(Ts...)>::doCall(Ts...) DescriptorHandle"_S);
-            return DescriptorHandle->doCall(Objects::doForward<Ts>(ParameterList)...);
+            return DescriptorHandle->doCall(Objects::doForward<Ts>(FunctionParameter)...);
         }
 
         Tr operator()(Ts &&...FunctionParameter) {
-            doCall(Objects::doForward<Ts>(FunctionParameter)...);
+            if (!DescriptorHandle) [[unlikely]]
+                throw Exception(u"Function<Tr(Ts...)>::operator()(Ts...) DescriptorHandle"_S);
+            return DescriptorHandle->doCall(Objects::doForward<Ts>(FunctionParameter)...);
         }
     };
 
@@ -1409,12 +1410,12 @@ namespace eLibrary::Core {
 
         template<typename Tf, typename Tc, typename ...Tp> requires (::std::is_member_function_pointer_v<::std::remove_reference_t<Tf>>) && (::std::is_pointer_v<::std::remove_reference_t<Tc>>)
         static auto doInvoke(Tf &&FunctionSource, Tc &&FunctionClass, Tp &&...FunctionParameter) {
-            return Objects::doForward<Tc>(FunctionClass)->*FunctionSource(Objects::doForward<Tp>(FunctionParameter)...);
+            return (Objects::doForward<Tc>(FunctionClass)->*FunctionSource)(Objects::doForward<Tp>(FunctionParameter)...);
         }
 
         template<typename Tf, typename Tc, typename ...Tp> requires (::std::is_member_function_pointer_v<::std::remove_reference_t<Tf>>) && (!::std::is_pointer_v<::std::remove_reference_t<Tc>>)
         static auto doInvoke(Tf &&FunctionSource, Tc &&FunctionClass, Tp &&...FunctionParameter) {
-            return Objects::doForward<Tc>(FunctionClass).*FunctionSource(Objects::doForward<Tp>(FunctionParameter)...);
+            return (Objects::doForward<Tc>(FunctionClass).*FunctionSource)(Objects::doForward<Tp>(FunctionParameter)...);
         }
 
         template<typename Tf, typename Tc> requires (::std::is_member_object_pointer_v<::std::remove_reference_t<Tf>>) && (::std::is_pointer_v<::std::remove_reference_t<Tc>>)
@@ -1612,6 +1613,9 @@ namespace eLibrary::Core {
     private:
         T *PointerObject = nullptr;
         uintmax_t *PointerReference = nullptr;
+
+        template<typename>
+        friend class PointerSharedThis;
     public:
         doEnableCopyAssignConstruct(PointerWeak)
 

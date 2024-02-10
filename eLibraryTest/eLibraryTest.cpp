@@ -57,6 +57,35 @@ TEST_SUITE("Container") {
         CHECK(NumberList.doUnion(NumberList).doDifference(NumberList).isEmpty());
     }
 
+    int doAddGlobal(int Number1, int Number2) {
+        return Number1 + Number2;
+    }
+
+    struct FunctionAdder {
+        int doAdd(int Number1, int Number2) {
+            return Number1 + Number2;
+        }
+    };
+
+    TEST_CASE("Function") {
+        Function<int(int, int)> FunctionAddGlobal = doAddGlobal;
+        CHECK_EQ(FunctionAddGlobal(1, 2), 3);
+        Function<int(int, int)> FunctionAddLambda = [](int Number1, int Number2) {
+            return Number1 + Number2;
+        };
+        CHECK_EQ(FunctionAddLambda(1, 2), 3);
+    }
+
+    TEST_CASE("Functions::doBind&doInvoke") {
+        auto FunctionAdd = [](int Number1, int Number2) {
+            return Number1 + Number2;
+        };
+        CHECK_EQ(Functions::doBind(FunctionAdd, 1, 2)(), 3);
+        CHECK_EQ(Functions::doBind(FunctionAdd, Functions::PlaceHolder<1>(), Functions::PlaceHolder<2>())(1, 2), 3);
+        FunctionAdder AdderObject;
+        CHECK_EQ(Functions::doBind(&FunctionAdder::doAdd, &AdderObject, 1, 2)(), 3);
+    }
+
     TEST_CASE("RedBlackTree") {
         RedBlackTree<NumberBuiltin<intmax_t>, nullptr_t> NumberTree;
         for (uintmax_t NumberIndex = 0;NumberIndex < 10000;++NumberIndex)
@@ -111,16 +140,34 @@ TEST_SUITE("Concurrent") {
                 NumberSource.doFetchAdd(1);
         };
         ThreadExecutor ThreadExecutorObject(4);
-        ThreadExecutorObject.doSubmit(ThreadFunctionIncrement);
-        ThreadExecutorObject.doSubmit(ThreadFunctionIncrement);
-        ThreadExecutorObject.doSubmit(ThreadFunctionIncrement);
+        ThreadExecutorObject.doSubmit(ThreadFunctionIncrement).get();
+        ThreadExecutorObject.doSubmit(ThreadFunctionIncrement).get();
+        ThreadExecutorObject.doSubmit(ThreadFunctionIncrement).get();
         ThreadExecutorObject.doSubmit(ThreadFunctionIncrement).get();
         CHECK_EQ(NumberSource.getValue(), NumberValue * 4);
-        ThreadExecutorObject.doSubmit(ThreadFunctionDecrement);
-        ThreadExecutorObject.doSubmit(ThreadFunctionDecrement);
-        ThreadExecutorObject.doSubmit(ThreadFunctionDecrement);
+        ThreadExecutorObject.doSubmit(ThreadFunctionDecrement).get();
+        ThreadExecutorObject.doSubmit(ThreadFunctionDecrement).get();
+        ThreadExecutorObject.doSubmit(ThreadFunctionDecrement).get();
         ThreadExecutorObject.doSubmit(ThreadFunctionDecrement).get();
         CHECK_EQ(NumberSource.getValue(), 0);
+    }
+
+    TEST_CASE("Mutex&MutexLocker&ThreadExecutor") {
+        uintmax_t NumberSource(0);
+        uintmax_t NumberValue = RandomEngine() % 10000;
+        Mutex NumberMutex;
+        auto ThreadFunction = [&]() {
+            for (uintmax_t NumberEpoch = 0; NumberEpoch < NumberValue; ++NumberEpoch) {
+                MutexLocker NumberLocker(NumberMutex);
+                ++NumberSource;
+            }
+        };
+        ThreadExecutor ThreadExecutorObject(4);
+        ThreadExecutorObject.doSubmit(ThreadFunction).get();
+        ThreadExecutorObject.doSubmit(ThreadFunction).get();
+        ThreadExecutorObject.doSubmit(ThreadFunction).get();
+        ThreadExecutorObject.doSubmit(ThreadFunction).get();
+        CHECK_EQ(NumberSource, NumberValue * 4);
     }
 }
 

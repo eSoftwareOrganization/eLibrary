@@ -30,11 +30,11 @@ namespace eLibrary::Core {
      */
     class Integer final : public Object {
     private:
-        class NumberVector final : protected ::std::vector<intmax_t> {
+        class NumberVector final : public ::std::vector<intmax_t> {
         public:
             NumberVector() noexcept = default;
 
-            NumberVector(intmax_t NumberSize, intmax_t NumberValue) : ::std::vector<intmax_t>(NumberSize, NumberValue) {}
+            NumberVector(uintmax_t NumberSize, intmax_t NumberValue) : ::std::vector<intmax_t>(NumberSize, NumberValue) {}
 
             void addElement(intmax_t NumberSource) {
                 push_back(NumberSource);
@@ -44,7 +44,7 @@ namespace eLibrary::Core {
                 NumberVector NumberProduct(getElementSize() + NumberOther.getElementSize(), 0);
                 for (intmax_t NumberDigit1 = 0; NumberDigit1 < getElementSize(); ++NumberDigit1)
                     for (intmax_t NumberDigit2 = 0; NumberDigit2 < NumberOther.getElementSize(); ++NumberDigit2)
-                        NumberProduct[NumberDigit1 + NumberDigit2] += NumberOther[NumberDigit1] * NumberOther[NumberDigit2];
+                        NumberProduct[NumberDigit1 + NumberDigit2] += (*this)[NumberDigit1] * NumberOther[NumberDigit2];
                 NumberVector NumberResult;
                 NumberResult.doReserve(getElementSize() + NumberOther.getElementSize());
                 intmax_t NumberCarry = 0;

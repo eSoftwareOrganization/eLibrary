@@ -10,6 +10,7 @@
 
 #if eLibrarySystem(Windows)
 #include <ws2tcpip.h>
+#include <mswsock.h>
 #else
 #include <netinet/in.h>
 #include <netinet/tcp.h>

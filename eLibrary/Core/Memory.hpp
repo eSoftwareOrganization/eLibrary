@@ -74,7 +74,9 @@ namespace eLibrary::Core {
         }
 
         static constexpr void doDestroy(T *ObjectSource) {
-            ObjectSource->~T();
+            if constexpr (::std::is_array_v<T>)
+                for (auto &ObjectCurrent : *ObjectSource) doDestroy(Objects::getAddress(ObjectCurrent));
+            else if (ObjectSource) ObjectSource->~T();
         }
 
         static auto newArray(uintmax_t ArraySize) noexcept {

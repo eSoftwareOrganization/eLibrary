@@ -29,9 +29,9 @@ namespace eLibrary::IO {
         ~Library() noexcept {
             if (LibraryHandle) {
 #if eLibrarySystem(Windows)
-                FreeLibrary(LibraryHandle);
+                ::FreeLibrary(LibraryHandle);
 #else
-                dlclose(LibraryHandle);
+                ::dlclose(LibraryHandle);
 #endif
                 LibraryHandle = nullptr;
             }
@@ -40,20 +40,23 @@ namespace eLibrary::IO {
         static Library doOpen(const String &LibraryPath) {
             LibraryHandleType LibraryHandle =
 #if eLibrarySystem(Windows)
-            LoadLibraryExA(LibraryPath.toU8String().c_str(), nullptr, 0);
+                ::LoadLibraryExA(LibraryPath.toU8String().c_str(), nullptr, 0);
 #else
-            dlopen(LibraryPath.toU8String().c_str(), RTLD_LAZY);
+                ::dlopen(LibraryPath.toU8String().c_str(), RTLD_LAZY);
 #endif
-            if (!LibraryHandle) throw IOException(u"Library::Library(const String&)"_S);
+            if (!LibraryHandle) [[unlikely]] throw IOException(u"Library::Library(const String&)"_S);
             return {LibraryHandle};
         }
 
-        auto getSymbol(const String &LibrarySymbol) const noexcept {
+        template<typename F>
+        F getSymbol(const String &LibrarySymbol) const noexcept {
+            return reinterpret_cast<F>(
 #if eLibrarySystem(Windows)
-            return GetProcAddress(LibraryHandle, LibrarySymbol.toU8String().c_str());
+                ::GetProcAddress(LibraryHandle, LibrarySymbol.toU8String().c_str())
 #else
-            return dlsym(LibraryHandle, LibrarySymbol.toU8String().c_str());
+                ::dlsym(LibraryHandle, LibrarySymbol.toU8String().c_str())
 #endif
+            );
         }
     };
 }

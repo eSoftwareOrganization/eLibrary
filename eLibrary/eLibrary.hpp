@@ -40,4 +40,8 @@
 #include <Extension/Extension-GeoIP.hpp>
 #endif
 
+#if eLibrarySystem(Windows)
+#include <Platform/Windows.hpp>
+#endif
+
 #endif

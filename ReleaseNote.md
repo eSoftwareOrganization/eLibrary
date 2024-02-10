@@ -2,6 +2,15 @@
 
 This document describes the changes to eLibrary present in each release.
 
+> eLibrary V0.20.3
+- Core::Function(Memory Allocation)
+- Core::Functions::doInvoke(...)
+- Core::Integer doMultiplication(...)
+- Core::MemoryAllocator doDestroy(...)
+- Core::Mutex(...)
+- Core::Thread(`Platform::Windows::NtHandle` Implementation)
+- IO::Library getSymbol<F>(getSymbol)
+- Platform::Windows::NtHandle / doAssign / doClose / isAvailable(New)
 > eLibrary V0.20.2
 - Core::ConcurrentOperation<T, 16>(New)(MSVC)
 > eLibrary V0.20.1
@@ -73,7 +82,7 @@ This document describes the changes to eLibrary present in each release.
 - Core::TypePropertyBase(Remove)
 - Core::TypePropertyClass(Remove)
 - Core::TypePropertyEnumeration(Remove)
-- Core::Extension::GeoIP MaxMindDatabase / doLookup(Experimental / New)
+- Extension::GeoIP::MaxMindDatabase / doLookup(Experimental / New)
 - IO::ByteBuffer(`Array` Implementation) doAssign(Remove)
 - Multimedia::AudioSegment(`Array` Implementation) doConcat(New) setChannelCount(Segmentation Fault) setSampleRate(...)
 - Multimedia::MediaChannelLayout doCompare(New)

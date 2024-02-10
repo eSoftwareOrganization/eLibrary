@@ -65,6 +65,7 @@ namespace eLibrary::Core {
 #define doEnableCopyAssignParameterConstruct(ClassName, ParameterName) ClassName(const ParameterName &ObjectSource) {doAssign(ObjectSource);}ClassName &operator=(const ParameterName &ObjectSource) {doAssign(ObjectSource);return *this;}
 #define doEnableMoveAssignConstruct(ClassName) ClassName(ClassName &&ObjectSource) noexcept {doAssign(Objects::doMove(ObjectSource));}ClassName &operator=(ClassName &&ObjectSource) noexcept {doAssign(Objects::doMove(ObjectSource));return *this;}
 #define doEnableMoveAssignParameterConstruct(ClassName, ParameterName) ClassName(ParameterName &&ObjectSource) noexcept {doAssign(Objects::doMove(ObjectSource));}ClassName &operator=(ParameterName &&ObjectSource) noexcept {doAssign(Objects::doMove(ObjectSource));return *this;}
+#define doEnableValueAssignParameterConstruct(ClassName, ParameterName) ClassName(ParameterName ObjectSource) {doAssign(ObjectSource);}ClassName &operator=(ParameterName ObjectSource) {doAssign(ObjectSource);return *this;}
 #define eLibraryArchitecture(ArchitectureName) eLibraryArchitecture_##ArchitectureName
 #define eLibraryCompiler(CompilerName) eLibraryCompiler_##CompilerName
 #define eLibraryFeature(FeatureName) eLibraryFeature_##FeatureName
