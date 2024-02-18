@@ -48,11 +48,6 @@ namespace eLibrary::Core {
             delete[] ArraySource;
         }
 
-        static void deleteObject(T *ObjectSource) {
-            doDestroy(ObjectSource);
-            delete ObjectSource;
-        }
-
         [[nodiscard]] constexpr T *doAllocate(uintmax_t ObjectSize) {
             if (::std::is_constant_evaluated()) {
                 return static_cast<T *>(::operator new(ObjectSize * sizeof(T)));
@@ -81,11 +76,6 @@ namespace eLibrary::Core {
 
         static auto newArray(uintmax_t ArraySize) noexcept {
             return new (::std::nothrow) T[ArraySize];
-        }
-
-        template<typename ...Ts>
-        static auto newObject(Ts&&... ArgumentList) {
-            return new (::std::nothrow) T(Objects::doForward<Ts>(ArgumentList)...);
         }
 
         void releaseObject(T *ObjectSource) {

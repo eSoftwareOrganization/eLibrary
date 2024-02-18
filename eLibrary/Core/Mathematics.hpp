@@ -126,7 +126,7 @@ namespace eLibrary::Core {
             return false;
         }
     public:
-        static Fraction NumberPi;
+        inline static const Fraction NumberPi = {52163, 16604};
 
         constexpr Mathematics() noexcept = delete;
 
@@ -142,7 +142,7 @@ namespace eLibrary::Core {
         }
 
         static Integer doCombinator(const Integer &NumberM, const Integer &NumberN) {
-            if (NumberN.doCompare(NumberM) < 0) throw ArithmeticException(u"Mathematics::doCombinator(const Integer&, const Integer&) NumberM NumberN"_S);
+            if (NumberN.doCompare(NumberM) < 0) doThrowChecked(ArithmeticException(u"Mathematics::doCombinator(const Integer&, const Integer&) NumberM NumberN"_S));
             return NumberN.doFactorial().doDivision(NumberM.doFactorial().doMultiplication(NumberN.doSubtraction(NumberM).doFactorial()));
         }
 
@@ -273,8 +273,8 @@ namespace eLibrary::Core {
             return NumberSource >= 0 ? NumberSource : -NumberSource;
         }
 
-        static Integer getJocabiSymbol(const Integer &NumberMSource, const Integer &NumberNSource) {
-            if (NumberNSource.isNegative() || NumberNSource.isEven()) throw ArithmeticException(u"Mathematics::getJocabiSymbol(const Integer&, const Integer&) NumberNSource"_S);
+        static Integer getJocabiSymbol(const Integer &NumberMSource, const Integer &NumberNSource) noexcept {
+            if (NumberNSource.isNegative() || NumberNSource.isEven()) doThrowUnchecked(ArithmeticException(u"Mathematics::getJocabiSymbol(const Integer&, const Integer&) NumberNSource"_S));
             Integer NumberM(NumberMSource), NumberN(NumberNSource);
             if (NumberM.isNegative() || NumberM.doCompare(NumberN) > 0) NumberM = NumberM.doModulo(NumberN);
             if (NumberM.isZero()) return !NumberNSource.doCompare(1);
@@ -290,7 +290,7 @@ namespace eLibrary::Core {
                     if (!NumberN.doModulo(8).doCompare(3) || !NumberN.doModulo(8).doCompare(5))
                         NumberJ = NumberJ.getOpposite();
                 }
-                ::std::swap(NumberM, NumberN);
+                Objects::doSwap(NumberM, NumberN);
                 if (!NumberM.doModulo(4).doCompare(3) && !NumberN.doModulo(4).doCompare(3)) NumberJ = NumberJ.getOpposite();
                 NumberM = NumberM.doModulo(NumberN);
             }
@@ -368,8 +368,6 @@ namespace eLibrary::Core {
             return NumberPi.doDivision({180}).doMultiplication(NumberSource);
         }
     };
-
-    Fraction Mathematics::NumberPi = {52163, 16604};
 }
 
 #endif

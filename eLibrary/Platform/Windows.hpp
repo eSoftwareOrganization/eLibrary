@@ -42,7 +42,7 @@ namespace eLibrary::Platform::Windows {
         }
 
         void doClose() {
-            if (HandleObject == INVALID_HANDLE_VALUE) throw Exception(u"NtHandle::doClose() HandleObject"_S);
+            if (HandleObject == INVALID_HANDLE_VALUE) doThrowChecked(Exception(u"NtHandle::doClose() HandleObject"_S));
             ::CloseHandle(HandleObject);
             HandleObject = INVALID_HANDLE_VALUE;
         }

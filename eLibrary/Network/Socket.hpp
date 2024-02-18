@@ -32,7 +32,7 @@ namespace eLibrary::Network {
                 AddressResult.sin_port = htons(SocketPort);
                 return AddressResult;
             }
-            throw NetworkException(u"NetworkSocketAddress::toAddressIn4() SocketAddress::getAddressProtocol"_S);
+            doThrowChecked(NetworkException(u"NetworkSocketAddress::toAddressIn4() SocketAddress::getAddressProtocol"_S));
         }
 
         auto toAddressIn6() const {
@@ -43,7 +43,7 @@ namespace eLibrary::Network {
                 AddressResult.sin6_port = htons(SocketPort);
                 return AddressResult;
             }
-            throw NetworkException(u"NetworkSocketAddress::toAddressIn6() SocketAddress::getAddressProtocol"_S);
+            doThrowChecked(NetworkException(u"NetworkSocketAddress::toAddressIn6() SocketAddress::getAddressProtocol"_S));
         }
 
         String toString() const noexcept override {
@@ -75,9 +75,9 @@ namespace eLibrary::Network {
     public:
         explicit DatagramSocket(const NetworkSocketAddress &AddressSource) : SocketAddress(AddressSource) {
             if (AddressSource.getSocketAddress().getAddressProtocol() == NetworkAddress::NetworkAddressProtocol::ProtocolUnknown)
-                throw NetworkException(u"DatagramSocket::DatagramSocket(const NetworkSocketAddress&) AddressSource"_S);
+                doThrowChecked(NetworkException(u"DatagramSocket::DatagramSocket(const NetworkSocketAddress&) AddressSource"_S));
             SocketDescriptor.doAssign(::socket(AddressSource.getSocketAddress().getAddressFamily(), SOCK_DGRAM, 0));
-            if (!SocketDescriptor.isAvailable()) throw NetworkException(u"DatagramSocket::DatagramSocket(const NetworkSocketAddress&) isAvailable"_S);
+            if (!SocketDescriptor.isAvailable()) doThrowChecked(NetworkException(u"DatagramSocket::DatagramSocket(const NetworkSocketAddress&) isAvailable"_S));
         }
 
         void doClose() {
@@ -89,11 +89,11 @@ namespace eLibrary::Network {
             if (SocketAddress.getSocketAddress().getAddressProtocol() == NetworkAddress::NetworkAddressProtocol::ProtocolIPv4) {
                 auto SocketAddressIn = SocketAddress.toAddressIn4();
                 if ((SocketSize = ::recvfrom((int) SocketDescriptor, (char*) SocketBuffer.getBufferContainer().getElementContainer() + SocketBuffer.getBufferPosition(), SocketBuffer.getRemaining(), 0, (sockaddr*) &SocketAddressIn, nullptr)) < 0)
-                    throw NetworkException(u"DatagramSocket::doReceive(ByteBuffer&) recvfrom"_S);
+                    doThrowChecked(NetworkException(u"DatagramSocket::doReceive(ByteBuffer&) recvfrom"_S));
             } else {
                 auto SocketAddressIn = SocketAddress.toAddressIn6();
                 if ((SocketSize = ::recvfrom((int) SocketDescriptor, (char*) SocketBuffer.getBufferContainer().getElementContainer() + SocketBuffer.getBufferPosition(), SocketBuffer.getRemaining(), 0, (sockaddr*) &SocketAddressIn, nullptr)) < 0)
-                    throw NetworkException(u"DatagramSocket::doReceive(ByteBuffer&) recvfrom"_S);
+                    doThrowChecked(NetworkException(u"DatagramSocket::doReceive(ByteBuffer&) recvfrom"_S));
             }
             SocketBuffer.setBufferPosition(SocketBuffer.getBufferPosition() + SocketSize);
         }
@@ -102,11 +102,11 @@ namespace eLibrary::Network {
             if (SocketAddress.getSocketAddress().getAddressProtocol() == NetworkAddress::NetworkAddressProtocol::ProtocolIPv4) {
                 auto SocketAddressIn = SocketAddress.toAddressIn4();
                 if (::sendto((int) SocketDescriptor, (char*) SocketBuffer.getBufferContainer().getElementContainer() + SocketBuffer.getBufferPosition(), SocketBuffer.getRemaining(), 0, (sockaddr*) &SocketAddressIn, sizeof(sockaddr_in)) < 0)
-                    throw NetworkException(u"DatagramSocket::doSend(ByteBuffer&) sendto"_S);
+                    doThrowChecked(NetworkException(u"DatagramSocket::doSend(ByteBuffer&) sendto"_S));
             } else {
                 auto SocketAddressIn = SocketAddress.toAddressIn6();
                 if (::sendto((int) SocketDescriptor, (char*) SocketBuffer.getBufferContainer().getElementContainer() + SocketBuffer.getBufferPosition(), SocketBuffer.getRemaining(), 0, (sockaddr*) &SocketAddressIn, sizeof(sockaddr_in6)) < 0)
-                    throw NetworkException(u"DatagramSocket::doSend(ByteBuffer&) sendto"_S);
+                    doThrowChecked(NetworkException(u"DatagramSocket::doSend(ByteBuffer&) sendto"_S));
             }
             SocketBuffer.setBufferPosition(SocketBuffer.getBufferLimit());
         }
@@ -117,13 +117,13 @@ namespace eLibrary::Network {
 
         void setSocketOption(NetworkSocketOption OptionType, int OptionValue) {
             if (::setsockopt((int) SocketDescriptor, SOL_SOCKET, (int) OptionType, (char*) &OptionValue, sizeof(int)))
-                throw NetworkException(u"DatagramSocket::setSocketOption(NetworkSocketOption, int) setsockopt"_S);
+                doThrowChecked(NetworkException(u"DatagramSocket::setSocketOption(NetworkSocketOption, int) setsockopt"_S));
         }
 
 #if UDP_NOCHECKSUM
         void setUDPNoChecksum(bool OptionValue) {
             if (::setsockopt((int) SocketDescriptor, IPPROTO_UDP, UDP_NOCHECKSUM, (char*) &OptionValue, sizeof(bool)))
-                throw NetworkException(u"DatagramSocket::setUDPNoChecksum(bool) setsockopt"_S);
+                doThrowChecked(NetworkException(u"DatagramSocket::setUDPNoChecksum(bool) setsockopt"_S));
         }
 #endif
     };
@@ -142,9 +142,9 @@ namespace eLibrary::Network {
     public:
         explicit StreamSocket(const NetworkSocketAddress &AddressSource) : SocketAddress(AddressSource) {
             if (AddressSource.getSocketAddress().getAddressProtocol() == NetworkAddress::NetworkAddressProtocol::ProtocolUnknown)
-                throw NetworkException(u"StreamSocket::StreamSocket(const NetworkSocketAddress&) AddressSource"_S);
+                doThrowChecked(NetworkException(u"StreamSocket::StreamSocket(const NetworkSocketAddress&) AddressSource"_S));
             SocketDescriptor.doAssign(::socket(AddressSource.getSocketAddress().getAddressFamily(), SOCK_STREAM, 0));
-            if (!SocketDescriptor.isAvailable()) throw NetworkException(u"StreamSocket::StreamSocket(const NetworkSocketAddress&) SocketDescriptor::isAvailable"_S);
+            if (!SocketDescriptor.isAvailable()) doThrowChecked(NetworkException(u"StreamSocket::StreamSocket(const NetworkSocketAddress&) SocketDescriptor::isAvailable"_S));
         }
 
         void doClose() {
@@ -152,15 +152,15 @@ namespace eLibrary::Network {
         }
 
         void doConnect() {
-            if (isConnected()) throw NetworkException(u"StreamSocket::doConnect() isConnected"_S);
+            if (isConnected()) doThrowChecked(NetworkException(u"StreamSocket::doConnect() isConnected"_S));
             if (SocketAddress.getSocketAddress().getAddressProtocol() == NetworkAddress::NetworkAddressProtocol::ProtocolIPv4) {
                 auto SocketAddress4 = SocketAddress.toAddressIn4();
                 if (::connect((int) SocketDescriptor, (sockaddr*) &SocketAddress4, sizeof(sockaddr_in)))
-                    throw NetworkException(u"StreamSocket::doConnect() connect"_S);
+                    doThrowChecked(NetworkException(u"StreamSocket::doConnect() connect"_S));
             } else {
                 auto SocketAddress6 = SocketAddress.toAddressIn6();
                 if (::connect((int) SocketDescriptor, (sockaddr*) &SocketAddress6, sizeof(sockaddr_in6)))
-                    throw NetworkException(u"StreamSocket::doConnect() connect"_S);
+                    doThrowChecked(NetworkException(u"StreamSocket::doConnect() connect"_S));
             }
             SocketConnected = true;
         }
@@ -179,12 +179,12 @@ namespace eLibrary::Network {
 
         void setSocketOption(NetworkSocketOption OptionType, int OptionValue) {
             if (::setsockopt((int) SocketDescriptor, SOL_SOCKET, (int) OptionType, (char*) &OptionValue, sizeof(int)))
-                throw NetworkException(u"StreamSocket::setSocketOption(NetworkSocketOption, int) setsockopt"_S);
+                doThrowChecked(NetworkException(u"StreamSocket::setSocketOption(NetworkSocketOption, int) setsockopt"_S));
         }
 
         void setTCPNoDelay(bool OptionValue) const {
             if (::setsockopt((int) SocketDescriptor, IPPROTO_TCP, TCP_NODELAY, (char*) &OptionValue, sizeof(bool)))
-                throw NetworkException(u"StreamSocket::setTCPNoDelay(bool) setsockopt"_S);
+                doThrowChecked(NetworkException(u"StreamSocket::setTCPNoDelay(bool) setsockopt"_S));
         }
 
         String toString() const noexcept override {
@@ -200,9 +200,9 @@ namespace eLibrary::Network {
     public:
         explicit StreamSocketServer(const NetworkSocketAddress &AddressSource) : SocketAddress(AddressSource) {
             if (AddressSource.getSocketAddress().getAddressProtocol() == NetworkAddress::NetworkAddressProtocol::ProtocolUnknown)
-                throw NetworkException(u"StreamSocketServer::StreamSocketServer(const NetworkSocketAddress&) AddressSource"_S);
+                doThrowChecked(NetworkException(u"StreamSocketServer::StreamSocketServer(const NetworkSocketAddress&) AddressSource"_S));
             SocketDescriptor.doAssign(::socket(SocketAddress.getSocketAddress().getAddressFamily(), SOCK_STREAM, 0));
-            if (!SocketDescriptor.isAvailable()) throw NetworkException(u"StreamSocket::StreamSocket(const NetworkSocketAddress&) SocketDescriptor::isAvailable"_S);
+            if (!SocketDescriptor.isAvailable()) doThrowChecked(NetworkException(u"StreamSocket::StreamSocket(const NetworkSocketAddress&) SocketDescriptor::isAvailable"_S));
         }
 
         ~StreamSocketServer() noexcept {
@@ -210,29 +210,29 @@ namespace eLibrary::Network {
         }
 
         StreamSocket doAccept() const {
-            if (!isAvailable()) throw NetworkException(u"StreamSocketServer::doAccept() isAvailable"_S);
-            if (!isBound()) throw NetworkException(u"StreamSocketServer::doAccept() isBound"_S);
+            if (!isAvailable()) doThrowChecked(NetworkException(u"StreamSocketServer::doAccept() isAvailable"_S));
+            if (!isBound()) doThrowChecked(NetworkException(u"StreamSocketServer::doAccept() isBound"_S));
             int SocketTarget = ::accept((int) SocketDescriptor, nullptr, nullptr);
             sockaddr_storage SocketTargetAddress{};
             socklen_t SocketTargetAddressSize = sizeof(sockaddr_storage);
             if (::getpeername(SocketTarget, (sockaddr*) &SocketTargetAddress, &SocketTargetAddressSize))
-                throw NetworkException(u"StreamSocketServer::doAccept() getpeername"_S);
+                doThrowChecked(NetworkException(u"StreamSocketServer::doAccept() getpeername"_S));
             if (((sockaddr*) &SocketTargetAddress)->sa_family == AF_INET) return {SocketTarget, NetworkSocketAddress(NetworkAddress(((sockaddr_in*) &SocketTargetAddress)->sin_addr), ntohs(((sockaddr_in*) &SocketTargetAddress)->sin_port))};
             else if (((sockaddr*) &SocketTargetAddress)->sa_family == AF_INET6) return {SocketTarget, NetworkSocketAddress(NetworkAddress(((sockaddr_in6*) &SocketTargetAddress)->sin6_addr), ntohs(((sockaddr_in6*) &SocketTargetAddress)->sin6_port))};
-            else throw NetworkException(u"StreamSocketServer::doAccept() SocketTargetAddress.sa_family"_S);
+            else doThrowChecked(NetworkException(u"StreamSocketServer::doAccept() SocketTargetAddress.sa_family"_S));
         }
 
         void doBind() {
-            if (!isAvailable()) throw NetworkException(u"StreamSocketServer::doBind() isClosed"_S);
-            if (isBound()) throw NetworkException(u"StreamSocketServer::doBind() isBound"_S);
+            if (!isAvailable()) doThrowChecked(NetworkException(u"StreamSocketServer::doBind() isClosed"_S));
+            if (isBound()) doThrowChecked(NetworkException(u"StreamSocketServer::doBind() isBound"_S));
             if (SocketAddress.getSocketAddress().getAddressProtocol() == NetworkAddress::NetworkAddressProtocol::ProtocolIPv4) {
                 auto SocketAddress4 = SocketAddress.toAddressIn4();
                 if (::bind((int) SocketDescriptor, (sockaddr*) &SocketAddress4, sizeof(sockaddr_in)))
-                    throw NetworkException(u"StreamSocketServer::doBind() bind"_S);
+                    doThrowChecked(NetworkException(u"StreamSocketServer::doBind() bind"_S));
             } else {
                 auto SocketAddress6 = SocketAddress.toAddressIn6();
                 if (::bind((int) SocketDescriptor, (sockaddr*) &SocketAddress6, sizeof(sockaddr_in6)))
-                    throw NetworkException(u"StreamSocketServer::doBind() bind"_S);
+                    doThrowChecked(NetworkException(u"StreamSocketServer::doBind() bind"_S));
             }
             SocketBound = true;
         }
@@ -242,10 +242,10 @@ namespace eLibrary::Network {
         }
 
         void doListen(int SocketBacklog = 0) const {
-            if (!isAvailable()) throw NetworkException(u"StreamSocketServer::doListen(int=0) isAvailable()"_S);
-            if (!isBound()) throw NetworkException(u"StreamSocketServer::doListen(int=0) isBound()"_S);
+            if (!isAvailable()) doThrowChecked(NetworkException(u"StreamSocketServer::doListen(int=0) isAvailable()"_S));
+            if (!isBound()) doThrowChecked(NetworkException(u"StreamSocketServer::doListen(int=0) isBound()"_S));
             if (::listen((int) SocketDescriptor, SocketBacklog))
-                throw NetworkException(u"StreamSocketServer::doListen(int=0) listen"_S);
+                doThrowChecked(NetworkException(u"StreamSocketServer::doListen(int=0) listen"_S));
         }
 
         bool isAvailable() const noexcept {
@@ -258,12 +258,12 @@ namespace eLibrary::Network {
 
         void setSocketOption(NetworkSocketOption OptionType, int OptionValue) {
             if (::setsockopt((int) SocketDescriptor, SOL_SOCKET, (int) OptionType, (char*) &OptionValue, sizeof(int)))
-                throw NetworkException(u"StreamSocketServer::setSocketOption(NetworkSocketOption, int) setsockopt"_S);
+                doThrowChecked(NetworkException(u"StreamSocketServer::setSocketOption(NetworkSocketOption, int) setsockopt"_S));
         }
 
         void setTCPNoDelay(bool OptionValue) const {
             if (::setsockopt((int) SocketDescriptor, IPPROTO_TCP, TCP_NODELAY, (char*) &OptionValue, sizeof(bool)))
-                throw NetworkException(u"StreamSocketServer::setTCPNoDelay(bool) setsockopt"_S);
+                doThrowChecked(NetworkException(u"StreamSocketServer::setTCPNoDelay(bool) setsockopt"_S));
         }
     };
 
@@ -274,23 +274,23 @@ namespace eLibrary::Network {
         SocketInputStream(StreamSocket &SocketSource) noexcept : SocketDescriptor(SocketSource) {}
     public:
         int doRead() override {
-            if (!isAvailable()) throw NetworkException(u"SocketInputStream::doRead() isAvailable"_S);
+            if (!isAvailable()) doThrowChecked(NetworkException(u"SocketInputStream::doRead() isAvailable"_S));
             char SocketCharacter;
             if (::recv((int) SocketDescriptor.SocketDescriptor, &SocketCharacter, 1, 0) < 0)
-                throw NetworkException(u"SocketInputStream::doRead() recv"_S);
+                doThrowChecked(NetworkException(u"SocketInputStream::doRead() recv"_S));
             return SocketCharacter;
         }
 
         void doRead(IO::ByteBuffer &SocketBuffer) override {
-            if (!isAvailable()) throw NetworkException(u"SocketInputStream::doRead(ByteBuffer&) isAvailable"_S);
+            if (!isAvailable()) doThrowChecked(NetworkException(u"SocketInputStream::doRead(ByteBuffer&) isAvailable"_S));
             int SocketSizeReceived;
             if ((SocketSizeReceived = ::recv((int) SocketDescriptor.SocketDescriptor, (char*) SocketBuffer.getBufferContainer().getElementContainer() + SocketBuffer.getBufferPosition(), SocketBuffer.getRemaining(), 0)) < 0)
-                throw NetworkException(u"SocketInputStream::doRead(ByteBuffer&) recv"_S);
+                doThrowChecked(NetworkException(u"SocketInputStream::doRead(ByteBuffer&) recv"_S));
             SocketBuffer.setBufferPosition(SocketBuffer.getBufferPosition() + SocketSizeReceived);
         }
 
         static SocketInputStream getInstance(StreamSocket &SocketSource) {
-            if (!SocketSource.isConnected()) throw NetworkException(u"SocketInputStream::getInstance(StreamSocket&) SocketSource.isConnected"_S);
+            if (!SocketSource.isConnected()) doThrowChecked(NetworkException(u"SocketInputStream::getInstance(StreamSocket&) SocketSource.isConnected"_S));
             return {SocketSource};
         }
 
@@ -306,20 +306,20 @@ namespace eLibrary::Network {
         SocketOutputStream(StreamSocket &SocketSource) noexcept : SocketDescriptor(SocketSource) {}
     public:
         void doWrite(uint8_t SocketCharacter) override {
-            if (!isAvailable()) throw NetworkException(u"SocketOutputStream::doWrite(uint8_t) isAvailable"_S);
+            if (!isAvailable()) doThrowChecked(NetworkException(u"SocketOutputStream::doWrite(uint8_t) isAvailable"_S));
             if (::send((int) SocketDescriptor.SocketDescriptor, (char*) &SocketCharacter, 1, 0) < 0)
-                throw NetworkException(u"SocketOutputStream::doWrite(uint8_t) send"_S);
+                doThrowChecked(NetworkException(u"SocketOutputStream::doWrite(uint8_t) send"_S));
         }
 
         void doWrite(const IO::ByteBuffer &SocketBuffer) override {
-            if (!isAvailable()) throw NetworkException(u"SocketOutputStream::doWrite(const ByteBuffer&) isAvailable"_S);
+            if (!isAvailable()) doThrowChecked(NetworkException(u"SocketOutputStream::doWrite(const ByteBuffer&) isAvailable"_S));
             if (::send((int) SocketDescriptor.SocketDescriptor, (char*) SocketBuffer.getBufferContainer().getElementContainer() + SocketBuffer.getBufferPosition(), SocketBuffer.getRemaining(), 0) < 0)
-                throw NetworkException(u"SocketOutputStream::doWrite(const ByteBuffer&) send"_S);
+                doThrowChecked(NetworkException(u"SocketOutputStream::doWrite(const ByteBuffer&) send"_S));
             SocketBuffer.setBufferPosition(SocketBuffer.getBufferLimit());
         }
 
         static SocketOutputStream getInstance(StreamSocket &SocketSource) {
-            if (!SocketSource.isConnected()) throw NetworkException(u"SocketOutputStream::getInstance(StreamSocket&) SocketSource::isConnected"_S);
+            if (!SocketSource.isConnected()) doThrowChecked(NetworkException(u"SocketOutputStream::getInstance(StreamSocket&) SocketSource::isConnected"_S));
             return {SocketSource};
         }
 

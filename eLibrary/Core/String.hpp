@@ -4,6 +4,7 @@
 #define eLibraryHeaderCoreString
 
 #include <Core/Memory.hpp>
+#include <Core/StringUnicode.hpp>
 #include <cwctype>
 #include <string>
 
@@ -26,23 +27,43 @@ namespace eLibrary::Core {
         }
 
         bool isAlpha() const noexcept {
-            return iswalpha(CharacterValue) != 0;
+            return iswalpha(CharacterValue);
         }
 
         bool isDigit() const noexcept {
-            return iswdigit(CharacterValue) != 0;
+            return iswdigit(CharacterValue);
+        }
+
+        bool isHighSurrogate() const noexcept {
+            return (CharacterValue & 0xFFFFFC00) == 0xD800;
         }
 
         bool isLowerCase() const noexcept {
-            return iswlower(CharacterValue) != 0;
+            return iswlower(CharacterValue);
+        }
+
+        bool isLowSurrogate() const noexcept {
+            return (CharacterValue & 0xFFFFFC00) == 0xDC00;
+        }
+
+        bool isNonCharacter() const noexcept {
+            return CharacterValue >= 0xFDD0 && CharacterValue <= 0xFDEF;
         }
 
         bool isNull() const noexcept {
             return CharacterValue == char16_t();
         }
 
+        bool isSpace() const noexcept {
+            return iswspace(CharacterValue);
+        }
+
+        bool isSurrogate() const noexcept {
+            return CharacterValue >= 0xD800 && CharacterValue <= 0xDFFF;
+        }
+
         bool isUpperCase() const noexcept {
-            return iswupper(CharacterValue) != 0;
+            return iswupper(CharacterValue);
         }
 
         explicit operator char16_t() const noexcept {
@@ -62,6 +83,31 @@ namespace eLibrary::Core {
         }
 
         eLibraryAPI static Character valueOf(uint8_t, uint8_t);
+    };
+
+    class CharacterLatin1 final : public Object {
+    private:
+        char CharacterValue;
+    public:
+        constexpr CharacterLatin1(char CharacterSource = char()) noexcept : CharacterValue(CharacterSource) {}
+
+        intmax_t doCompare(const CharacterLatin1 &CharacterSource) const noexcept {
+            return (intmax_t) CharacterValue - CharacterSource.CharacterValue;
+        }
+
+        uintmax_t hashCode() const noexcept override {
+            return CharacterValue;
+        }
+
+        explicit operator char() const noexcept {
+            return CharacterValue;
+        }
+
+        Character toCharacter() const noexcept {
+            return {(char16_t) CharacterValue};
+        }
+
+        eLibraryAPI String toString() const noexcept override;
     };
 
     /**
@@ -229,13 +275,9 @@ namespace eLibrary::Core {
     };
 
     inline namespace Literal {
-        eLibraryAPI String operator"" _S(const char *StringSource);
-
+        eLibraryAPI Character operator"" _C(char16_t CharacterSource) noexcept;
+        eLibraryAPI CharacterLatin1 operator"" _CL1(char CharacterSource) noexcept;
         eLibraryAPI String operator"" _S(const char16_t *StringSource, size_t StringSize);
-
-        eLibraryAPI String operator"" _S(const char32_t *StringSource, size_t StringSize);
-
-        eLibraryAPI String operator"" _S(const wchar_t *StringSource, size_t StringSize);
     }
 }
 

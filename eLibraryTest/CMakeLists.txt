@@ -3,7 +3,7 @@ project(eLibraryTest)
 include_directories(${CMAKE_HOME_DIRECTORY}/eLibrary)
 
 if(ELIBRARY_MODULE_NETWORK AND ${CMAKE_SYSTEM_NAME} STREQUAL "Windows")
-    link_libraries(ws2_32.dll)
+    link_libraries(ws2_32)
 endif()
 
 add_executable(eLibraryTest eLibraryTest.cpp)

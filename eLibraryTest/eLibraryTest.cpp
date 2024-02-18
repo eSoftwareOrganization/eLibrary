@@ -17,6 +17,39 @@ using namespace eLibrary::Core;
 ::std::random_device RandomDevice;
 
 TEST_SUITE("Container") {
+    int doAddGlobal(int Number1, int Number2) {
+        return Number1 + Number2;
+    }
+
+    struct FunctionAdder {
+        int AdderValue;
+
+        constexpr FunctionAdder() : AdderValue(0) {}
+
+        constexpr FunctionAdder(int AdderSource) : AdderValue(AdderSource) {}
+
+        int doAdd(int Number1, int Number2) {
+            return Number1 + Number2;
+        }
+    };
+
+    TEST_CASE("Any") {
+        Any AnyEmpty;
+        CHECK_EQ(AnyEmpty.getValueType(), &typeid(void));
+        CHECK_FALSE(AnyEmpty.hasValue());
+
+        Any AnyInteger = Integer(1);
+        CHECK(AnyInteger.hasValue());
+        CHECK_EQ(AnyInteger.getValueType(), &typeid(Integer));
+        CHECK_EQ(AnyInteger.getValue<Integer>().getValue<int>(), 1);
+        CHECK_THROWS(AnyInteger.getValue<int>());
+        AnyInteger = u"Any"_S;
+        CHECK(AnyInteger.hasValue());
+        CHECK_EQ(AnyInteger.getValueType(), &typeid(String));
+        CHECK_EQ(AnyInteger.getValue<String>().toU8String(), "Any");
+        CHECK_THROWS(AnyInteger.getValue<Integer>());
+    }
+
     TEST_CASE("ArrayList") {
         ArrayList<NumberBuiltin<uintmax_t>> NumberList;
         for (uintmax_t NumberIndex = 0;NumberIndex < 10000;++NumberIndex)
@@ -56,16 +89,6 @@ TEST_SUITE("Container") {
         CHECK(NumberList.doIntersection(NumberList).doDifference(NumberList).isEmpty());
         CHECK(NumberList.doUnion(NumberList).doDifference(NumberList).isEmpty());
     }
-
-    int doAddGlobal(int Number1, int Number2) {
-        return Number1 + Number2;
-    }
-
-    struct FunctionAdder {
-        int doAdd(int Number1, int Number2) {
-            return Number1 + Number2;
-        }
-    };
 
     TEST_CASE("Function") {
         Function<int(int, int)> FunctionAddGlobal = doAddGlobal;

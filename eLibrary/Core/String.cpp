@@ -4,14 +4,14 @@
 
 namespace eLibrary::Core {
     uint8_t Character::toNumber(uint8_t NumberRadix) const {
-        if (NumberRadix < 2 || NumberRadix > 36) throw ArithmeticException(u"Character::toNumber(uint8_t) NumberRadix"_S);
+        if (NumberRadix < 2 || NumberRadix > 36) doThrowChecked(ArithmeticException(u"Character::toNumber(uint8_t) NumberRadix"_S));
         if (isDigit()) {
             if (CharacterValue - 48 >= NumberRadix)
-                throw Exception(u"Character::toNumber(uint8_t) NumberRadix"_S);
+                doThrowChecked(Exception(u"Character::toNumber(uint8_t) NumberRadix"_S));
             return CharacterValue - 48;
-        } else if (!isAlpha()) throw Exception(u"Character::toNumber(uint8_t) isAlpha"_S);
+        } else if (!isAlpha()) doThrowChecked(Exception(u"Character::toNumber(uint8_t) isAlpha"_S));
         if (towupper(CharacterValue) - 55 >= NumberRadix)
-            throw Exception(u"Character::toNumber(uint8_t) NumberRadix"_S);
+            doThrowChecked(Exception(u"Character::toNumber(uint8_t) NumberRadix"_S));
         return CharacterValue - 55;
     }
 
@@ -20,10 +20,14 @@ namespace eLibrary::Core {
     }
 
     Character Character::valueOf(uint8_t NumberSource, uint8_t NumberRadix) {
-        if (NumberRadix < 2 || NumberRadix > 36) throw ArithmeticException(u"Character::valueOf(uint8_t, uint8_t) NumberRadix"_S);
-        if (NumberSource >= NumberRadix) throw Exception(u"Character::valueOf(uint8_t, uint8_t) NumberSource"_S);
+        if (NumberRadix < 2 || NumberRadix > 36) doThrowChecked(ArithmeticException(u"Character::valueOf(uint8_t, uint8_t) NumberRadix"_S));
+        if (NumberSource >= NumberRadix) doThrowChecked(Exception(u"Character::valueOf(uint8_t, uint8_t) NumberSource"_S));
         if (NumberSource <= 10) return {char16_t(NumberSource + 48)};
         return {char16_t(NumberSource + 55)};
+    }
+
+    String CharacterLatin1::toString() const noexcept {
+        return toCharacter().toString();
     }
 
     String::String(const Character &CharacterSource) noexcept {
@@ -252,19 +256,15 @@ namespace eLibrary::Core {
         return CharacterResult;
     }
 
-    eLibraryAPI String Literal::operator"" _S(const char *StringSource) {
-        return {::std::string(StringSource)};
+    eLibraryAPI Character Literal::operator"" _C(char16_t CharacterSource) noexcept {
+        return {CharacterSource};
+    }
+
+    eLibraryAPI CharacterLatin1 Literal::operator"" _CL1(char CharacterSource) noexcept {
+        return {CharacterSource};
     }
 
     eLibraryAPI String Literal::operator"" _S(const char16_t *StringSource, size_t StringSize) {
         return {::std::u16string(StringSource, StringSize)};
-    }
-
-    eLibraryAPI String Literal::operator"" _S(const char32_t *StringSource, size_t StringSize) {
-        return {::std::u32string(StringSource, StringSize)};
-    }
-
-    eLibraryAPI String Literal::operator"" _S(const wchar_t *StringSource, size_t StringSize) {
-        return {::std::wstring(StringSource, StringSize)};
     }
 }

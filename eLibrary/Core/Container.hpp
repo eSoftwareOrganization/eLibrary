@@ -35,22 +35,21 @@ namespace eLibrary::Core {
         };
 
         void *AnyValue = nullptr;
-        const ::std::type_info *AnyType = nullptr;
+        const ::std::type_info *AnyType = &typeid(void);
 
-        void (*AnyFunction)(AnyOperation, Any *, void *) = nullptr;
+        void (*AnyFunction)(AnyOperation, Any *, void*) = nullptr;
 
         template<typename T>
         static void doExecute(AnyOperation ManagerOperation, Any *ManagerObject, void *ManagerSource) {
             switch (ManagerOperation) {
                 case AnyOperation::OperationCopy:
-                    ManagerObject->AnyValue = MemoryAllocator<T>::newObject(*(const T *) ManagerSource);
+                    ManagerObject->AnyValue = new T(*(const T *) ManagerSource);
                     break;
                 case AnyOperation::OperationDestroy:
-                    MemoryAllocator<T>::deleteObject((const T *) ManagerObject->AnyValue);
+                    MemoryAllocator<T>::doDestroy((T *) ManagerObject->AnyValue);
                     break;
                 case AnyOperation::OperationMove:
-                    ManagerObject->AnyValue = MemoryAllocator<T>::newObject(
-                            Objects::doMove(*(const T *) ManagerSource));
+                    ManagerObject->AnyValue = new T(Objects::doMove(*(T *) ManagerSource));
                     break;
             }
         }
@@ -72,11 +71,6 @@ namespace eLibrary::Core {
             doAssign(Objects::doMove(AnySource));
         }
 
-        template<typename T, typename ...Ts>
-        Any(::std::in_place_t, Ts &&...ParameterList) {
-            doAssign(T(Objects::doForward<Ts>(ParameterList)...));
-        }
-
         ~Any() {
             doReset();
         }
@@ -96,7 +90,10 @@ namespace eLibrary::Core {
                 AnyFunction = AnySource.AnyFunction;
                 AnyFunction(AnyOperation::OperationMove, this, AnySource.AnyValue);
                 AnyType = AnySource.AnyType;
-                AnySource.doReset();
+                AnyValue = AnySource.AnyValue;
+                AnySource.AnyFunction = nullptr;
+                AnySource.AnyType = &typeid(void);
+                AnySource.AnyValue = nullptr;
             }
         }
 
@@ -105,7 +102,7 @@ namespace eLibrary::Core {
             doReset();
             AnyFunction = &doExecute<T>;
             AnyType = &typeid(T);
-            AnyValue = MemoryAllocator<T>::newObject(AnySource);
+            AnyValue = new T(AnySource);
         }
 
         template<typename T>
@@ -113,22 +110,22 @@ namespace eLibrary::Core {
             doReset();
             AnyFunction = &doExecute<T>;
             AnyType = &typeid(T);
-            AnyValue = MemoryAllocator<T>::newObject(Objects::doMove(AnySource));
+            AnyValue = new T(Objects::doMove(AnySource));
         }
 
         void doReset() {
             if (AnyFunction && AnyValue) AnyFunction(AnyOperation::OperationDestroy, this, nullptr);
             AnyFunction = nullptr;
-            AnyType = nullptr;
+            AnyType = &typeid(void);
             AnyValue = nullptr;
         }
 
         template<typename T>
         auto getValue() const {
             if (&typeid(T) != AnyType) [[unlikely]]
-                throw TypeException(u"Any::getValue<T>()"_S);
+                doThrowChecked(TypeException(u"Any::getValue<T>()"_S));
             if (!hasValue()) [[unlikely]]
-                throw Exception(u"Any::getValue<T>() hasValue"_S);
+                doThrowChecked(Exception(u"Any::getValue<T>() hasValue"_S));
             return *((T *) AnyValue);
         }
 
@@ -139,6 +136,16 @@ namespace eLibrary::Core {
         bool hasValue() const noexcept {
             return AnyValue;
         }
+
+        template<typename T>
+        static Any valueOf(T &&AnySource) {
+            return {Objects::doForward<T>(AnySource)};
+        }
+
+        template<typename T, typename ...Ts>
+        static Any valueOf(Ts &&...AnySource) {
+            return {T(Objects::doForward<Ts>(AnySource)...)};
+        }
     };
 
     class Collections final : public Object, public NonConstructable {
@@ -146,25 +153,25 @@ namespace eLibrary::Core {
         template<typename T1, typename T2>
         static void doCheckG(T1 IndexSource, T2 IndexStart) {
             if (IndexSource <= IndexStart) [[unlikely]]
-                throw IndexException(u"Collections::doCheckG(T1, T2) IndexSource"_S);
+                doThrowChecked(IndexException(u"Collections::doCheckG(T1, T2) IndexSource"_S));
         }
 
         template<typename T1, typename T2>
         static void doCheckGE(T1 IndexSource, T2 IndexStart) {
             if (IndexSource < IndexStart) [[unlikely]]
-                throw IndexException(u"Collections::doCheckStartGE(T1, T2) IndexSource"_S);
+                doThrowChecked(IndexException(u"Collections::doCheckStartGE(T1, T2) IndexSource"_S));
         }
 
         template<typename T1, typename T2>
         static void doCheckL(T1 IndexSource, T2 IndexStop) {
             if (IndexSource >= IndexStop) [[unlikely]]
-                throw IndexException(u"Collections::doCheckL(T1, T2) IndexSource"_S);
+                doThrowChecked(IndexException(u"Collections::doCheckL(T1, T2) IndexSource"_S));
         }
 
         template<typename T1, typename T2>
         static void doCheckLE(T1 IndexSource, T2 IndexStop) {
             if (IndexSource > IndexStop) [[unlikely]]
-                throw IndexException(u"Collections::doCheckLE(T1, T2) IndexSource"_S);
+                doThrowChecked(IndexException(u"Collections::doCheckLE(T1, T2) IndexSource"_S));
         }
 
         template<typename II>
@@ -712,6 +719,100 @@ namespace eLibrary::Core {
 
         ArrayIterator<E> end() const noexcept {
             return {ElementContainer + ElementSize};
+        }
+    };
+
+    template<typename K, typename V>
+    class [[deprecated]] AVLTree : public Object {
+    protected:
+        struct AVLNode final {
+            K NodeKey;
+            V NodeValue;
+            AVLNode *NodeChildLeft = nullptr, *NodeChildRight = nullptr, *NodeParent = nullptr;
+            int NodeHeight = 0;
+
+            AVLNode(const K &NodeKeySource, const V &NodeValueSource) : NodeKey(NodeKeySource), NodeValue(NodeValueSource) {}
+        } *NodeRoot = nullptr;
+        mutable MemoryAllocator<AVLNode> NodeAllocator;
+
+        void deleteNode(AVLNode *NodeCurrent) {
+            if (!NodeCurrent) return;
+            deleteNode(NodeCurrent->NodeChildLeft);
+            deleteNode(NodeCurrent->NodeChildRight);
+            NodeAllocator.releaseObject(NodeCurrent);
+        }
+
+        template<typename F>
+        static void doOrderCore(AVLNode *NodeCurrent, F Operation) {
+            if (!NodeCurrent) return;
+            Operation(NodeCurrent->NodeKey, NodeCurrent->NodeValue);
+            doOrderCore(NodeCurrent->NodeChildLeft, Operation);
+            doOrderCore(NodeCurrent->NodeChildRight, Operation);
+        }
+    public:
+        doEnableCopyAssignConstruct(AVLTree)
+
+        doEnableMoveAssignConstruct(AVLTree)
+
+        constexpr AVLTree() noexcept = default;
+
+        ~AVLTree() {
+            doClear();
+        }
+
+        void doAssign(const AVLTree &TreeSource) {
+            if (Objects::getAddress(TreeSource) == this) return;
+            doClear();
+            TreeSource.doOrderCore(TreeSource.NodeRoot, [&](const K &NodeKeySource, const V &NodeValueSource) {
+                doInsert(NodeKeySource, NodeValueSource);
+            });
+        }
+
+        void doAssign(AVLTree &&TreeSource) {
+            if (Objects::getAddress(TreeSource) == this) return;
+            doClear();
+            NodeRoot = TreeSource.NodeRoot;
+            TreeSource.NodeRoot = nullptr;
+        }
+
+        void doClear() {
+            deleteNode(NodeRoot);
+            NodeRoot = nullptr;
+        }
+
+        void doInsert(const K &NodeKey, const V &NodeValue) noexcept {
+            auto *NodeTarget = NodeAllocator.acquireObject(NodeKey, NodeValue);
+            if (!NodeRoot) {
+                NodeRoot = NodeTarget;
+                return;
+            }
+            auto *NodeParent = NodeRoot;
+            while (NodeParent) {
+                auto NodeRelation = Objects::doCompare(NodeTarget->NodeKey, NodeParent->NodeKey);
+                if (NodeRelation == 0) {
+                    NodeParent->NodeValue = NodeTarget->NodeValue;
+                    return;
+                } else if (NodeRelation > 0) {
+                    if (!NodeParent->NodeChildRight) {
+                        NodeParent->NodeChildRight = NodeTarget;
+                        NodeTarget->NodeParent = NodeParent;
+                        break;
+                    }
+                    NodeParent = NodeParent->NodeChildRight;
+                } else {
+                    if (!NodeParent->NodeChildLeft) {
+                        NodeParent->NodeChildLeft = NodeTarget;
+                        NodeTarget->NodeParent = NodeParent;
+                        break;
+                    }
+                    NodeParent = NodeParent->NodeChildLeft;
+                }
+            }
+        }
+
+        template<typename F>
+        void doOrder(F Operation) const {
+            doOrderCore(NodeRoot, Operation);
         }
     };
 
@@ -1333,13 +1434,13 @@ namespace eLibrary::Core {
 
         Tr doCall(Ts ...FunctionParameter) {
             if (!DescriptorHandle) [[unlikely]]
-                throw Exception(u"Function<Tr(Ts...)>::doCall(Ts...) DescriptorHandle"_S);
+                doThrowChecked(Exception(u"Function<Tr(Ts...)>::doCall(Ts...) DescriptorHandle"_S));
             return DescriptorHandle->doCall(Objects::doForward<Ts>(FunctionParameter)...);
         }
 
         Tr operator()(Ts &&...FunctionParameter) {
             if (!DescriptorHandle) [[unlikely]]
-                throw Exception(u"Function<Tr(Ts...)>::operator()(Ts...) DescriptorHandle"_S);
+                doThrowChecked(Exception(u"Function<Tr(Ts...)>::operator()(Ts...) DescriptorHandle"_S));
             return DescriptorHandle->doCall(Objects::doForward<Ts>(FunctionParameter)...);
         }
     };
@@ -1467,11 +1568,6 @@ namespace eLibrary::Core {
 
         constexpr Optional() noexcept = default;
 
-        template<typename ...Ts>
-        Optional(::std::in_place_t, Ts &&...ParameterList) {
-            doAssign(T(Objects::doForward<Ts>(ParameterList)...));
-        }
-
         ~Optional() {
             doReset();
         }
@@ -1509,12 +1605,21 @@ namespace eLibrary::Core {
 
         T getValue() const {
             if (!hasValue()) [[unlikely]]
-                throw Exception(u"Optional<T>::getValue() hasValue"_S);
+                doThrowChecked(Exception(u"Optional<T>::getValue() hasValue"_S));
             return *((T *) OptionalData);
         }
 
         bool hasValue() const noexcept {
             return OptionalValue;
+        }
+
+        static Optional valueOf(T &&OptionalSource) {
+            return {Objects::doForward<T>(OptionalSource)};
+        }
+
+        template<typename ...Ts>
+        static Optional valueOf(Ts&& ...OptionalSource) {
+            return {T(Objects::doForward<Ts>(OptionalSource)...)};
         }
     };
 
@@ -1594,7 +1699,7 @@ namespace eLibrary::Core {
 
         T &operator*() const {
             if (!hasValue()) [[unlikely]]
-                throw Exception(u"PointerShared::operator*() hasValue"_S);
+                doThrowChecked(Exception(u"PointerShared::operator*() hasValue"_S));
             return *PointerObject;
         }
 
@@ -1678,7 +1783,7 @@ namespace eLibrary::Core {
 
         T &operator*() const {
             if (!hasValue()) [[unlikely]]
-                throw Exception(u"PointerWeak::operator*() hasValue"_S);
+                doThrowChecked(Exception(u"PointerWeak::operator*() hasValue"_S));
             return *PointerObject;
         }
 
@@ -1736,7 +1841,7 @@ namespace eLibrary::Core {
 
         T &operator*() const {
             if (!hasValue()) [[unlikely]]
-                throw Exception(u"PointerUnique::operator*() hasValue"_S);
+                doThrowChecked(Exception(u"PointerUnique::operator*() hasValue"_S));
             return *PointerObject;
         }
 
@@ -1820,9 +1925,8 @@ namespace eLibrary::Core {
         static RedBlackNode *doSearchCore(RedBlackNode *NodeCurrent, const K &NodeKey) noexcept {
             if (!NodeCurrent) return nullptr;
             auto NodeRelation = Objects::doCompare(NodeCurrent->NodeKey, NodeKey);
-            if (NodeRelation == 0) return NodeCurrent;
-            else if (NodeRelation < 0) return doSearchCore(NodeCurrent->NodeChildRight, NodeKey);
-            else return doSearchCore(NodeCurrent->NodeChildLeft, NodeKey);
+            if (NodeRelation) return doSearchCore(NodeRelation < 0 ? NodeCurrent->NodeChildRight : NodeCurrent->NodeChildLeft, NodeKey);
+            else return NodeCurrent;
         }
 
         static uintmax_t getHeightCore(RedBlackNode *NodeCurrent) noexcept {
@@ -1849,18 +1953,27 @@ namespace eLibrary::Core {
     public:
         doEnableCopyAssignConstruct(RedBlackTree)
 
+        doEnableMoveAssignConstruct(RedBlackTree)
+
         constexpr RedBlackTree() noexcept = default;
 
         ~RedBlackTree() {
             doClear();
         }
 
-        void doAssign(const RedBlackTree<K, V> &TreeSource) noexcept {
+        void doAssign(const RedBlackTree &TreeSource) {
             if (Objects::getAddress(TreeSource) == this) return;
-            NodeAllocator.releaseObject(NodeRoot);
+            doClear();
             TreeSource.doOrderCore(TreeSource.NodeRoot, [&](const K &NodeKeySource, const V &NodeValueSource) {
                 doInsert(NodeKeySource, NodeValueSource);
             });
+        }
+
+        void doAssign(RedBlackTree &&TreeSource) {
+            if (Objects::getAddress(TreeSource) == this) return;
+            doClear();
+            NodeRoot = TreeSource.NodeRoot;
+            TreeSource.NodeRoot = nullptr;
         }
 
         void doClear() {
@@ -1878,8 +1991,10 @@ namespace eLibrary::Core {
             auto *NodeParent = NodeRoot;
             while (NodeParent) {
                 auto NodeRelation = Objects::doCompare(NodeTarget->NodeKey, NodeParent->NodeKey);
-                if (NodeRelation == 0) return;
-                else if (NodeRelation > 0) {
+                if (NodeRelation == 0) {
+                    NodeParent->NodeValue = NodeTarget->NodeValue;
+                    return;
+                } else if (NodeRelation > 0) {
                     if (!NodeParent->NodeChildRight) {
                         NodeParent->NodeChildRight = NodeTarget;
                         NodeTarget->NodeParent = NodeParent;
@@ -1933,7 +2048,7 @@ namespace eLibrary::Core {
         }
 
         template<typename F>
-        void doOrder(F Operation) {
+        void doOrder(F Operation) const {
             doOrderCore(NodeRoot, Operation);
         }
 
@@ -2346,7 +2461,7 @@ namespace eLibrary::Core {
         const V &getElement(const K &MapKey) const {
             auto *MapNode = this->doSearchCore(this->NodeRoot, MapKey);
             if (!MapNode) [[unlikely]]
-                throw IndexException(u"TreeMap<K, V>::getElement(const K&) doSearchCore"_S);
+                doThrowChecked(IndexException(u"TreeMap<K, V>::getElement(const K&) doSearchCore"_S));
             return MapNode->NodeValue;
         }
 
@@ -2372,7 +2487,7 @@ namespace eLibrary::Core {
 
         void removeMapping(const K &MapKey) {
             if (!this->doSearchCore(this->NodeRoot, MapKey)) [[unlikely]]
-                throw IndexException(u"TreeMap<K(Comparable),V>::removeMapping(const K&) MapKey"_S);
+                doThrowChecked(IndexException(u"TreeMap<K(Comparable),V>::removeMapping(const K&) MapKey"_S));
             this->doRemove(MapKey);
         }
 
@@ -2445,7 +2560,7 @@ namespace eLibrary::Core {
 
         void removeElement(const E &ElementSource) {
             if (!isContains(ElementSource)) [[unlikely]]
-                throw IndexException(u"TreeObject::removeElement(const E&) isContains"_S);
+                doThrowChecked(IndexException(u"TreeObject::removeElement(const E&) isContains"_S));
             this->doRemove(ElementSource);
         }
 
@@ -2521,7 +2636,6 @@ namespace eLibrary::Core {
     private:
         alignas(getMaximumInteger<alignof(Ts)...>) uint8_t VariantData[getMaximumInteger<sizeof(Ts)...>]{};
         const ::std::type_info *VariantType = nullptr;
-        bool VariantValue = false;
     public:
         doEnableCopyAssignConstruct(Variant)
 
@@ -2532,14 +2646,14 @@ namespace eLibrary::Core {
         template<typename T>
         requires ContainsType<T, Ts...>
         Variant(const T &VariantSource) {
-            new(VariantData) T(VariantSource);
+            MemoryAllocator<T>::doConstruct(VariantData, VariantSource);
             VariantType = &typeid(T);
         }
 
         template<typename T>
         requires ContainsType<T, Ts...>
         Variant(T &&VariantSource) {
-            new(VariantData) T(Objects::doMove(VariantSource));
+            MemoryAllocator<T>::doConstruct(VariantData, Objects::doMove(VariantSource));
             VariantType = &typeid(T);
         }
 
@@ -2565,8 +2679,18 @@ namespace eLibrary::Core {
         template<typename T>
         auto getValue() {
             if (&typeid(T) != VariantType) [[unlikely]]
-                throw TypeException(u"Variant::getValue<T>() T"_S);
+                doThrowChecked(TypeException(u"Variant::getValue<T>() T"_S));
             return *((T *) VariantData);
+        }
+
+        template<typename T> requires ContainsType<T, Ts...>
+        static Variant valueOf(T &&VariantSource) {
+            return {Objects::doForward<T>(VariantSource)};
+        }
+
+        template<typename T, typename ...Tp> requires ContainsType<T, Ts...>
+        static Variant valueOf(Tp&& ...VariantSource) {
+            return {T(Objects::doForward<Tp>(VariantSource)...)};
         }
     };
 

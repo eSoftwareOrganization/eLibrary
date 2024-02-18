@@ -28,9 +28,14 @@ namespace eLibrary::Core {
         }
     };
 
-    class ArithmeticException final : public Exception {
+    class RuntimeException : public Exception {
     public:
         using Exception::Exception;
+    };
+
+    class ArithmeticException final : public RuntimeException {
+    public:
+        using RuntimeException::RuntimeException;
     };
 
     class ConcurrentException : public Exception {
@@ -52,6 +57,9 @@ namespace eLibrary::Core {
     public:
         using Exception::Exception;
     };
+
+#define doThrowChecked(...) throw __VA_ARGS__
+#define doThrowUnchecked(...) throw __VA_ARGS__
 }
 
 #endif

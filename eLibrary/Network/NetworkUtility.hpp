@@ -114,7 +114,7 @@ namespace eLibrary::Network {
                 AddressResult.s_addr = htonl((AddressFieldList.getElement(0) << 24) | (AddressFieldList.getElement(1) << 16) | (AddressFieldList.getElement(2) << 8) | AddressFieldList.getElement(3));
                 return AddressResult;
             }
-            throw NetworkException(u"NetworkAddress::toAddressIn4() AddressProtocol"_S);
+            doThrowChecked(NetworkException(u"NetworkAddress::toAddressIn4() AddressProtocol"_S));
         }
 
         auto toAddressIn6() const {
@@ -123,7 +123,7 @@ namespace eLibrary::Network {
                 Collections::doCopy(AddressFieldList.begin(), 16, AddressResult.s6_addr);
                 return AddressResult;
             }
-            throw NetworkException(u"NetworkAddress::toAddressIn6() AddressProtocol"_S);
+            doThrowChecked(NetworkException(u"NetworkAddress::toAddressIn6() AddressProtocol"_S));
         }
 
         String toString() const noexcept override {
@@ -166,7 +166,7 @@ namespace eLibrary::Network {
         }
 
         void doClose() override {
-            if (!isAvailable()) throw NetworkException(u"NetworkSocketDescriptor::doClose() isAvailable"_S);
+            if (!isAvailable()) doThrowChecked(NetworkException(u"NetworkSocketDescriptor::doClose() isAvailable"_S));
 #if eLibrarySystem(Windows)
             closesocket(DescriptorHandle);
 #else

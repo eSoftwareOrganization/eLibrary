@@ -24,34 +24,34 @@ namespace eLibrary::IO {
 
         void doRemove() const {
             if (::remove(FilePath.toU8String().c_str()))
-                throw IOException(u"File::doRemove() remove"_S);
+                doThrowChecked(IOException(u"File::doRemove() remove"_S));
         }
 
         auto getAccessTime() const {
             struct stat FileStatistic{};
             if (::stat(FilePath.toU8String().c_str(), &FileStatistic))
-                throw IOException(u"File::getAccessTime() stat"_S);
+                doThrowChecked(IOException(u"File::getAccessTime() stat"_S));
             return FileStatistic.st_atime;
         }
 
         auto getFileSize() const {
             struct stat FileStatistic{};
             if (::stat(FilePath.toU8String().c_str(), &FileStatistic))
-                throw IOException(u"File::getFileSize() stat"_S);
+                doThrowChecked(IOException(u"File::getFileSize() stat"_S));
             return FileStatistic.st_size;
         }
 
         auto getModificationTime() const {
             struct stat FileStatistic{};
             if (::stat(FilePath.toU8String().c_str(), &FileStatistic))
-                throw IOException(u"File::getModificationTime() stat"_S);
+                doThrowChecked(IOException(u"File::getModificationTime() stat"_S));
             return FileStatistic.st_mtime;
         }
 
         bool isDirectory() const {
             struct stat FileStatistic{};
             if (::stat(FilePath.toU8String().c_str(), &FileStatistic))
-                throw IOException(u"File::isDirectory() stat"_S);
+                doThrowChecked(IOException(u"File::isDirectory() stat"_S));
             return FileStatistic.st_mode & S_IFDIR;
         }
 
@@ -62,7 +62,7 @@ namespace eLibrary::IO {
         bool isFile() const {
             struct stat FileStatistic{};
             if (::stat(FilePath.toU8String().c_str(), &FileStatistic))
-                throw IOException(u"File::isFile() stat"_S);
+                doThrowChecked(IOException(u"File::isFile() stat"_S));
             return FileStatistic.st_mode & S_IFREG;
         }
 
@@ -92,7 +92,7 @@ namespace eLibrary::IO {
         }
 
         virtual void doClose() {
-            if (!isAvailable()) throw IOException(u"FileDescriptor::doClose() isAvailable"_S);
+            if (!isAvailable()) doThrowChecked(IOException(u"FileDescriptor::doClose() isAvailable"_S));
             ::close(DescriptorHandle);
             DescriptorHandle = -1;
         }

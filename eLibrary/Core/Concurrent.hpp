@@ -854,18 +854,18 @@ namespace eLibrary::Core {
         }
 
         void doLock() {
-            if (!LockerMutex || LockerOwnership) throw Exception(u"MutexLockerUnique::doLock() LockerMutex || LockerOwnership"_S);
+            if (!LockerMutex || LockerOwnership) doThrowChecked(Exception(u"MutexLockerUnique::doLock() LockerMutex || LockerOwnership"_S));
             LockerMutex->doLock();
             LockerOwnership = true;
         }
 
         void doUnlock() {
-            if (!LockerOwnership) throw Exception(u"MutexLockerUnique::doUnlock() LockerOwnership"_S);
+            if (!LockerOwnership) doThrowChecked(Exception(u"MutexLockerUnique::doUnlock() LockerOwnership"_S));
             if (LockerMutex) LockerMutex->doUnlock();
         }
 
         bool tryLock() {
-            if (!LockerMutex || LockerOwnership) throw Exception(u"MutexLockerUnique::tryLock() LockerMutex || LockerOwnership"_S);
+            if (!LockerMutex || LockerOwnership) doThrowChecked(Exception(u"MutexLockerUnique::tryLock() LockerMutex || LockerOwnership"_S));
             return LockerOwnership = LockerMutex->tryLock();
         }
     };
@@ -955,20 +955,20 @@ namespace eLibrary::Core {
         virtual void doExecute() noexcept {}
 
         void doInterrupt() {
-            if (isInterrupted()) throw InterruptedException(u"Thread::doInterrupt() isInterrupted"_S);
+            if (isInterrupted()) doThrowChecked(InterruptedException(u"Thread::doInterrupt() isInterrupted"_S));
             ThreadState.setInterrupted(true);
         }
 
         void doJoin() const {
 #if eLibrarySystem(Windows)
             while (!isFinished()) {
-                if (isInterrupted()) throw InterruptedException(u"Thread::doJoin() isInterrupted"_S);
+                if (isInterrupted()) doThrowChecked(InterruptedException(u"Thread::doJoin() isInterrupted"_S));
                 doYieldCpu();
             }
             WaitForSingleObject((HANDLE) ThreadHandle, INFINITE);
 #else
             while (!isFinished()) {
-                if (isInterrupted()) throw InterruptedException(String(u"Thread::doJoin() isInterrupted"));
+                if (isInterrupted()) doThrowChecked(InterruptedException(String(u"Thread::doJoin() isInterrupted")));
                 doYieldCpu();
             }
             pthread_join(ThreadHandle, nullptr);
@@ -976,7 +976,7 @@ namespace eLibrary::Core {
         }
 
         void doStart() {
-            if (ThreadHandle) throw Exception(u"Thread::doStart() ThreadHandle"_S);
+            if (ThreadHandle) doThrowChecked(Exception(u"Thread::doStart() ThreadHandle"_S));
             doStartCore();
         }
 
@@ -1093,7 +1093,7 @@ namespace eLibrary::Core {
 
         template<typename F, typename ...Ps>
         auto doSubmit(F &&ExecutorFunction, Ps &&...ExecutorFunctionParameter) -> ::std::future<decltype(ExecutorFunction(ExecutorFunctionParameter...))> {
-            if (ExecutorShutdown) throw Exception(u"ThreadExecutor::doSubmit<F, Ps...>(F&&, Ps&&...) ExecutorShutdown"_S);
+            if (ExecutorShutdown) doThrowChecked(Exception(u"ThreadExecutor::doSubmit<F, Ps...>(F&&, Ps&&...) ExecutorShutdown"_S));
             auto ExecutorTarget(::std::bind(Objects::doForward<F>(ExecutorFunction), Objects::doForward<Ps>(ExecutorFunctionParameter)...));
             auto ExecutorTask(::std::make_shared<::std::packaged_task<decltype(ExecutorTarget(ExecutorFunctionParameter...))()>>(ExecutorTarget));
             ::std::function<void()> ExecutorWrapper = [ExecutorTask] {

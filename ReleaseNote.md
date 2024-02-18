@@ -2,6 +2,19 @@
 
 This document describes the changes to eLibrary present in each release.
 
+> eLibrary V0.20.4
+- Core::Any Constructor<T, Ts...>(::std::in_place_t, Ts&&...)(Remove) valueOf(New)
+- Core::AVLTree / doAssign / doClear / doOrder(New)
+- Core::Character(Unicode Support)
+- Core::CharacterLatin1 / doCompare / toCharacter(New)
+- Core::MemoryAllocator deleteObject / newObject(Remove)
+- Core::Optional Constructor<T, Ts...>(::std::in_place_t, Ts&&...)(Remove) valueOf(New)
+- Core::RedBlackTree doAssign(RedBlackTree&&)(New) doInsert(...) doOrder(const)
+- Core::String(Unicode Support)
+- Core::Variant valueOf(New)
+- operator""_C(New)
+- operator""_CL1(New)
+- operator""_S(const char*, size_t) / operator""_S(const char32_t*, size_t) / operator""_S(const wchar_t*, size_t)(Remove)
 > eLibrary V0.20.3
 - Core::Function(Memory Allocation)
 - Core::Functions::doInvoke(...)
