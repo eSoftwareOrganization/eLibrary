@@ -8,7 +8,7 @@
 #include <vector>
 
 namespace eLibrary::Core {
-    class Numbers final : public Object, public NonConstructable {
+    class Numbers final : public NonConstructable {
     public:
         template<std::floating_point T>
         static intmax_t doCompare(T Number1, T Number2) noexcept {
@@ -163,9 +163,9 @@ namespace eLibrary::Core {
 
         Integer(const String &NumberValue, uint8_t NumberRadix) : NumberSignature(true) {
             if (NumberRadix < 2 || NumberRadix > 36) [[unlikely]]
-                doThrowChecked(ArithmeticException(u"Integer::Integer(const String&, uint8_t) NumberRadix"_S));
+                doThrowChecked(ArithmeticException, u"Integer::Integer(const String&, uint8_t) NumberRadix"_S);
             if (NumberValue.isEmpty()) [[unlikely]]
-                doThrowChecked(Exception(u"Integer::Integer(const String&, uint8_t) NumberValue"_S));
+                doThrowChecked(Exception, u"Integer::Integer(const String&, uint8_t) NumberValue"_S);
             Integer IntegerRadix(NumberRadix);
             intmax_t NumberDigit(0);
             if ((char16_t) NumberValue.getCharacter(0) == u'-') NumberSignature = false, NumberDigit = 1;
@@ -229,9 +229,9 @@ namespace eLibrary::Core {
 
         Integer doFactorial(const Integer &NumberStep = {1}) const {
             if (!NumberStep.isPositive()) [[unlikely]]
-                doThrowChecked(ArithmeticException(u"Integer::doFactorial(const Integer&={1}) NumberStep"_S));
+                doThrowChecked(ArithmeticException, u"Integer::doFactorial(const Integer&={1}) NumberStep"_S);
             if (isNegative()) [[unlikely]]
-                doThrowChecked(ArithmeticException(u"Integer::doFactorial(const Integer&={1}) isNegative"_S));
+                doThrowChecked(ArithmeticException, u"Integer::doFactorial(const Integer&={1}) isNegative"_S);
             if (!NumberStep.doCompare(1)) [[likely]]
                 return doFactorialCore(1, *this);
             Integer NumberCurrent(NumberList, true);
@@ -335,10 +335,10 @@ namespace eLibrary::Core {
             return {NumberList, !NumberSignature};
         }
 
-        template<Arithmetic T>
+        template<Type::Arithmetic T>
         T getValue() const {
             if ((isPositive() && doCompare(::std::numeric_limits<T>::max()) > 0) || (isNegative() && doCompare(::std::numeric_limits<T>::min()) < 0)) [[unlikely]]
-                doThrowChecked(ArithmeticException(u"Integer::getValue<T>() (isPositive() && doCompare(std::numeric_limits<T>::max()) > 0) || (isNegative() && doCompare(std::numeric_limits<T>::min()) < 0)"_S));
+                doThrowChecked(ArithmeticException, u"Integer::getValue<T>() (isPositive() && doCompare(std::numeric_limits<T>::max()) > 0) || (isNegative() && doCompare(std::numeric_limits<T>::min()) < 0)"_S);
             T NumberValue(0);
             for (auto NumberPart = NumberList.getElementSize() - 1; NumberPart >= 0; --NumberPart)
                 NumberValue = NumberValue * 10000000 + NumberList[NumberPart];
@@ -371,8 +371,8 @@ namespace eLibrary::Core {
 
         String toString(uint8_t NumberRadix) const {
             if (NumberRadix < 2 || NumberRadix > 36) [[unlikely]]
-                doThrowChecked(Exception(u"Integer::toString(uint8_t) NumberRadix"_S));
-            StringStream CharacterStream;
+                doThrowChecked(Exception, u"Integer::toString(uint8_t) NumberRadix"_S);
+            StringBuilder CharacterStream;
             Integer NumberCurrent(getAbsolute()), NumberRadixInteger(NumberRadix);
             if (isZero()) return u"0"_S;
             while (NumberCurrent.NumberList[0]) {
@@ -384,7 +384,7 @@ namespace eLibrary::Core {
         }
     };
 
-    template<Arithmetic T>
+    template<Type::Arithmetic T>
     class NumberBuiltin final : public Object {
     private:
         T NumberValue;
@@ -417,9 +417,9 @@ namespace eLibrary::Core {
 
         constexpr NumberBuiltin(T NumberSource) noexcept : NumberValue(NumberSource) {}
 
-        template<Arithmetic O>
+        template<Type::Arithmetic O>
         O doCast() const {
-            if (Numbers::doCompare(NumberValue, ::std::numeric_limits<O>::max()) > 0 || Numbers::doCompare(NumberValue, ::std::numeric_limits<O>::min()) < 0) doThrowChecked(ArithmeticException(u"IntegerBuiltin::doCast<O(Arithmetic)>() NumberValue"_S));
+            if (Numbers::doCompare(NumberValue, ::std::numeric_limits<O>::max()) > 0 || Numbers::doCompare(NumberValue, ::std::numeric_limits<O>::min()) < 0) doThrowChecked(ArithmeticException, u"IntegerBuiltin::doCast<O(Arithmetic)>() NumberValue"_S);
             return (O) NumberValue;
         }
 
@@ -557,7 +557,7 @@ namespace eLibrary::Core {
         }
 
         String toString() const noexcept override {
-            StringStream CharacterStream;
+            StringBuilder CharacterStream;
             if (NumberNumerator.isZero()) return u"0"_S;
             if (!NumberSignature) CharacterStream.addCharacter(u'-');
             CharacterStream.addString(NumberNumerator.toString());
@@ -568,11 +568,11 @@ namespace eLibrary::Core {
     };
 
     inline namespace Literal {
-        Integer operator"" _I(const char16_t *StringSource, size_t StringSize) {
+        static Integer operator"" _I(const char16_t *StringSource, size_t StringSize) {
             return {{::std::u16string{StringSource, StringSize}}, 10};
         }
 
-        Integer operator""_I(unsigned long long int NumberValue) noexcept {
+        static Integer operator""_I(unsigned long long int NumberValue) noexcept {
             return {NumberValue};
         }
     }

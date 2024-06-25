@@ -730,7 +730,7 @@ namespace eLibrary::Core {
     };
 #endif
 
-    template<typename T, size_t=sizeof(::std::remove_reference_t<T>)>
+    template<typename T, size_t=sizeof(Type::noReference<T>)>
     class AtomicStorage;
 
     template<typename T, size_t S>
@@ -853,19 +853,28 @@ namespace eLibrary::Core {
             LockerSource.LockerOwnership = false;
         }
 
+        /**
+         * @throws ConcurrentException
+         */
         void doLock() {
-            if (!LockerMutex || LockerOwnership) doThrowChecked(Exception(u"MutexLockerUnique::doLock() LockerMutex || LockerOwnership"_S));
+            if (!LockerMutex || LockerOwnership) doThrowChecked(ConcurrentException, u"MutexLockerUnique::doLock() LockerMutex || LockerOwnership"_S);
             LockerMutex->doLock();
             LockerOwnership = true;
         }
 
+        /**
+         * @throws ConcurrentException
+         */
         void doUnlock() {
-            if (!LockerOwnership) doThrowChecked(Exception(u"MutexLockerUnique::doUnlock() LockerOwnership"_S));
+            if (!LockerOwnership) doThrowChecked(ConcurrentException, u"MutexLockerUnique::doUnlock() LockerOwnership"_S);
             if (LockerMutex) LockerMutex->doUnlock();
         }
 
+        /**
+         * @throws ConcurrentException
+         */
         bool tryLock() {
-            if (!LockerMutex || LockerOwnership) doThrowChecked(Exception(u"MutexLockerUnique::tryLock() LockerMutex || LockerOwnership"_S));
+            if (!LockerMutex || LockerOwnership) doThrowChecked(ConcurrentException, u"MutexLockerUnique::tryLock() LockerMutex || LockerOwnership"_S);
             return LockerOwnership = LockerMutex->tryLock();
         }
     };
@@ -954,29 +963,38 @@ namespace eLibrary::Core {
 
         virtual void doExecute() noexcept {}
 
+        /**
+         * @throws InterruptedException
+         */
         void doInterrupt() {
-            if (isInterrupted()) doThrowChecked(InterruptedException(u"Thread::doInterrupt() isInterrupted"_S));
+            if (isInterrupted()) doThrowChecked(InterruptedException, u"Thread::doInterrupt() isInterrupted"_S);
             ThreadState.setInterrupted(true);
         }
 
+        /**
+         * @throws InterruptedException
+         */
         void doJoin() const {
 #if eLibrarySystem(Windows)
             while (!isFinished()) {
-                if (isInterrupted()) doThrowChecked(InterruptedException(u"Thread::doJoin() isInterrupted"_S));
+                if (isInterrupted()) doThrowChecked(InterruptedException, u"Thread::doJoin() isInterrupted"_S);
                 doYieldCpu();
             }
             WaitForSingleObject((HANDLE) ThreadHandle, INFINITE);
 #else
             while (!isFinished()) {
-                if (isInterrupted()) doThrowChecked(InterruptedException(String(u"Thread::doJoin() isInterrupted")));
+                if (isInterrupted()) doThrowChecked(InterruptedException, u"Thread::doJoin() isInterrupted"_S);
                 doYieldCpu();
             }
             pthread_join(ThreadHandle, nullptr);
 #endif
         }
 
+        /**
+         * @throws ConcurrentException
+         */
         void doStart() {
-            if (ThreadHandle) doThrowChecked(Exception(u"Thread::doStart() ThreadHandle"_S));
+            if (ThreadHandle) doThrowChecked(ConcurrentException, u"Thread::doStart() ThreadHandle"_S);
             doStartCore();
         }
 
@@ -1018,28 +1036,28 @@ namespace eLibrary::Core {
         }
     };
 
-    template <typename T>
+    template<typename E, typename C>
     class ConcurrentQueue final : public Object {
     private:
-        ::std::queue<T> QueueObject;
+        ContainerQueue<E, C> QueueObject;
         Mutex QueueMutex;
     public:
-        bool isEmpty() {
+        bool isEmpty() noexcept {
             MutexLocker QueueLock(QueueMutex);
-            return QueueObject.empty();
+            return QueueObject.isEmpty();
         }
 
-        bool doDequeue(T &QueueSource) {
+        bool doDequeue(E &QueueSource) {
             MutexLocker QueueLock(QueueMutex);
-            if (QueueObject.empty()) return false;
-            QueueSource = Objects::doMove(QueueObject.front());
-            QueueObject.pop();
+            if (QueueObject.isEmpty()) return false;
+            QueueSource = Objects::doMove(QueueObject.getFront());
+            QueueObject.removeFront();
             return true;
         }
 
-        void doEnqueue(T &QueueSource) {
+        void doEnqueue(E &QueueSource) {
             MutexLocker QueueLock(QueueMutex);
-            QueueObject.push(QueueSource);
+            QueueObject.addBack(QueueSource);
         }
     };
 
@@ -1066,7 +1084,7 @@ namespace eLibrary::Core {
         };
 
         ::std::mutex ExecutorMutex;
-        ConcurrentQueue<::std::function<void()>> ExecutorQueue;
+        ConcurrentQueue<::std::function<void()>, DoubleLinkedList<::std::function<void()>>> ExecutorQueue;
         bool ExecutorShutdown = false;
         Array<ThreadExecutorCore*> ExecutorThread;
         ::std::condition_variable ExecutorVariable;
@@ -1091,9 +1109,12 @@ namespace eLibrary::Core {
             });
         }
 
+        /**
+         * @throws ConcurrentException
+         */
         template<typename F, typename ...Ps>
         auto doSubmit(F &&ExecutorFunction, Ps &&...ExecutorFunctionParameter) -> ::std::future<decltype(ExecutorFunction(ExecutorFunctionParameter...))> {
-            if (ExecutorShutdown) doThrowChecked(Exception(u"ThreadExecutor::doSubmit<F, Ps...>(F&&, Ps&&...) ExecutorShutdown"_S));
+            if (ExecutorShutdown) doThrowChecked(ConcurrentException, u"ThreadExecutor::doSubmit<F, Ps...>(F&&, Ps&&...) ExecutorShutdown"_S);
             auto ExecutorTarget(::std::bind(Objects::doForward<F>(ExecutorFunction), Objects::doForward<Ps>(ExecutorFunctionParameter)...));
             auto ExecutorTask(::std::make_shared<::std::packaged_task<decltype(ExecutorTarget(ExecutorFunctionParameter...))()>>(ExecutorTarget));
             ::std::function<void()> ExecutorWrapper = [ExecutorTask] {

@@ -3,17 +3,16 @@ cmake_minimum_required(VERSION 3.17)
 cmake_policy(SET CMP0003 NEW)
 cmake_policy(SET CMP0005 NEW)
 
-option(ELIBRARY_LINKAGE_DYNAMIC "ON for dynamical linkage, OFF for statical linkage" OFF)
-option(ELIBRARY_MODULE_EXTENSION_GEOIP "eLibrary::Extension::GeoIP" OFF)
-option(ELIBRARY_MODULE_IO "eLibrary::IO" ON)
-option(ELIBRARY_MODULE_MULTIMEDIA "eLibrary::Multimedia" OFF)
-option(ELIBRARY_MODULE_NETWORK "eLibrary::Network" ON)
+option(ELIBRARY_COMPACT_STL "Currently no effects" ON)
+option(ELIBRARY_LINKAGE_DYNAMIC "ON for dynamical linkage, OFF for statical linkage(Default OFF)" OFF)
+option(ELIBRARY_MODULE_IO "eLibrary::IO(Default ON)" ON)
+option(ELIBRARY_MODULE_MULTIMEDIA "eLibrary::Multimedia(Default OFF)" OFF)
+option(ELIBRARY_MODULE_NETWORK "eLibrary::Network(Default ON)" ON)
 option(ELIBRARY_PACKAGE OFF)
 option(ELIBRARY_UNIT_TEST OFF)
 
-if(ELIBRARY_MODULE_EXTENSION_GEOIP)
-    list(APPEND VCPKG_MANIFEST_FEATURES "module-extension-geoip")
-    add_compile_definitions(eLibraryFeature_ExtensionGeoIP=1)
+if(ELIBRARY_COMPACT_STL)
+    add_compile_definitions(eLibraryCompact_STL=1)
 endif()
 
 if(ELIBRARY_MODULE_IO)
@@ -29,7 +28,7 @@ if(ELIBRARY_MODULE_NETWORK)
     add_compile_definitions(eLibraryFeature_Network=1)
 endif()
 
-project(eLibrary DESCRIPTION "An all-in-one cpp library" VERSION 0.20.4 LANGUAGES CXX)
+project(eLibrary DESCRIPTION "An all-in-one cpp library" VERSION 0.21.0 LANGUAGES CXX)
 
 set(CMAKE_CXX_STANDARD 23)
 set(CMAKE_CXX_STANDARD_REQUIRED TRUE)
@@ -47,20 +46,45 @@ if(${CMAKE_CXX_COMPILER_ID} STREQUAL MSVC)
     set(CMAKE_WINDOWS_EXPORT_ALL_SYMBOLS ON)
 endif()
 
-file(GLOB_RECURSE FileHeader "eLibrary/*.hpp")
-file(GLOB_RECURSE FileSource "eLibrary/*.cpp")
+file(GLOB_RECURSE FileList "eLibrary/*")
 if(ELIBRARY_LINKAGE_DYNAMIC)
     add_compile_definitions(eLibraryLinkage_Dynamic=1)
-    add_library(eLibrary SHARED ${FileSource})
+    add_library(eLibrary SHARED ${FileList})
 else()
     add_compile_definitions(eLibraryLinkage_Static=1)
-    add_library(eLibrary STATIC ${FileSource})
+    add_library(eLibrary STATIC ${FileList})
 endif()
+
+set_target_properties(eLibrary PROPERTIES PUBLIC_HEADER ${CMAKE_HOME_DIRECTORY}/eLibrary/eLibrary.hpp)
+
+include(CMakePackageConfigHelpers)
+configure_package_config_file(
+        eLibraryConfig.cmake.in
+        "${CMAKE_CURRENT_BINARY_DIR}/eLibraryConfig.cmake"
+        INSTALL_DESTINATION lib/cmake/eLibrary
+)
+write_basic_package_version_file(
+        "${CMAKE_CURRENT_BINARY_DIR}/eLibraryConfigVersion.cmake"
+        VERSION ${PROJECT_VERSION}
+        COMPATIBILITY AnyNewerVersion
+)
+install(DIRECTORY eLibrary DESTINATION eLibrary)
+install(
+        TARGETS eLibrary
+        EXPORT eLibraryTargets
+        RUNTIME DESTINATION bin
+        ARCHIVE DESTINATION lib
+        LIBRARY DESTINATION lib
+        PUBLIC_HEADER DESTINATION eLibrary
+)
+install(EXPORT eLibraryTargets DESTINATION lib/cmake/eLibrary NAMESPACE eLibrary::)
+install(
+        FILES ${CMAKE_CURRENT_BINARY_DIR}/eLibraryConfig.cmake ${CMAKE_CURRENT_BINARY_DIR}/eLibraryConfigVersion.cmake
+        DESTINATION lib/cmake/eLibrary
+)
 
 if(ELIBRARY_PACKAGE)
     include(InstallRequiredSystemLibraries)
-    install(DIRECTORY eLibrary eLibraryTest DESTINATION .)
-    install(FILES CMakeLists.txt LICENSE ReadMe.md ReleaseNote.md vcpkg.json DESTINATION .)
     set(CPACK_GENERATOR "ZIP")
     set(CPACK_PACKAGE_VENDOR "eSoftware")
     set(CPACK_PROJECT_NAME ${PROJECT_NAME})

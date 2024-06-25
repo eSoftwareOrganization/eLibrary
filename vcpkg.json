@@ -1,7 +1,7 @@
 {
   "name": "elibrary",
   "description": "An all-in-one cpp library",
-  "version": "0.20.4",
+  "version": "0.21.0",
   "license": "Apache-2.0",
   "dependencies": [
     {
@@ -15,10 +15,6 @@
   ],
   "default-features": ["module-multimedia"],
   "features": {
-    "module-extension-geoip": {
-      "description": "eLibrary::Extension::GeoIP",
-      "dependencies": ["libmaxminddb"]
-    },
     "module-multimedia": {
       "description": "eLibrary::Multimedia",
       "dependencies": ["ffmpeg", "openal-soft"]

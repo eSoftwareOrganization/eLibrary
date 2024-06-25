@@ -5,10 +5,93 @@
 
 #include <Core/Memory.hpp>
 #include <Core/StringUnicode.hpp>
-#include <cwctype>
 #include <string>
 
 namespace eLibrary::Core {
+    class CharacterLatin1;
+    class CharacterUcs4;
+    template<typename>
+    class Reference;
+    class StringBuilder;
+
+    class CharacterUtility final : public NonConstructable {
+    public:
+        static bool isAlpha(char32_t CharacterValue) noexcept {
+            return CharacterDerivedCore::doQuery(CharacterValue) & CharacterDerivedCore::DerivedProperty_Alphabetic;
+        }
+
+        static bool isDigit(char32_t CharacterValue) noexcept {
+            switch (CharacterGeneralCategory::doQuery(CharacterValue)) {
+                case CharacterGeneralCategory::Nd:
+                case CharacterGeneralCategory::Nl:
+                case CharacterGeneralCategory::No:
+                    return true;
+                default:
+                    return false;
+            }
+        }
+
+        static bool isHighSurrogate(char32_t CharacterValue) noexcept {
+            return (CharacterValue & 0xFFFFFC00) == 0xD800;
+        }
+
+        static bool isLetter(char32_t CharacterValue) noexcept {
+            switch (CharacterGeneralCategory::doQuery(CharacterValue)) {
+                case CharacterGeneralCategory::Ll:
+                case CharacterGeneralCategory::Lm:
+                case CharacterGeneralCategory::Lo:
+                case CharacterGeneralCategory::Lu:
+                case CharacterGeneralCategory::Lt:
+                    return true;
+                default:
+                    return false;
+            }
+        }
+
+        static bool isLowerCase(char32_t CharacterValue) noexcept {
+            return CharacterDerivedCore::doQuery(CharacterValue) & CharacterDerivedCore::DerivedProperty_Lowercase;
+        }
+
+        static bool isLowSurrogate(char32_t CharacterValue) noexcept {
+            return (CharacterValue & 0xFFFFFC00) == 0xDC00;
+        }
+
+        static bool isNonCharacter(char32_t CharacterValue) noexcept {
+            return CharacterValue >= 0xFDD0 && CharacterValue <= 0xFDEF;
+        }
+
+        static bool isNull(char32_t CharacterValue) noexcept {
+            return CharacterValue == char32_t();
+        }
+
+        static bool isSpace(char32_t CharacterValue) noexcept {
+            switch (CharacterGeneralCategory::doQuery(CharacterValue)) {
+                case CharacterGeneralCategory::Zl:
+                case CharacterGeneralCategory::Zp:
+                case CharacterGeneralCategory::Zs:
+                    return true;
+                default:
+                    return CharacterValue == 0x20 || (CharacterValue <= 0x0D && CharacterValue >= 0x09) || CharacterValue == 0x85 || CharacterValue == 0xA0;
+            }
+        }
+
+        static bool isSurrogate(char32_t CharacterValue) noexcept {
+            return CharacterValue >= 0xD800 && CharacterValue <= 0xDFFF;
+        }
+
+        static bool isUpperCase(char32_t CharacterValue) noexcept {
+            return CharacterDerivedCore::doQuery(CharacterValue) & CharacterDerivedCore::DerivedProperty_Uppercase;
+        }
+
+        static char32_t toLowerCase(char32_t CharacterValue) noexcept {
+            return CharacterCaseMappingSimple::isContains(CharacterValue) ? CharacterCaseMappingSimple::doQuery(CharacterValue)[1] : CharacterValue;
+        }
+
+        static char32_t toUpperCase(char32_t CharacterValue) noexcept {
+            return CharacterCaseMappingSimple::isContains(CharacterValue) ? CharacterCaseMappingSimple::doQuery(CharacterValue)[0] : CharacterValue;
+        }
+    };
+
     /**
      * Support for character storage and operation
      */
@@ -27,59 +110,67 @@ namespace eLibrary::Core {
         }
 
         bool isAlpha() const noexcept {
-            return iswalpha(CharacterValue);
+            return CharacterDerivedCore::doQuery(CharacterValue) & CharacterDerivedCore::DerivedProperty_Alphabetic;
         }
 
         bool isDigit() const noexcept {
-            return iswdigit(CharacterValue);
+            return CharacterUtility::isDigit(CharacterValue);
         }
 
         bool isHighSurrogate() const noexcept {
-            return (CharacterValue & 0xFFFFFC00) == 0xD800;
+            return CharacterUtility::isHighSurrogate(CharacterValue);
+        }
+
+        bool isLetter() const noexcept {
+            return CharacterUtility::isLetter(CharacterValue);
         }
 
         bool isLowerCase() const noexcept {
-            return iswlower(CharacterValue);
+            return CharacterUtility::isLowerCase(CharacterValue);
         }
 
         bool isLowSurrogate() const noexcept {
-            return (CharacterValue & 0xFFFFFC00) == 0xDC00;
+            return CharacterUtility::isLowSurrogate(CharacterValue);
         }
 
         bool isNonCharacter() const noexcept {
-            return CharacterValue >= 0xFDD0 && CharacterValue <= 0xFDEF;
+            return CharacterUtility::isNonCharacter(CharacterValue);
         }
 
         bool isNull() const noexcept {
-            return CharacterValue == char16_t();
+            return CharacterUtility::isNull(CharacterValue);
         }
 
         bool isSpace() const noexcept {
-            return iswspace(CharacterValue);
+            return CharacterUtility::isSpace(CharacterValue);
         }
 
         bool isSurrogate() const noexcept {
-            return CharacterValue >= 0xD800 && CharacterValue <= 0xDFFF;
+            return CharacterUtility::isSurrogate(CharacterValue);
         }
 
         bool isUpperCase() const noexcept {
-            return iswupper(CharacterValue);
+            return CharacterUtility::isUpperCase(CharacterValue);
         }
 
         explicit operator char16_t() const noexcept {
             return CharacterValue;
         }
 
+        eLibraryAPI CharacterLatin1 toLantin1() const noexcept;
+
         Character toLowerCase() const noexcept {
-            return {(char16_t) towlower(CharacterValue)};
+            return (char16_t) CharacterUtility::toLowerCase(CharacterValue);
         }
 
         eLibraryAPI uint8_t toNumber(uint8_t) const;
 
         eLibraryAPI String toString() const noexcept override;
 
+        eLibraryAPI CharacterUcs4 toUcs4() const noexcept;
+
         Character toUpperCase() const noexcept {
-            return {(char16_t) towupper(CharacterValue)};
+            return (char16_t) CharacterUtility::toUpperCase(CharacterValue);
         }
 
         eLibraryAPI static Character valueOf(uint8_t, uint8_t);
@@ -110,6 +201,27 @@ namespace eLibrary::Core {
         eLibraryAPI String toString() const noexcept override;
     };
 
+    class CharacterUcs4 final : public Object {
+    private:
+        char32_t CharacterValue;
+    public:
+        constexpr CharacterUcs4(char32_t CharacterSource = char32_t()) noexcept : CharacterValue(CharacterSource) {}
+
+        intmax_t doCompare(const CharacterUcs4 &CharacterSource) const noexcept {
+            return (intmax_t) CharacterValue - CharacterSource.CharacterValue;
+        }
+
+        uintmax_t hashCode() const noexcept override {
+            return CharacterValue;
+        }
+
+        explicit operator char32_t() const noexcept {
+            return CharacterValue;
+        }
+
+        eLibraryAPI String toString() const noexcept override;
+    };
+
     /**
      * Support for string storage and operation
      */
@@ -119,22 +231,16 @@ namespace eLibrary::Core {
         Character *CharacterContainer = nullptr;
         mutable MemoryAllocator<Character> CharacterAllocator;
 
-        friend class StringStream;
+        eLibraryAPI String(const StringBuilder&) noexcept;
+
+        friend class StringBuilder;
     public:
         doEnableCopyAssignConstruct(String)
         doEnableMoveAssignConstruct(String)
 
         constexpr String() noexcept = default;
 
-        eLibraryAPI String(const Character&) noexcept;
-
-        eLibraryAPI String(const ::std::string&) noexcept;
-
         eLibraryAPI String(const ::std::u16string&) noexcept;
-
-        eLibraryAPI String(const ::std::u32string&) noexcept;
-
-        eLibraryAPI String(const ::std::wstring&) noexcept;
 
         eLibraryAPI ~String() noexcept;
 
@@ -168,6 +274,10 @@ namespace eLibrary::Core {
             if (Character2 == StringTarget.CharacterSize) return Character1 - StringTarget.CharacterSize;
             return -1;
         }
+
+        eLibraryAPI [[deprecated("Not implemented")]] Reference<String> doIntern() const;
+
+        eLibraryAPI String doRepeat(uintmax_t StringCount) const noexcept;
 
         eLibraryAPI String doReplace(const String &StringTarget, const String &StringSource) const noexcept;
 
@@ -239,39 +349,87 @@ namespace eLibrary::Core {
 
         eLibraryAPI ::std::wstring toWString() const noexcept;
 
-        template<Arithmetic T>
-        static String valueOf(T ObjectSource) noexcept {
-            return ::std::to_string(ObjectSource);
+        static eLibraryAPI String valueOf(const Character&) noexcept;
+
+        static String valueOf(const CharacterLatin1 &ObjectSource) noexcept {
+            return ObjectSource.toString();
         }
 
-        template<StringConvertible T>
+        static String valueOf(const CharacterUcs4 &ObjectSource) noexcept {
+            return ObjectSource.toString();
+        }
+
+        static eLibraryAPI String valueOf(const ::std::string&);
+
+        static String valueOf(const ::std::u16string &StringSource) noexcept {
+            return {StringSource};
+        }
+
+        static eLibraryAPI String valueOf(const ::std::u32string&) noexcept;
+
+        static eLibraryAPI String valueOf(const ::std::wstring&) noexcept;
+
+        template<Type::Arithmetic T>
+        static String valueOf(T ObjectSource) noexcept {
+            return valueOf(::std::to_string(ObjectSource));
+        }
+
+        template<ObjectDerived T>
         static String valueOf(const T &ObjectSource) noexcept {
             return ObjectSource.toString();
         }
+
+        template<ObjectDerived T>
+        static String valueOf(const T *ObjectSource) noexcept {
+            return ObjectSource->toString();
+        }
     };
 
-    class StringStream final : public Object, public NonCopyable {
+    class StringBuilder final : public Object, public NonCopyable {
     private:
         uintmax_t CharacterCapacity = 0;
         uintmax_t CharacterSize = 0;
         Character *CharacterContainer = nullptr;
         mutable MemoryAllocator<Character> CharacterAllocator;
+
+        friend class String;
     public:
-        constexpr StringStream() noexcept = default;
+        StringBuilder() noexcept = default;
 
-        eLibraryAPI explicit StringStream(uintmax_t);
+        explicit StringBuilder(uintmax_t CharacterCapacitySource) noexcept {
+            doReserve(CharacterCapacitySource);
+        }
 
-        ~StringStream() noexcept {
+        ~StringBuilder() noexcept {
             doClear();
         }
 
         eLibraryAPI void addCharacter(const Character&) noexcept;
 
-        eLibraryAPI void addString(const String &StringSource) noexcept;
+        eLibraryAPI void addString(const String&) noexcept;
 
         eLibraryAPI void doClear() noexcept;
 
-        eLibraryAPI String toString() const noexcept override;
+        eLibraryAPI void doReserve(uintmax_t) noexcept;
+
+        eLibraryAPI String toString() const noexcept override {
+            return {*this};
+        }
+    };
+
+    class [[deprecated("Not implemented")]] StringPool final : public Object, public NonCopyable, public NonMovable {
+    private:
+        struct PoolPage {
+            uint8_t *PageData = nullptr;
+            uintmax_t PageSize = 0;
+        } *PoolPageList = nullptr;
+    public:
+        eLibraryAPI Reference<String> doIntern(const String&);
+
+        static StringPool &getInstance() noexcept {
+            static StringPool PoolInstance;
+            return PoolInstance;
+        }
     };
 
     inline namespace Literal {
@@ -284,12 +442,12 @@ namespace eLibrary::Core {
 #if __has_include(<format>) && !eLibraryCompiler(AppleClang)
 #include <format>
 
-template<eLibrary::Core::StringConvertible ObjectT, typename CharacterT>
-struct std::formatter<ObjectT, CharacterT> : public ::std::formatter<std::string, CharacterT> {
+template<eLibrary::Core::ObjectDerived To, typename Tc>
+struct std::formatter<To, Tc> : public ::std::formatter<std::string, Tc> {
 public:
     template<typename ContextT>
-    auto format(const ObjectT &ObjectSource, ContextT &ObjectContext) const noexcept {
-        return ::std::formatter<std::string, CharacterT>::format(ObjectSource.toString().toU8String(), ObjectContext);
+    auto format(const To &ObjectSource, ContextT &ObjectContext) const noexcept {
+        return ::std::formatter<::std::string, Tc>::format(ObjectSource.toString().toU8String(), ObjectContext);
     }
 };
 #endif

@@ -46,7 +46,7 @@ TEST_SUITE("Container") {
         AnyInteger = u"Any"_S;
         CHECK(AnyInteger.hasValue());
         CHECK_EQ(AnyInteger.getValueType(), &typeid(String));
-        CHECK_EQ(AnyInteger.getValue<String>().toU8String(), "Any");
+        CHECK(AnyInteger.getValue<String>().toU8String() == "Any");
         CHECK_THROWS(AnyInteger.getValue<Integer>());
     }
 
@@ -305,6 +305,32 @@ TEST_SUITE("Number") {
 
             CHECK_EQ(NumberObject1.doSubtraction(NumberObject2).doCompare(Number1 - Number2), 0);
         }
+    }
+}
+
+TEST_SUITE("CharacterString") {
+    String doGenerateString() {
+        StringBuilder CharacterStream;
+        std::uniform_int_distribution<> CharacterDistribution(0x4E00, 0x9FFF);
+        for (uintmax_t CharacterIndex = 0;CharacterIndex < 10000;++CharacterIndex)
+            CharacterStream.addCharacter(CharacterDistribution(RandomEngine64));
+        return CharacterStream.toString();
+    }
+
+    TEST_CASE("CaseConversion") {
+        String StringSource(doGenerateString());
+        CHECK_EQ(StringSource.toUpperCase().doCompare(StringSource.toUpperCase()), 0);
+        CHECK_EQ(StringSource.toLowerCase().toUpperCase().doCompare(StringSource.toUpperCase()), 0);
+        CHECK_EQ(StringSource.toLowerCase().doCompare(StringSource.toLowerCase()), 0);
+        CHECK_EQ(StringSource.toUpperCase().toLowerCase().doCompare(StringSource.toLowerCase()), 0);
+    }
+
+    TEST_CASE("UnicodeConversion") {
+        String StringSource(doGenerateString());
+        CHECK_EQ(StringSource.doCompare(String::valueOf(StringSource.toU8String())), 0);
+        CHECK_EQ(StringSource.doCompare(String::valueOf(StringSource.toU16String())), 0);
+        CHECK_EQ(StringSource.doCompare(String::valueOf(StringSource.toU32String())), 0);
+        CHECK_EQ(StringSource.doCompare(String::valueOf(StringSource.toWString())), 0);
     }
 }
 

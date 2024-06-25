@@ -16,7 +16,7 @@ namespace eLibrary::IO {
         virtual int doRead() = 0;
 
         virtual void doRead(ByteBuffer &StreamBuffer) {
-            if (!isAvailable()) doThrowChecked(IOException(u"InputStream::doRead(ByteBuffer&) isAvailable"_S));
+            if (!isAvailable()) doThrowChecked(IOException, u"InputStream::doRead(ByteBuffer&) isAvailable"_S);
             int StreamCharacter = doRead();
             if (StreamCharacter == -1) return;
             StreamBuffer.setValue((uint8_t) StreamCharacter);
@@ -41,7 +41,7 @@ namespace eLibrary::IO {
         virtual void doWrite(uint8_t) = 0;
 
         virtual void doWrite(const ByteBuffer &StreamBuffer) {
-            if (!isAvailable()) doThrowChecked(IOException(u"OutputStream::doWrite(const ByteBuffer&) isAvailable"_S));
+            if (!isAvailable()) doThrowChecked(IOException, u"OutputStream::doWrite(const ByteBuffer&) isAvailable"_S);
             for (uintmax_t StreamIndex = 0;StreamIndex < StreamBuffer.getRemaining();++StreamIndex)
                 doWrite(StreamBuffer.getValue());
         }

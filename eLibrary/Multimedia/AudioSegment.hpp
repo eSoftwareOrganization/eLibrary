@@ -73,7 +73,7 @@ namespace eLibrary::Multimedia {
         void doExport(const String &AudioPath) const {
             FFMpeg::MediaFormatContext AudioFormatContext(FFMpeg::MediaFormatContext::doAllocateOutput(AudioPath));
             if (avio_open(&AudioFormatContext->pb, AudioPath.toU8String().c_str(), AVIO_FLAG_WRITE) < 0)
-                doThrowChecked(MediaException(u"AudioSegment::doExport(const String&) avio_open"_S));
+                doThrowChecked(MediaException, u"AudioSegment::doExport(const String&) avio_open"_S);
             FFMpeg::MediaCodec AudioCodec(FFMpeg::MediaCodec::doFindEncoder(AudioFormatContext->oformat->audio_codec));
             FFMpeg::MediaCodecContext AudioCodecContext(FFMpeg::MediaCodecContext::doAllocate(AudioCodec));
             AVChannelLayout AudioChannelLayoutSource(AudioChannelLayout.toFFMpegFormat());
@@ -83,9 +83,9 @@ namespace eLibrary::Multimedia {
             AVStream *AudioStreamObject;
             AudioCodecContext.doOpen(AudioCodec);
             if (!(AudioStreamObject = avformat_new_stream((AVFormatContext*) AudioFormatContext, (const AVCodec*) AudioCodec)))
-                doThrowChecked(MediaException(u"AudioSegment::doExport(const String&) avformat_new_stream"_S));
+                doThrowChecked(MediaException, u"AudioSegment::doExport(const String&) avformat_new_stream"_S);
             if (avcodec_parameters_from_context(AudioStreamObject->codecpar, (AVCodecContext*) AudioCodecContext))
-                doThrowChecked(MediaException(u"AudioSegment::doExport(const String&) avcodec_parameters_from_context"_S));
+                doThrowChecked(MediaException, u"AudioSegment::doExport(const String&) avcodec_parameters_from_context"_S);
             AudioFormatContext.doWriteHeader();
             FFMpeg::MediaSWRContext AudioSWRContext(FFMpeg::MediaSWRContext::doAllocate(&AudioCodecContext->ch_layout, &AudioCodecContext->ch_layout, AV_SAMPLE_FMT_U8, AudioCodecContext->sample_fmt, AudioCodecContext->sample_rate, AudioCodecContext->sample_rate));
             AudioSWRContext.doInitialize();
@@ -117,7 +117,7 @@ namespace eLibrary::Multimedia {
                     AudioFormatContext.doWriteFrame(AudioPacket);
                 if (AudioStatus == AVERROR_EOF) break;
                 else if (AudioStatus != AVERROR(EAGAIN))
-                    doThrowChecked(MediaException(u"AudioSegment::doExport(const String&) avcodec_receive_packet"_S));
+                    doThrowChecked(MediaException, u"AudioSegment::doExport(const String&) avcodec_receive_packet"_S);
             }
             MemoryAllocator<uint8_t>::deleteArray(AudioDataSample);
             AudioFormatContext.doWriteTrailer();
@@ -132,7 +132,7 @@ namespace eLibrary::Multimedia {
             FFMpeg::MediaCodec AudioCodec(FFMpeg::MediaCodec::doFindDecoder(AudioCodecContext->codec_id));
             AudioCodecContext.doOpen(AudioCodec);
             if (AudioCodecContext->sample_rate <= 0) [[unlikely]]
-                doThrowChecked(MediaException(u"AudioSegment::doOpen(const String&) AudioCodecContext->sample_rate"_S));
+                doThrowChecked(MediaException, u"AudioSegment::doOpen(const String&) AudioCodecContext->sample_rate"_S);
             FFMpeg::MediaSWRContext AudioSWRContext(FFMpeg::MediaSWRContext::doAllocate(&AudioCodecContext->ch_layout, &AudioCodecContext->ch_layout, AudioCodecContext->sample_fmt, AV_SAMPLE_FMT_U8, AudioCodecContext->sample_rate, AudioCodecContext->sample_rate));
             AudioSWRContext.doInitialize();
             FFMpeg::MediaFrame AudioFrame(FFMpeg::MediaFrame::doAllocate());
@@ -141,7 +141,7 @@ namespace eLibrary::Multimedia {
             for (;;) {
                 int AudioStatus = av_read_frame((AVFormatContext*) AudioFormatContext, (AVPacket*) AudioPacket);
                 if (AudioStatus == AVERROR_EOF) break;
-                else if (AudioStatus < 0) doThrowChecked(MediaException(u"AudioSegment::doOpen(const String&) av_read_frame"_S));
+                else if (AudioStatus < 0) doThrowChecked(MediaException, u"AudioSegment::doOpen(const String&) av_read_frame"_S);
                 if (AudioPacket->stream_index != AudioStreamIndex) continue;
                 AudioCodecContext.doSendPacket(AudioPacket);
                 while (!(AudioStatus = avcodec_receive_frame((AVCodecContext*) AudioCodecContext, (AVFrame*) AudioFrame))) {
@@ -153,7 +153,7 @@ namespace eLibrary::Multimedia {
                     MemoryAllocator<uint8_t>::deleteArray(AudioDataBuffer);
                 }
                 if (AudioStatus != AVERROR(EAGAIN))
-                    doThrowChecked(MediaException(u"AudioSegment::doOpen(const String&) avcodec_receive_frame"_S));
+                    doThrowChecked(MediaException, u"AudioSegment::doOpen(const String&) avcodec_receive_frame"_S);
             }
             return {AudioDataOutput, AudioCodecContext->ch_layout, AudioCodecContext->sample_rate};
         }
@@ -188,7 +188,7 @@ namespace eLibrary::Multimedia {
         }
 
         AudioSegment setSampleRate(int AudioSampleRateSource) const {
-            if (AudioSampleRateSource < 0) doThrowChecked(MediaException(u"AudioSegment::setSampleRate(int) AudioSampleRateSource"_S));
+            if (AudioSampleRateSource < 0) doThrowChecked(MediaException, u"AudioSegment::setSampleRate(int) AudioSampleRateSource"_S);
             if (AudioSampleRate == AudioSampleRateSource) return *this;
             AVChannelLayout AudioChannelLayoutSource(AudioChannelLayout.toFFMpegFormat());
             FFMpeg::MediaSWRContext AudioSWRContext(FFMpeg::MediaSWRContext::doAllocate(&AudioChannelLayoutSource, &AudioChannelLayoutSource, AV_SAMPLE_FMT_U8P, AV_SAMPLE_FMT_U8P, AudioSampleRate, AudioSampleRateSource));

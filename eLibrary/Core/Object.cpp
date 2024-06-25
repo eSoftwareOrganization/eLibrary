@@ -2,7 +2,7 @@
 
 namespace eLibrary::Core {
     String Object::toString() const noexcept {
-        StringStream ObjectStream;
+        StringBuilder ObjectStream;
         uintmax_t ObjectHash = hashCode();
         while (ObjectHash) {
             if (ObjectHash % 16 < 10) ObjectStream.addCharacter(ObjectHash % 16 + 48);

@@ -90,7 +90,6 @@ namespace eLibrary::Core {
                 AnyFunction = AnySource.AnyFunction;
                 AnyFunction(AnyOperation::OperationMove, this, AnySource.AnyValue);
                 AnyType = AnySource.AnyType;
-                AnyValue = AnySource.AnyValue;
                 AnySource.AnyFunction = nullptr;
                 AnySource.AnyType = &typeid(void);
                 AnySource.AnyValue = nullptr;
@@ -123,9 +122,9 @@ namespace eLibrary::Core {
         template<typename T>
         auto getValue() const {
             if (&typeid(T) != AnyType) [[unlikely]]
-                doThrowChecked(TypeException(u"Any::getValue<T>()"_S));
+                doThrowChecked(TypeException, u"Any::getValue<T>()"_S);
             if (!hasValue()) [[unlikely]]
-                doThrowChecked(Exception(u"Any::getValue<T>() hasValue"_S));
+                doThrowChecked(Exception, u"Any::getValue<T>() hasValue"_S);
             return *((T *) AnyValue);
         }
 
@@ -148,30 +147,30 @@ namespace eLibrary::Core {
         }
     };
 
-    class Collections final : public Object, public NonConstructable {
+    class Collections final : public NonConstructable {
     public:
         template<typename T1, typename T2>
         static void doCheckG(T1 IndexSource, T2 IndexStart) {
             if (IndexSource <= IndexStart) [[unlikely]]
-                doThrowChecked(IndexException(u"Collections::doCheckG(T1, T2) IndexSource"_S));
+                doThrowChecked(IndexException, u"Collections::doCheckG(T1, T2) IndexSource"_S);
         }
 
         template<typename T1, typename T2>
         static void doCheckGE(T1 IndexSource, T2 IndexStart) {
             if (IndexSource < IndexStart) [[unlikely]]
-                doThrowChecked(IndexException(u"Collections::doCheckStartGE(T1, T2) IndexSource"_S));
+                doThrowChecked(IndexException, u"Collections::doCheckStartGE(T1, T2) IndexSource"_S);
         }
 
         template<typename T1, typename T2>
         static void doCheckL(T1 IndexSource, T2 IndexStop) {
             if (IndexSource >= IndexStop) [[unlikely]]
-                doThrowChecked(IndexException(u"Collections::doCheckL(T1, T2) IndexSource"_S));
+                doThrowChecked(IndexException, u"Collections::doCheckL(T1, T2) IndexSource"_S);
         }
 
         template<typename T1, typename T2>
         static void doCheckLE(T1 IndexSource, T2 IndexStop) {
             if (IndexSource > IndexStop) [[unlikely]]
-                doThrowChecked(IndexException(u"Collections::doCheckLE(T1, T2) IndexSource"_S));
+                doThrowChecked(IndexException, u"Collections::doCheckLE(T1, T2) IndexSource"_S);
         }
 
         template<typename II>
@@ -406,7 +405,7 @@ namespace eLibrary::Core {
         constexpr Array() noexcept = default;
 
         template<typename II>
-        Array(II ElementStart, II ElementStop) : ElementSize((intmax_t) ::std::distance(ElementStart, ElementStop)){
+        Array(II ElementStart, II ElementStop, const MemoryAllocator<E> &AllocatorSource = MemoryAllocator<E>()) : ElementSize(Collections::getDistance(ElementStart, ElementStop)), ElementAllocator(AllocatorSource) {
             ElementContainer = ElementAllocator.doAllocate(ElementSize);
             Collections::doCopyConstruct(ElementStart, ElementStop, ElementContainer);
         }
@@ -494,6 +493,18 @@ namespace eLibrary::Core {
             ElementContainer[ElementIndex] = ElementSource;
         }
 
+        String toString() const noexcept override {
+            StringBuilder CharacterStream;
+            CharacterStream.addCharacter(u'[');
+            for (intmax_t ElementIndex = 0; ElementIndex + 1 < ElementSize; ++ElementIndex) {
+                CharacterStream.addString(String::valueOf(ElementContainer[ElementIndex]));
+                CharacterStream.addCharacter(u',');
+            }
+            if (ElementSize) CharacterStream.addString(String::valueOf(ElementContainer[ElementSize - 1]));
+            CharacterStream.addCharacter(u']');
+            return CharacterStream.toString();
+        }
+
         ArrayIterator<E> begin() const noexcept {
             return {ElementContainer};
         }
@@ -548,7 +559,7 @@ namespace eLibrary::Core {
         }
 
         template<typename II>
-        ArrayList(II ElementStart, II ElementStop) : ElementCapacity(1), ElementSize((intmax_t) ::std::distance(ElementStart, ElementStop)) {
+        ArrayList(II ElementStart, II ElementStop) : ElementCapacity(1), ElementSize(Collections::getDistance(ElementStart, ElementStop)) {
             while (ElementCapacity < ElementSize)
                 ElementCapacity <<= 1;
             ElementContainer = ElementAllocator.doAllocate(ElementSize);
@@ -560,15 +571,8 @@ namespace eLibrary::Core {
         }
 
         void addElement(const E &ElementSource) noexcept {
-            if (!ElementCapacity) [[unlikely]] ElementContainer = ElementAllocator.doAllocate(ElementCapacity = 1);
-            if (ElementSize == ElementCapacity) {
-                E *ElementBuffer = ElementAllocator.doAllocate(ElementSize);
-                Collections::doMoveConstruct(ElementContainer, ElementSize, ElementBuffer);
-                ElementAllocator.doDeallocate(ElementContainer, ElementCapacity);
-                ElementContainer = ElementAllocator.doAllocate(ElementCapacity <<= 1);
-                Collections::doMoveConstruct(ElementBuffer, ElementSize, ElementContainer);
-                ElementAllocator.doDeallocate(ElementBuffer, ElementSize);
-            }
+            if (ElementSize == ElementCapacity)
+                doReserve(ElementCapacity ? ElementCapacity << 1 : 1);
             ElementAllocator.doConstruct(ElementContainer + (ElementSize++), ElementSource);
         }
 
@@ -576,15 +580,8 @@ namespace eLibrary::Core {
             if (ElementIndex < 0) ElementIndex += ElementSize + 1;
             Collections::doCheckGE(ElementIndex, 0);
             Collections::doCheckLE(ElementIndex, ElementSize);
-            if (!ElementCapacity) [[unlikely]] ElementContainer = ElementAllocator.doAllocate(ElementCapacity = 1);
-            if (ElementSize == ElementCapacity) {
-                E *ElementBuffer = ElementAllocator.doAllocate(ElementSize);
-                Collections::doMoveConstruct(ElementContainer, ElementContainer + ElementSize, ElementBuffer);
-                ElementAllocator.doDeallocate(ElementContainer, ElementCapacity);
-                ElementContainer = ElementAllocator.doAllocate(ElementCapacity <<= 1);
-                Collections::doMoveConstruct(ElementBuffer, ElementBuffer + ElementSize, ElementContainer);
-                ElementAllocator.doDeallocate(ElementBuffer, ElementSize);
-            }
+            if (ElementSize == ElementCapacity)
+                doReserve(ElementCapacity ? ElementCapacity << 1 : 1);
             Collections::doMoveBackward(ElementContainer + ElementIndex, ElementContainer + ElementSize,
                                         ElementContainer + ElementSize + 1);
             ElementContainer[ElementIndex] = ElementSource;
@@ -628,6 +625,18 @@ namespace eLibrary::Core {
             Collections::doCopyConstruct(ElementContainer, ElementSize, ElementBuffer);
             Collections::doCopyConstruct(ElementSource.ElementContainer, ElementSource.ElementSize, ElementBuffer + ElementSize);
             return {ElementBuffer, ElementSize + ElementSource.ElementSize};
+        }
+
+        void doReserve(intmax_t ElementCapacityNew) noexcept {
+            if (!ElementCapacity) [[unlikely]] ElementContainer = ElementAllocator.doAllocate(ElementCapacity = 1);
+            if (ElementCapacityNew > ElementCapacity) {
+                E *ElementBuffer = ElementAllocator.doAllocate(ElementSize);
+                Collections::doMoveConstruct(ElementContainer, ElementContainer + ElementSize, ElementBuffer);
+                ElementAllocator.doDeallocate(ElementContainer, ElementCapacity);
+                ElementContainer = ElementAllocator.doAllocate(ElementCapacity = ElementCapacityNew);
+                Collections::doMoveConstruct(ElementBuffer, ElementBuffer + ElementSize, ElementContainer);
+                ElementAllocator.doDeallocate(ElementBuffer, ElementSize);
+            }
         }
 
         void doReverse() noexcept {
@@ -702,7 +711,7 @@ namespace eLibrary::Core {
         }
 
         String toString() const noexcept override {
-            StringStream CharacterStream;
+            StringBuilder CharacterStream;
             CharacterStream.addCharacter(u'[');
             for (intmax_t ElementIndex = 0; ElementIndex + 1 < ElementSize; ++ElementIndex) {
                 CharacterStream.addString(String::valueOf(ElementContainer[ElementIndex]));
@@ -1348,7 +1357,7 @@ namespace eLibrary::Core {
         }
 
         String toString() const noexcept override {
-            StringStream CharacterStream;
+            StringBuilder CharacterStream;
             CharacterStream.addCharacter(u'[');
             if (NodeHead) {
                 auto *NodeCurrent(NodeHead);
@@ -1434,18 +1443,18 @@ namespace eLibrary::Core {
 
         Tr doCall(Ts ...FunctionParameter) {
             if (!DescriptorHandle) [[unlikely]]
-                doThrowChecked(Exception(u"Function<Tr(Ts...)>::doCall(Ts...) DescriptorHandle"_S));
+                doThrowChecked(Exception, u"Function<Tr(Ts...)>::doCall(Ts...) DescriptorHandle"_S);
             return DescriptorHandle->doCall(Objects::doForward<Ts>(FunctionParameter)...);
         }
 
         Tr operator()(Ts &&...FunctionParameter) {
             if (!DescriptorHandle) [[unlikely]]
-                doThrowChecked(Exception(u"Function<Tr(Ts...)>::operator()(Ts...) DescriptorHandle"_S));
+                doThrowChecked(Exception, u"Function<Tr(Ts...)>::operator()(Ts...) DescriptorHandle"_S);
             return DescriptorHandle->doCall(Objects::doForward<Ts>(FunctionParameter)...);
         }
     };
 
-    class Functions final : public Object, public NonConstructable {
+    class Functions final : public NonConstructable {
     public:
         template<int> struct PlaceHolder {};
     private:
@@ -1509,39 +1518,39 @@ namespace eLibrary::Core {
                                            Objects::doForward<Tp>(FunctionParameter)...);
         }
 
-        template<typename Tf, typename Tc, typename ...Tp> requires (::std::is_member_function_pointer_v<::std::remove_reference_t<Tf>>) && (::std::is_pointer_v<::std::remove_reference_t<Tc>>)
+        template<typename Tf, typename Tc, typename ...Tp> requires (::std::is_member_function_pointer_v<Type::noReference<Tf>>) && (Type::isPointer<Type::noReference<Tc>>)
         static auto doInvoke(Tf &&FunctionSource, Tc &&FunctionClass, Tp &&...FunctionParameter) {
             return (Objects::doForward<Tc>(FunctionClass)->*FunctionSource)(Objects::doForward<Tp>(FunctionParameter)...);
         }
 
-        template<typename Tf, typename Tc, typename ...Tp> requires (::std::is_member_function_pointer_v<::std::remove_reference_t<Tf>>) && (!::std::is_pointer_v<::std::remove_reference_t<Tc>>)
+        template<typename Tf, typename Tc, typename ...Tp> requires (::std::is_member_function_pointer_v<Type::noReference<Tf>>) && (!Type::isPointer<Type::noReference<Tc>>)
         static auto doInvoke(Tf &&FunctionSource, Tc &&FunctionClass, Tp &&...FunctionParameter) {
             return (Objects::doForward<Tc>(FunctionClass).*FunctionSource)(Objects::doForward<Tp>(FunctionParameter)...);
         }
 
-        template<typename Tf, typename Tc> requires (::std::is_member_object_pointer_v<::std::remove_reference_t<Tf>>) && (::std::is_pointer_v<::std::remove_reference_t<Tc>>)
+        template<typename Tf, typename Tc> requires (::std::is_member_object_pointer_v<Type::noReference<Tf>>) && (Type::isPointer<Type::noReference<Tc>>)
         static auto doInvoke(Tf &&FunctionSource, Tc &&FunctionClass) {
             return Objects::doForward<Tc>(FunctionClass)->*FunctionSource;
         }
 
-        template<typename Tf, typename Tc> requires (::std::is_member_object_pointer_v<::std::remove_reference_t<Tf>>) && (!::std::is_pointer_v<::std::remove_reference_t<Tc>>)
+        template<typename Tf, typename Tc> requires (::std::is_member_object_pointer_v<Type::noReference<Tf>>) && (!Type::isPointer<Type::noReference<Tc>>)
         static auto doInvoke(Tf &&FunctionSource, Tc &&FunctionClass) {
             return Objects::doForward<Tc>(FunctionClass).*FunctionSource;
         }
 
-        template<typename Tf, typename ...Tp> requires (!::std::is_member_pointer_v<::std::remove_reference_t<Tf>>) && (!::std::is_pointer_v<::std::remove_reference_t<Tf>>)
+        template<typename Tf, typename ...Tp> requires (!::std::is_member_pointer_v<Type::noReference<Tf>>) && (!Type::isPointer<Type::noReference<Tf>>)
         static auto doInvoke(Tf &&FunctionSource, Tp &&...FunctionParameter) {
             return FunctionSource(Objects::doForward<Tp>(FunctionParameter)...);
         }
 
-        template<typename Tf, typename ...Tp> requires ::std::is_pointer_v<::std::remove_reference_t<Tf>>
+        template<typename Tf, typename ...Tp> requires Type::isPointer<Type::noReference<Tf>>
         static auto doInvoke(Tf &&FunctionSource, Tp &&...FunctionParameter) {
             return (*FunctionSource)(Objects::doForward<Tp>(FunctionParameter)...);
         }
 
         template<typename Tf, typename Tt>
         static auto doInvokeTuple(Tf &&FunctionSource, Tt &&FunctionParameter) {
-            return doInvokeTuple(Objects::doForward<Tf>(FunctionSource), Objects::doForward<Tt>(FunctionParameter), typename MakeIndexTuple<::std::tuple_size_v<::std::remove_reference_t<Tt>>>::Type());
+            return doInvokeTuple(Objects::doForward<Tf>(FunctionSource), Objects::doForward<Tt>(FunctionParameter), typename MakeIndexTuple<::std::tuple_size_v<Type::noReference<Tt>>>::Type());
         }
     };
 
@@ -1605,7 +1614,7 @@ namespace eLibrary::Core {
 
         T getValue() const {
             if (!hasValue()) [[unlikely]]
-                doThrowChecked(Exception(u"Optional<T>::getValue() hasValue"_S));
+                doThrowChecked(Exception, u"Optional<T>::getValue() hasValue"_S);
             return *((T *) OptionalData);
         }
 
@@ -1648,7 +1657,7 @@ namespace eLibrary::Core {
 
         constexpr PointerShared() noexcept = default;
 
-        template<typename Tp> requires ::std::is_convertible_v<Tp, T>
+        template<typename Tp> requires Type::isConvertible<Tp, T>
         explicit PointerShared(Tp *PointerSource) : PointerObject(PointerSource), PointerReference(new uintmax_t(1)) {}
 
         ~PointerShared() {
@@ -1699,7 +1708,7 @@ namespace eLibrary::Core {
 
         T &operator*() const {
             if (!hasValue()) [[unlikely]]
-                doThrowChecked(Exception(u"PointerShared::operator*() hasValue"_S));
+                doThrowChecked(Exception, u"PointerShared::operator*() hasValue"_S);
             return *PointerObject;
         }
 
@@ -1783,7 +1792,7 @@ namespace eLibrary::Core {
 
         T &operator*() const {
             if (!hasValue()) [[unlikely]]
-                doThrowChecked(Exception(u"PointerWeak::operator*() hasValue"_S));
+                doThrowChecked(Exception, u"PointerWeak::operator*() hasValue"_S);
             return *PointerObject;
         }
 
@@ -1803,7 +1812,7 @@ namespace eLibrary::Core {
 
         constexpr PointerUnique() noexcept = default;
 
-        template<typename Tp> requires ::std::is_convertible_v<Tp, T>
+        template<typename Tp> requires Type::isConvertible<Tp, T>
         explicit PointerUnique(Tp *PointerSource) : PointerObject(PointerSource) {}
 
         void doAssign(::std::nullptr_t) {
@@ -1825,7 +1834,7 @@ namespace eLibrary::Core {
             PointerObject = nullptr;
         }
 
-        template<typename Tp> requires ::std::is_convertible_v<Tp, T>
+        template<typename Tp> requires Type::isConvertible<Tp, T>
         void doReset(Tp *PointerSource) {
             delete PointerObject;
             PointerObject = Objects::doMove(PointerSource);
@@ -1841,7 +1850,7 @@ namespace eLibrary::Core {
 
         T &operator*() const {
             if (!hasValue()) [[unlikely]]
-                doThrowChecked(Exception(u"PointerUnique::operator*() hasValue"_S));
+                doThrowChecked(Exception, u"PointerUnique::operator*() hasValue"_S);
             return *PointerObject;
         }
 
@@ -2176,14 +2185,17 @@ namespace eLibrary::Core {
     private:
         T *ReferenceData;
 
-        static T *getAddress(T &ReferenceSource) noexcept {
+        template<typename TI>
+        static TI *getAddress(TI &ReferenceSource) noexcept {
             return Objects::getAddress(ReferenceSource);
         }
 
-        static T *getAddress(T &&) noexcept = delete;
+        template<typename TI>
+        static TI *getAddress(TI &&) noexcept = delete;
 
     public:
-        Reference(T &&ReferenceSource) noexcept: ReferenceData(getAddress(Objects::doForward<T>(ReferenceSource))) {}
+        template<typename TI>
+        Reference(TI &&ReferenceSource) noexcept: ReferenceData(getAddress(Objects::doForward<TI>(ReferenceSource))) {}
 
         T &getValue() const noexcept {
             return *ReferenceData;
@@ -2193,6 +2205,9 @@ namespace eLibrary::Core {
             return getValue();
         }
     };
+
+    template<class T>
+    Reference(T&) -> Reference<T>;
 
     template<typename E>
     class SingleLinkedIterator final {
@@ -2427,7 +2442,7 @@ namespace eLibrary::Core {
         }
 
         String toString() const noexcept override {
-            StringStream CharacterStream;
+            StringBuilder CharacterStream;
             CharacterStream.addCharacter(u'[');
             if (NodeHead) {
                 auto *NodeCurrent(NodeHead);
@@ -2461,7 +2476,7 @@ namespace eLibrary::Core {
         const V &getElement(const K &MapKey) const {
             auto *MapNode = this->doSearchCore(this->NodeRoot, MapKey);
             if (!MapNode) [[unlikely]]
-                doThrowChecked(IndexException(u"TreeMap<K, V>::getElement(const K&) doSearchCore"_S));
+                doThrowChecked(IndexException, u"TreeMap<K, V>::getElement(const K&) doSearchCore"_S);
             return MapNode->NodeValue;
         }
 
@@ -2487,7 +2502,7 @@ namespace eLibrary::Core {
 
         void removeMapping(const K &MapKey) {
             if (!this->doSearchCore(this->NodeRoot, MapKey)) [[unlikely]]
-                doThrowChecked(IndexException(u"TreeMap<K(Comparable),V>::removeMapping(const K&) MapKey"_S));
+                doThrowChecked(IndexException, u"TreeMap<K(Comparable),V>::removeMapping(const K&) MapKey"_S);
             this->doRemove(MapKey);
         }
 
@@ -2502,7 +2517,7 @@ namespace eLibrary::Core {
     class TreeSet final : protected RedBlackTree<E, ::std::nullptr_t> {
     private:
         static void toString(const typename RedBlackTree<E, ::std::nullptr_t>::RedBlackNode *NodeCurrent,
-                             StringStream &CharacterStream) noexcept {
+                             StringBuilder &CharacterStream) noexcept {
             if (!NodeCurrent) return;
             CharacterStream.addString(String::valueOf(NodeCurrent->NodeKey));
             CharacterStream.addCharacter(u' ');
@@ -2560,12 +2575,12 @@ namespace eLibrary::Core {
 
         void removeElement(const E &ElementSource) {
             if (!isContains(ElementSource)) [[unlikely]]
-                doThrowChecked(IndexException(u"TreeObject::removeElement(const E&) isContains"_S));
+                doThrowChecked(IndexException, u"TreeObject::removeElement(const E&) isContains"_S);
             this->doRemove(ElementSource);
         }
 
         String toString() const noexcept override {
-            StringStream CharacterStream;
+            StringBuilder CharacterStream;
             CharacterStream.addCharacter(u'{');
             toString(this->NodeRoot, CharacterStream);
             CharacterStream.addCharacter(u'}');
@@ -2622,7 +2637,7 @@ namespace eLibrary::Core {
         constexpr bool isContainsType = true;
 
         template<typename T, typename T1, typename ...T2>
-        constexpr bool isContainsType<T, T1, T2...> = ::std::is_same_v<T, T1> || isContainsType<T, T2...>;
+        constexpr bool isContainsType<T, T1, T2...> = Type::isSame<T, T1> || isContainsType<T, T2...>;
 
         template<typename T>
         constexpr bool isContainsType<T> = false;
@@ -2679,7 +2694,7 @@ namespace eLibrary::Core {
         template<typename T>
         auto getValue() {
             if (&typeid(T) != VariantType) [[unlikely]]
-                doThrowChecked(TypeException(u"Variant::getValue<T>() T"_S));
+                doThrowChecked(TypeException, u"Variant::getValue<T>() T"_S);
             return *((T *) VariantData);
         }
 

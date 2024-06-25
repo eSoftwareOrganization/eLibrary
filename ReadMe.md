@@ -13,6 +13,9 @@ Project Code Style and Conventions:
 Project Credits:
 
 This repository draws from some preexisting work. Credits to their authors.
++ [cpp-unicodelib](https://github.com/yhirose/cpp-unicodelib)
+Core::StringUnicode
+
 + [pydub(Python)](https://github.com/jiaaro/pydub)
 
 Multimedia::AudioSegment

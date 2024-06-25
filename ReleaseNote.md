@@ -2,6 +2,26 @@
 
 This document describes the changes to eLibrary present in each release.
 
+> eLibrary V0.21.0
+- Core::Any(Any&&)(...)
+- Core::ArrayList addElement(`doReserve` Implementation) doReserve(New)
+- Core::Character isAlpha / isDigit / isLowerCase / isSpace / isUpperCase / toLowerCase / toNumber / toUpperCase(...) isLetter / toLatin1 / toUcs4(New)
+- Core::CharacterUcs4 / doCompare(New)
+- Core::CharacterUtility(...)
+- Core::ConcurrentQueue<E, C>(ConcurrentQueue<T>)(`ContainerQueue<E, C>` Implementation)
+- Core::Exception printStackTrace(New) what(...)
+- Core::HeapMemoryResource doAcquire / doRelease(`noexcept` Qualifier)
+- Core::MemoryAllocator doAcquire / doRelease(`noexcept` Qualifier) getMemoryResource(New)
+- Core::MemoryResource doAcquire / doRelease(`noexcept` Qualifier)
+- Core::NotImplementedException(New)
+- Core::Reference Constructor<TI>(TI&&)(Constructor(T&&))
+- Core::String Constructor(const Character&) / Constructor(const ::std::string&) / Constructor(const ::std::u32string&) / Constructor(const ::std::wstring&)(Remove) toU8String / toU16String / toU32String / toWString(...) doIntern / doRepeat / valueOf(const Character&) / valueOf(const CharacterLatin1&) / valueOf(const CharacterUcs4&) / valueOf(const ::std::string&) / valueOf(const ::std::u16string&) / valueOf(const ::std::u32string&) / valueOf(const ::std::wstring&)(New)
+- Core::StringBuilder(Core::StringStream) addCharacter / addString(`doReserve` Implementation) doReserve(New) toString(...)
+- Core::StringConvertible(Remove)
+- Core::StringPool / doIntern / getInstance(New / Not Implemented)
+- Core::Type::...(...)
+- Extension::GeoIP::MaxMindDatabase / doLookup(Remove)
+- Platform::Windows::NtHandle ~Constructor / doAssign / doClose(`isAvailable` Implementation)
 > eLibrary V0.20.4
 - Core::Any Constructor<T, Ts...>(::std::in_place_t, Ts&&...)(Remove) valueOf(New)
 - Core::AVLTree / doAssign / doClear / doOrder(New)

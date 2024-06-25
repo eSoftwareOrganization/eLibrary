@@ -7,8 +7,8 @@
 #define eLibraryToString(ObjectSource) eLibraryToStringImplement(ObjectSource)
 
 #define eLibraryVersionMajor 0
-#define eLibraryVersionMinor 20
-#define eLibraryVersionPatch 4
+#define eLibraryVersionMinor 21
+#define eLibraryVersionPatch 0
 #define eLibraryVersionNumber (eLibraryVersionMajor * 10000 + eLibraryVersionMinor * 100 + eLibraryVersionPatch)
 #define eLibraryVersionString (eLibraryToString(eLibraryVersionMajor) "." eLibraryToString(eLibraryVersionMinor) "." eLibraryToString(eLibraryVersionPatch))
 
@@ -34,10 +34,6 @@
 
 #if eLibraryFeature(Network)
 #include <Network/Socket.hpp>
-#endif
-
-#if eLibraryFeature(ExtensionGeoIP)
-#include <Extension/Extension-GeoIP.hpp>
 #endif
 
 #if eLibrarySystem(Windows)

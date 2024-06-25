@@ -1,0 +1,13 @@
+@PACKAGE_INIT@
+
+set(CMAKE_CXX_STANDARD 23)
+
+include("${CMAKE_CURRENT_LIST_DIR}/eLibraryTargets.cmake")
+
+set_and_check(eLibrary_INCLUDE_DIRS "@PACKAGE_INCLUDE_INSTALL_DIR@")
+
+set(eLibrary_LIBRARIES)
+
+list(APPEND eLibrary_LIBRARIES eLibrary::eLibrary)
+
+check_required_components(eLibrary)

@@ -3,6 +3,8 @@
 #ifndef eLibraryHeaderCoreStringUnicode
 #define eLibraryHeaderCoreStringUnicode
 
+#include <Core/Global.hpp>
+
 namespace eLibrary::Core {
     namespace CharacterBlock {
         enum CharacterBlock {
@@ -338,6 +340,55 @@ namespace eLibrary::Core {
         };
     }
 
+    namespace CharacterCaseMappingSimple {
+        eLibraryAPI const char32_t *doQuery(char32_t) noexcept;
+
+        eLibraryAPI bool isContains(char32_t) noexcept;
+    }
+
+    namespace CharacterDerivedCore {
+        enum CharacterDerivedProperty : uintmax_t {
+            DerivedProperty_Math = 0b00000000000000000000000000000001,
+            DerivedProperty_Alphabetic = 0b00000000000000000000000000000010,
+            DerivedProperty_Lowercase = 0b00000000000000000000000000000100,
+            DerivedProperty_Uppercase = 0b00000000000000000000000000001000,
+            DerivedProperty_Cased = 0b00000000000000000000000000010000,
+            DerivedProperty_Case_Ignorable =
+            0b00000000000000000000000000100000,
+            DerivedProperty_Changes_When_Lowercased =
+            0b00000000000000000000000001000000,
+            DerivedProperty_Changes_When_Uppercased =
+            0b00000000000000000000000010000000,
+            DerivedProperty_Changes_When_Titlecased =
+            0b00000000000000000000000100000000,
+            DerivedProperty_Changes_When_Casefolded =
+            0b00000000000000000000001000000000,
+            DerivedProperty_Changes_When_Casemapped =
+            0b00000000000000000000010000000000,
+            DerivedProperty_ID_Start = 0b00000000000000000000100000000000,
+            DerivedProperty_ID_Continue = 0b00000000000000000001000000000000,
+            DerivedProperty_XID_Start = 0b00000000000000000010000000000000,
+            DerivedProperty_XID_Continue =
+            0b00000000000000000100000000000000,
+            DerivedProperty_Default_Ignorable_Code_Point =
+            0b00000000000000001000000000000000,
+            DerivedProperty_Grapheme_Extend =
+            0b00000000000000010000000000000000,
+            DerivedProperty_Grapheme_Base =
+            0b00000000000000100000000000000000,
+            DerivedProperty_Grapheme_Link =
+            0b00000000000001000000000000000000,
+            DerivedProperty_InCB_Linker =
+            0b00000000000010000000000000000000,
+            DerivedProperty_InCB_Consonant =
+            0b00000000000100000000000000000000,
+            DerivedProperty_InCB_Extend =
+            0b00000000001000000000000000000000,
+        };
+
+        eLibraryAPI uintmax_t doQuery(char32_t) noexcept;
+    }
+
     namespace CharacterEmoji {
         enum CharacterEmoji {
             Unassigned,
@@ -351,7 +402,16 @@ namespace eLibrary::Core {
     }
 
     namespace CharacterGeneralCategory {
-        enum CharacterGeneralCategory {};
+        enum CharacterGeneralCategory {
+            Cc, Zs, Po, Sc, Ps,
+            Pe, Sm, Pd, Nd, Lu,
+            Sk, Pc, Ll, So, Lo,
+            Pi, Cf, No, Pf, Lt,
+            Lm, Mn, Cn, Me, Mc,
+            Nl, Zl, Zp, Cs, Co
+        };
+
+        eLibraryAPI CharacterGeneralCategory doQuery(char32_t) noexcept;
     }
 
     namespace CharacterGraphemeBreak {

@@ -21,17 +21,17 @@ namespace eLibrary::Platform::Windows {
         constexpr NtHandle() noexcept = default;
 
         ~NtHandle() noexcept {
-            if (HandleObject != INVALID_HANDLE_VALUE) ::CloseHandle(HandleObject);
+            if (isAvailable()) ::CloseHandle(HandleObject);
         }
 
         void doAssign(HANDLE HandleSource) noexcept {
-            if (HandleObject != INVALID_HANDLE_VALUE) ::CloseHandle(HandleObject);
+            if (isAvailable()) ::CloseHandle(HandleObject);
             HandleObject = HandleSource;
         }
 
         void doAssign(const NtHandle &HandleSource) noexcept {
             if (Objects::getAddress(HandleSource) == this) return;
-            if (HandleObject != INVALID_HANDLE_VALUE) ::CloseHandle(HandleObject);
+            if (isAvailable()) ::CloseHandle(HandleObject);
             ::DuplicateHandle(GetCurrentProcess(), HandleSource.HandleObject, GetCurrentProcess(), &HandleObject, 0, FALSE, DUPLICATE_SAME_ACCESS);
         }
 
@@ -42,7 +42,7 @@ namespace eLibrary::Platform::Windows {
         }
 
         void doClose() {
-            if (HandleObject == INVALID_HANDLE_VALUE) doThrowChecked(Exception(u"NtHandle::doClose() HandleObject"_S));
+            if (!isAvailable()) doThrowChecked(Exception, u"NtHandle::doClose() isAvailable"_S);
             ::CloseHandle(HandleObject);
             HandleObject = INVALID_HANDLE_VALUE;
         }

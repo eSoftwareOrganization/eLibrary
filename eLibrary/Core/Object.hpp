@@ -4,6 +4,7 @@
 #define eLibraryHeaderCoreObject
 
 #include <Core/Global.hpp>
+#include <Core/Type.hpp>
 #include <functional>
 #include <utility>
 
@@ -21,6 +22,9 @@ namespace eLibrary::Core {
         eLibraryAPI virtual String toString() const noexcept;
     };
 
+    template<typename T>
+    concept ObjectDerived = ::std::derived_from<T, Object>;
+
     class Objects final : public Object {
     public:
         constexpr Objects() noexcept = delete;
@@ -31,12 +35,12 @@ namespace eLibrary::Core {
             if constexpr (sizeof...(Fs)) doCall(FunctionList...);
         }
 
-        template<Comparable T>
+        template<Type::Comparable T>
         static intmax_t doCompare(const T &Object1, const T &Object2) {
             return Object1.doCompare(Object2);
         }
 
-        template<Comparable T>
+        template<Type::Comparable T>
         static intmax_t doCompare(const T *Object1, const T *Object2) {
             return Object1->doCompare(*Object2);
         }
@@ -52,18 +56,18 @@ namespace eLibrary::Core {
         }
 
         template<typename T>
-        static constexpr T &&doForward(::std::remove_reference_t<T> &ObjectSource) noexcept {
+        static constexpr T &&doForward(Type::noReference<T> &ObjectSource) noexcept {
             return static_cast<T&&>(ObjectSource);
         }
 
         template<typename T>
-        static constexpr T &&doForward(::std::remove_reference_t<T> &&ObjectSource) noexcept {
+        static constexpr T &&doForward(Type::noReference<T> &&ObjectSource) noexcept {
             return static_cast<T&&>(ObjectSource);
         }
 
         template<typename T>
-        static constexpr ::std::remove_reference_t<T>&& doMove(T &&ObjectSource) noexcept {
-            return static_cast<::std::remove_reference_t<T>&&>(ObjectSource);
+        static constexpr Type::noReference<T>&& doMove(T &&ObjectSource) noexcept {
+            return static_cast<Type::noReference<T>&&>(ObjectSource);
         }
 
         template<typename T>
@@ -75,7 +79,7 @@ namespace eLibrary::Core {
 
         template<typename T> requires ::std::is_object_v<T>
         static T *getAddress(T &ObjectSource) noexcept {
-            return (T*) &((char&) ObjectSource);
+            return (T*) &(reinterpret_cast<const char&>(ObjectSource));
         }
 
         template<typename T> requires (!::std::is_object_v<T>)
@@ -83,29 +87,29 @@ namespace eLibrary::Core {
             return &ObjectSource;
         }
 
-        template<Arithmetic T1, Arithmetic T2>
+        template<Type::Arithmetic T1, Type::Arithmetic T2>
         static auto getMaximum(T1 Object1, T2 Object2) noexcept {
             return Object1 >= Object2 ? Object1 : Object2;
         }
 
-        template<Comparable T>
+        template<Type::Comparable T>
         static T getMaximum(const T &Object1, const T &Object2) {
             return doCompare(Object1, Object2) >= 0 ? Object1 : Object2;
         }
 
-        template<Arithmetic T1, Arithmetic T2>
+        template<Type::Arithmetic T1, Type::Arithmetic T2>
         static auto getMinimum(T1 Object1, T2 Object2) noexcept {
             return Object1 <= Object2 ? Object1 : Object2;
         }
 
-        template<Comparable T>
+        template<Type::Comparable T>
         static T getMinimum(const T &Object1, const T &Object2) {
             return doCompare(Object1, Object2) <= 0 ? Object1 : Object2;
         }
     };
 }
 
-template<eLibrary::Core::Comparable T>
+template<eLibrary::Core::Type::Comparable T>
 struct std::equal_to<T> {
 public:
     bool operator()(const T &Object1, const T &Object2) const noexcept {
@@ -113,7 +117,7 @@ public:
     }
 };
 
-template<eLibrary::Core::Comparable T>
+template<eLibrary::Core::Type::Comparable T>
 struct std::greater<T> {
 public:
     bool operator()(const T &Object1, const T &Object2) const noexcept {
@@ -121,7 +125,7 @@ public:
     }
 };
 
-template<eLibrary::Core::Comparable T>
+template<eLibrary::Core::Type::Comparable T>
 struct std::greater_equal<T> {
 public:
     bool operator()(const T &Object1, const T &Object2) const noexcept {
@@ -129,7 +133,15 @@ public:
     }
 };
 
-template<eLibrary::Core::Comparable T>
+template<eLibrary::Core::ObjectDerived T>
+struct std::hash<T> {
+public:
+    auto operator()(const T &ObjectSource) const noexcept {
+        return ObjectSource.hashCode();
+    }
+};
+
+template<eLibrary::Core::Type::Comparable T>
 struct std::less<T> {
 public:
     bool operator()(const T &Object1, const T &Object2) const noexcept {
@@ -137,7 +149,7 @@ public:
     }
 };
 
-template<eLibrary::Core::Comparable T>
+template<eLibrary::Core::Type::Comparable T>
 struct std::less_equal<T> {
 public:
     bool operator()(const T &Object1, const T &Object2) const noexcept {
@@ -145,7 +157,7 @@ public:
     }
 };
 
-template<eLibrary::Core::Comparable T>
+template<eLibrary::Core::Type::Comparable T>
 struct std::not_equal_to<T> {
 public:
     bool operator()(const T &Object1, const T &Object2) const noexcept {

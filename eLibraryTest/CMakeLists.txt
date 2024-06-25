@@ -10,13 +10,6 @@ add_executable(eLibraryTest eLibraryTest.cpp)
 
 target_link_libraries(eLibraryTest eLibrary)
 
-if(ELIBRARY_MODULE_EXTENSION_GEOIP)
-    find_package(PkgConfig REQUIRED)
-    pkg_search_module(libmaxminddb REQUIRED libmaxminddb)
-    include_directories(${libmaxminddb_INCLUDE_DIRS})
-    target_link_libraries(eLibraryTest ${libmaxminddb_LIBRARY})
-endif()
-
 if(ELIBRARY_MODULE_MULTIMEDIA)
     find_package(FFMPEG REQUIRED)
     include_directories(${FFMPEG_INCLUDE_DIRS})

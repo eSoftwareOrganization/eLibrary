@@ -30,7 +30,7 @@ namespace eLibrary::Core {
     /**
      * Support for mathematical operations
      */
-    class Mathematics final : public Object, public NonConstructable {
+    class Mathematics final : public NonConstructable {
     private:
         static bool isPrimeLucas(const Integer &NumberSource) noexcept {
             Integer NumberD(5);
@@ -142,7 +142,7 @@ namespace eLibrary::Core {
         }
 
         static Integer doCombinator(const Integer &NumberM, const Integer &NumberN) {
-            if (NumberN.doCompare(NumberM) < 0) doThrowChecked(ArithmeticException(u"Mathematics::doCombinator(const Integer&, const Integer&) NumberM NumberN"_S));
+            if (NumberN.doCompare(NumberM) < 0) doThrowChecked(ArithmeticException, u"Mathematics::doCombinator(const Integer&, const Integer&) NumberM NumberN"_S);
             return NumberN.doFactorial().doDivision(NumberM.doFactorial().doMultiplication(NumberN.doSubtraction(NumberM).doFactorial()));
         }
 
@@ -268,7 +268,7 @@ namespace eLibrary::Core {
             return doSineFraction(NumberSource, NumberContext).doDivision(doCosineFraction(NumberSource, NumberContext));
         }
 
-        template<Arithmetic T>
+        template<Type::Arithmetic T>
         static T getAbsolute(T NumberSource) noexcept {
             return NumberSource >= 0 ? NumberSource : -NumberSource;
         }
@@ -350,7 +350,7 @@ namespace eLibrary::Core {
             return true;
         }
 
-        template<Arithmetic T>
+        template<Type::Arithmetic T>
         static T toDegrees(T NumberSource) noexcept {
             return 180. / ::std::numbers::pi * NumberSource;
         }
@@ -359,7 +359,7 @@ namespace eLibrary::Core {
             return Fraction(180).doDivision(NumberPi).doMultiplication(NumberSource);
         }
 
-        template<Arithmetic T>
+        template<Type::Arithmetic T>
         static T toRadians(T NumberSource) noexcept {
             return ::std::numbers::pi / 180. * NumberSource;
         }

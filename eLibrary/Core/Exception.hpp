@@ -5,6 +5,10 @@
 
 #include <Core/String.hpp>
 #include <exception>
+#include <iostream>
+#if __cpp_lib_stacktrace
+#include <stacktrace>
+#endif
 
 namespace eLibrary::Core {
     /**
@@ -14,17 +18,31 @@ namespace eLibrary::Core {
     private:
         mutable ::std::string ExceptionDetail;
         String ExceptionMessage;
+#if __cpp_lib_stacktrace
+        ::std::stacktrace ExceptionStacktrace;
+#endif
     public:
-        explicit Exception(const String &ExceptionMessageSource) noexcept : ExceptionMessage(ExceptionMessageSource) {}
+        explicit Exception(const String &ExceptionMessageSource) noexcept : ExceptionMessage(ExceptionMessageSource) {
+            ExceptionDetail = ExceptionMessage.toU8String();
+#if __cpp_lib_stacktrace
+            ExceptionStacktrace = ::std::stacktrace::current();
+#endif
+        }
+
+        void printStackTrace() const {
+            ::std::cerr << ExceptionDetail << ::std::endl;
+#if __cpp_lib_stacktrace
+            for (const auto &StackFrame : ExceptionStacktrace)
+                ::std::cerr << "    at " << ::std::to_string(StackFrame) << ::std::endl;
+#endif
+        }
 
         String toString() const noexcept override {
-            if (ExceptionDetail.empty()) ExceptionDetail = ExceptionMessage.toU8String();
-            return {ExceptionDetail};
+            return ExceptionMessage;
         }
 
         const char *what() const noexcept override {
-            toString();
-            return ExceptionDetail.data();
+            return ExceptionDetail.c_str();
         }
     };
 
@@ -53,12 +71,17 @@ namespace eLibrary::Core {
         using ConcurrentException::ConcurrentException;
     };
 
+    class NotImplementedException final : public Exception {
+    public:
+        using Exception::Exception;
+    };
+
     class TypeException final : public Exception {
     public:
         using Exception::Exception;
     };
 
-#define doThrowChecked(...) throw __VA_ARGS__
+#define doThrowChecked(ExceptionType, ...) throw ExceptionType(__VA_ARGS__)
 #define doThrowUnchecked(...) throw __VA_ARGS__
 }
 

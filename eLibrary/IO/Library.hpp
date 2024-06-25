@@ -44,7 +44,7 @@ namespace eLibrary::IO {
 #else
                 ::dlopen(LibraryPath.toU8String().c_str(), RTLD_LAZY);
 #endif
-            if (!LibraryHandle) [[unlikely]] doThrowChecked(IOException(u"Library::Library(const String&)"_S));
+            if (!LibraryHandle) [[unlikely]] doThrowChecked(IOException, u"Library::Library(const String&)"_S);
             return {LibraryHandle};
         }
 
