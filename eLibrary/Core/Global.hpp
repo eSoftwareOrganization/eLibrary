@@ -3,6 +3,7 @@
 #ifndef eLibraryHeaderCoreGlobal
 #define eLibraryHeaderCoreGlobal
 
+#include <cstddef>
 #include <cstdint>
 
 namespace eLibrary::Core {

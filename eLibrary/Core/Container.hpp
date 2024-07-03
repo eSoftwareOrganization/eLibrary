@@ -1417,6 +1417,8 @@ namespace eLibrary::Core {
 
         doEnableMoveAssignConstruct(Function)
 
+        Function() noexcept : DescriptorHandle(nullptr) {}
+
         template<typename F>
         requires ::std::is_invocable_r_v<Tr, F, Ts...>
         Function(F FunctionObject) noexcept : DescriptorHandle(new FunctionDescriptor<F>(Objects::doMove(FunctionObject))) {}

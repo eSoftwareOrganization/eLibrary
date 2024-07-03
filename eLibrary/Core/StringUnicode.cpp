@@ -1,5 +1,4 @@
 #include <Core/StringUnicode.hpp>
-#include <initializer_list>
 #include <unordered_map>
 
 namespace eLibrary::Core {

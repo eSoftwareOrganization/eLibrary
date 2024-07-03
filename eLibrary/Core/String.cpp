@@ -19,7 +19,9 @@ namespace eLibrary::Core {
     }
 
     String Character::toString() const noexcept {
-        return String::valueOf(*this);
+        StringBuilder StringResult;
+        StringResult.addCharacter(CharacterValue);
+        return StringResult.toString();
     }
 
     CharacterUcs4 Character::toUcs4() const noexcept {
@@ -225,13 +227,7 @@ namespace eLibrary::Core {
         }
     }
 
-    String String::valueOf(const Character &CharacterSource) noexcept {
-        StringBuilder StringResult;
-        StringResult.addCharacter(CharacterSource);
-        return StringResult.toString();
-    }
-
-    String String::valueOf(const ::std::string &StringSource) {
+    String String::fromStd(const ::std::string &StringSource) {
         StringBuilder StringResult;
         for (intmax_t CharacterIndex = 0;CharacterIndex < StringSource.size();) {
             char32_t CharacterValue;
@@ -255,15 +251,15 @@ namespace eLibrary::Core {
         return StringResult.toString();
     }
 
-    String String::valueOf(const ::std::wstring &StringSource) noexcept {
+    String String::fromStd(const ::std::wstring &StringSource) noexcept {
         if constexpr (sizeof(std::wstring::value_type) == sizeof(char16_t)) {
-            return valueOf((::std::u16string&) StringSource);
+            return fromStd((::std::u16string&) StringSource);
         } else if constexpr (sizeof(std::wstring::value_type) == sizeof(char32_t)) {
-            return valueOf((::std::u32string&) StringSource);
+            return fromStd((::std::u32string&) StringSource);
         }
     }
 
-    String String::valueOf(const std::u32string &StringSource) noexcept {
+    String String::fromStd(const std::u32string &StringSource) noexcept {
         StringBuilder StringResult;
         for (char32_t CharacterIndex : StringSource) {
             if (CharacterIndex <= 0xFFFF) StringResult.addCharacter(CharacterIndex);

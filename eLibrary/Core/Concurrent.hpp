@@ -1070,7 +1070,7 @@ namespace eLibrary::Core {
             ThreadExecutorCore(ThreadExecutor *ExecutorSource) : ExecutorObject(ExecutorSource) {}
 
             void doExecute() noexcept override {
-                ::std::function<void()> ExecutorFunction;
+                Function<void()> ExecutorFunction;
                 bool ExecutorFunctionAvailable;
                 while (!ExecutorObject->ExecutorShutdown) {
                     {
@@ -1084,7 +1084,7 @@ namespace eLibrary::Core {
         };
 
         ::std::mutex ExecutorMutex;
-        ConcurrentQueue<::std::function<void()>, DoubleLinkedList<::std::function<void()>>> ExecutorQueue;
+        ConcurrentQueue<Function<void()>, DoubleLinkedList<Function<void()>>> ExecutorQueue;
         bool ExecutorShutdown = false;
         Array<ThreadExecutorCore*> ExecutorThread;
         ::std::condition_variable ExecutorVariable;
@@ -1117,7 +1117,7 @@ namespace eLibrary::Core {
             if (ExecutorShutdown) doThrowChecked(ConcurrentException, u"ThreadExecutor::doSubmit<F, Ps...>(F&&, Ps&&...) ExecutorShutdown"_S);
             auto ExecutorTarget(::std::bind(Objects::doForward<F>(ExecutorFunction), Objects::doForward<Ps>(ExecutorFunctionParameter)...));
             auto ExecutorTask(::std::make_shared<::std::packaged_task<decltype(ExecutorTarget(ExecutorFunctionParameter...))()>>(ExecutorTarget));
-            ::std::function<void()> ExecutorWrapper = [ExecutorTask] {
+            Function<void()> ExecutorWrapper = [ExecutorTask] {
                 (*ExecutorTask)();
             };
             ExecutorQueue.doEnqueue(ExecutorWrapper);

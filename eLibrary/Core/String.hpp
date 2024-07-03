@@ -349,29 +349,9 @@ namespace eLibrary::Core {
 
         eLibraryAPI ::std::wstring toWString() const noexcept;
 
-        static eLibraryAPI String valueOf(const Character&) noexcept;
-
-        static String valueOf(const CharacterLatin1 &ObjectSource) noexcept {
-            return ObjectSource.toString();
-        }
-
-        static String valueOf(const CharacterUcs4 &ObjectSource) noexcept {
-            return ObjectSource.toString();
-        }
-
-        static eLibraryAPI String valueOf(const ::std::string&);
-
-        static String valueOf(const ::std::u16string &StringSource) noexcept {
-            return {StringSource};
-        }
-
-        static eLibraryAPI String valueOf(const ::std::u32string&) noexcept;
-
-        static eLibraryAPI String valueOf(const ::std::wstring&) noexcept;
-
         template<Type::Arithmetic T>
         static String valueOf(T ObjectSource) noexcept {
-            return valueOf(::std::to_string(ObjectSource));
+            return fromStd(::std::to_string(ObjectSource));
         }
 
         template<ObjectDerived T>
@@ -383,6 +363,36 @@ namespace eLibrary::Core {
         static String valueOf(const T *ObjectSource) noexcept {
             return ObjectSource->toString();
         }
+
+        template<typename T> requires Type::isConvertible<T, ::std::string>
+        static String valueOf(const T &StringSource) noexcept {
+            return fromStd(StringSource);
+        }
+
+        template<typename T> requires Type::isConvertible<T, ::std::u16string>
+        static String valueOf(const T &StringSource) noexcept {
+            return {StringSource};
+        }
+
+        template<typename T> requires Type::isConvertible<T, ::std::u32string>
+        static String valueOf(const T &StringSource) noexcept {
+            return fromStd(StringSource);
+        }
+
+        template<typename T> requires Type::isConvertible<T, ::std::wstring>
+        static String valueOf(const T &StringSource) noexcept {
+            return fromStd(StringSource);
+        }
+
+        static eLibraryAPI String fromStd(const ::std::string&);
+
+        static String fromStd(const ::std::u16string &StringSource) noexcept {
+            return {StringSource};
+        }
+
+        static eLibraryAPI String fromStd(const ::std::u32string&) noexcept;
+
+        static eLibraryAPI String fromStd(const ::std::wstring&) noexcept;
     };
 
     class StringBuilder final : public Object, public NonCopyable {

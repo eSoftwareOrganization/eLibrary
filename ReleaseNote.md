@@ -2,6 +2,10 @@
 
 This document describes the changes to eLibrary present in each release.
 
+> eLibrary V0.21.1
+- Core::Function Constructor()(New)
+- Core::String fromStd(std::string / std::u16string / std::u32string / std::wstring)(New)
+- Core::ThreadExecutor(`Function` Implementation)
 > eLibrary V0.21.0
 - Core::Any(Any&&)(...)
 - Core::ArrayList addElement(`doReserve` Implementation) doReserve(New)

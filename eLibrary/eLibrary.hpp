@@ -8,7 +8,7 @@
 
 #define eLibraryVersionMajor 0
 #define eLibraryVersionMinor 21
-#define eLibraryVersionPatch 0
+#define eLibraryVersionPatch 1
 #define eLibraryVersionNumber (eLibraryVersionMajor * 10000 + eLibraryVersionMinor * 100 + eLibraryVersionPatch)
 #define eLibraryVersionString (eLibraryToString(eLibraryVersionMajor) "." eLibraryToString(eLibraryVersionMinor) "." eLibraryToString(eLibraryVersionPatch))
 
