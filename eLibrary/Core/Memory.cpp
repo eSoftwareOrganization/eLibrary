@@ -1,5 +1,4 @@
 #include <Core/Exception.hpp>
-#include <new>
 
 namespace eLibrary::Core {
     void *HeapMemoryResource::doAcquire(size_t MemorySize, size_t MemoryAlignment) noexcept {

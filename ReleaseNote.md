@@ -2,6 +2,8 @@
 
 This document describes the changes to eLibrary present in each release.
 
+> eLibrary V0.21.2
+- Core::Integer::NumberVector(`ArrayList` Implementation)
 > eLibrary V0.21.1
 - Core::Function Constructor()(New)
 - Core::String fromStd(std::string / std::u16string / std::u32string / std::wstring)(New)

@@ -3,7 +3,9 @@
 #ifndef eLibraryHeaderCoreType
 #define eLibraryHeaderCoreType
 
+#if __cpp_lib_concepts
 #include <concepts>
+#endif
 #include <type_traits>
 
 namespace eLibrary::Core::Type {

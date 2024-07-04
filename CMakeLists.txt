@@ -28,7 +28,7 @@ if(ELIBRARY_MODULE_NETWORK)
     add_compile_definitions(eLibraryFeature_Network=1)
 endif()
 
-project(eLibrary DESCRIPTION "An all-in-one cpp library" VERSION 0.21.1 LANGUAGES CXX)
+project(eLibrary DESCRIPTION "An all-in-one cpp library" VERSION 0.21.2 LANGUAGES CXX)
 
 set(CMAKE_CXX_STANDARD 23)
 set(CMAKE_CXX_STANDARD_REQUIRED TRUE)
@@ -54,34 +54,6 @@ else()
     add_compile_definitions(eLibraryLinkage_Static=1)
     add_library(eLibrary STATIC ${FileList})
 endif()
-
-set_target_properties(eLibrary PROPERTIES PUBLIC_HEADER ${CMAKE_HOME_DIRECTORY}/eLibrary/eLibrary.hpp)
-
-include(CMakePackageConfigHelpers)
-configure_package_config_file(
-        eLibraryConfig.cmake.in
-        "${CMAKE_CURRENT_BINARY_DIR}/eLibraryConfig.cmake"
-        INSTALL_DESTINATION lib/cmake/eLibrary
-)
-write_basic_package_version_file(
-        "${CMAKE_CURRENT_BINARY_DIR}/eLibraryConfigVersion.cmake"
-        VERSION ${PROJECT_VERSION}
-        COMPATIBILITY AnyNewerVersion
-)
-install(DIRECTORY eLibrary DESTINATION eLibrary)
-install(
-        TARGETS eLibrary
-        EXPORT eLibraryTargets
-        RUNTIME DESTINATION bin
-        ARCHIVE DESTINATION lib
-        LIBRARY DESTINATION lib
-        PUBLIC_HEADER DESTINATION eLibrary
-)
-install(EXPORT eLibraryTargets DESTINATION lib/cmake/eLibrary NAMESPACE eLibrary::)
-install(
-        FILES ${CMAKE_CURRENT_BINARY_DIR}/eLibraryConfig.cmake ${CMAKE_CURRENT_BINARY_DIR}/eLibraryConfigVersion.cmake
-        DESTINATION lib/cmake/eLibrary
-)
 
 if(ELIBRARY_PACKAGE)
     include(InstallRequiredSystemLibraries)

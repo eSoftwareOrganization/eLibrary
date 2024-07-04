@@ -6,7 +6,6 @@
 #include <Core/Global.hpp>
 #include <Core/Type.hpp>
 #include <functional>
-#include <utility>
 
 namespace eLibrary::Core {
     class String;
@@ -23,7 +22,7 @@ namespace eLibrary::Core {
     };
 
     template<typename T>
-    concept ObjectDerived = ::std::derived_from<T, Object>;
+    concept ObjectDerived = Type::isBaseOf<Object, T>;
 
     class Objects final : public Object {
     public:

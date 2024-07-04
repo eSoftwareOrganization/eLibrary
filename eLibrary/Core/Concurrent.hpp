@@ -30,7 +30,6 @@
 #include <cstring>
 #include <future>
 #include <mutex>
-#include <queue>
 #include <utility>
 
 namespace eLibrary::Core {

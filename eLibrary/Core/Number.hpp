@@ -5,7 +5,6 @@
 
 #include <Core/Exception.hpp>
 #include <limits>
-#include <vector>
 
 namespace eLibrary::Core {
     class Numbers final : public NonConstructable {
@@ -30,14 +29,12 @@ namespace eLibrary::Core {
      */
     class Integer final : public Object {
     private:
-        class NumberVector final : public ::std::vector<intmax_t> {
+        class NumberVector final : public ArrayList<intmax_t> {
         public:
             NumberVector() noexcept = default;
 
-            NumberVector(uintmax_t NumberSize, intmax_t NumberValue) : ::std::vector<intmax_t>(NumberSize, NumberValue) {}
-
-            void addElement(intmax_t NumberSource) {
-                push_back(NumberSource);
+            NumberVector(uintmax_t NumberSize, intmax_t NumberValue) : ArrayList<intmax_t>() {
+                Collections::doFill(ElementContainer, ElementContainer + (ElementSize = NumberSize), NumberValue);
             }
 
             NumberVector doMultiplication(const NumberVector &NumberOther) const {
@@ -58,33 +55,21 @@ namespace eLibrary::Core {
                 return NumberResult;
             }
 
-            void doReserve(intmax_t NumberSize) {
-                reserve(NumberSize);
-            }
-
             intmax_t getElementFront() const noexcept {
-                return front();
-            }
-
-            intmax_t getElementSize() const noexcept {
-                return (intmax_t) size();
-            }
-
-            bool isEmpty() const noexcept {
-                return empty();
+                return getElement(0);
             }
 
             intmax_t &operator[](intmax_t NumberIndex) noexcept {
-                return ::std::vector<intmax_t>::operator[](NumberIndex);
+                return getElement(NumberIndex);
             }
 
             intmax_t operator[](intmax_t NumberIndex) const noexcept {
-                return ::std::vector<intmax_t>::operator[](NumberIndex);
+                return getElement(NumberIndex);
             }
 
             void doRemove0() noexcept {
-                while (!back() && getElementSize() > 1)
-                    pop_back();
+                while (!getElement(-1) && getElementSize() > 1)
+                    removeIndex(-1);
             }
         };
 
